@@ -1,0 +1,24 @@
+{
+  "name": "ClubCRM",
+  "dockerComposeFile": ["../infra/docker-compose.yml", "docker-compose.devcontainer.yml"],
+  "service": "workspace",
+  "runServices": ["workspace", "postgres", "mongodb", "redis", "kafka", "api", "web"],
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+  "forwardPorts": [3000, 8000, 5432, 27017, 6379, 9092],
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/bin/python3",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-azuretools.vscode-docker",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh"
+}
