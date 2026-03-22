@@ -19,7 +19,6 @@ def main() -> None:
 
     if requirements.is_file():
         run(["python3", "-m", "venv", str(VENV_DIR)])
-        run([str(venv_python), "-m", "pip", "install", "--upgrade", "pip"])
         run(
             [
                 str(venv_python),

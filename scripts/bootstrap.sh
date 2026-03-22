@@ -20,7 +20,6 @@ if [ -f "$API_DIR/requirements.txt" ]; then
   python3 -m venv "$VENV_DIR"
   # shellcheck disable=SC1091
   source "$VENV_DIR/bin/activate"
-  python -m pip install --upgrade pip
   python -m pip install --no-cache-dir -r "$API_DIR/requirements.txt"
 
   if [ -f "$API_DIR/requirements-dev.txt" ]; then
