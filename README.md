@@ -30,6 +30,8 @@ If you do not create `.env`, the checked-in example values are used automaticall
 - `infra/docker-compose.yml`
 - `.devcontainer/docker-compose.devcontainer.yml`
 
+The repository enforces LF line endings for devcontainer and shell files so the same checkout works on macOS and Windows hosts. Devcontainer startup no longer depends on checked-out shell scripts, so you should not need any host-side normalization step just to open the environment.
+
 When the devcontainer starts, it:
 
 - mounts the repository at `/workspace`
