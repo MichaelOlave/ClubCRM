@@ -54,7 +54,7 @@ Next.js Frontend
 
 All day-to-day development should happen in the repository devcontainer so every team member uses the same environment.
 
-Before opening the devcontainer, create `.env` from `.env.example` at the repository root. The Compose services read that file during startup.
+The Compose services load checked-in defaults from `.env.example` during startup. When a developer needs local overrides, they can create `.env` from `.env.example` at the repository root before opening the devcontainer.
 
 The repository devcontainer uses Docker Compose with these files:
 
