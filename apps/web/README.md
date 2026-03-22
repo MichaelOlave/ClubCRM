@@ -4,9 +4,9 @@ This is the ClubCRM web client, built with [Next.js](https://nextjs.org).
 
 ## Getting Started
 
-Use the repository devcontainer for local development. The devcontainer mounts the repo at `/workspace`, installs dependencies with `pnpm`, and forwards the web app on port `3000`.
+Use the repository devcontainer for local development. Before opening it, create `.env` from `.env.example` at the repository root. The devcontainer mounts the repo at `/workspace`, installs dependencies with `pnpm`, and forwards the web app on port `3000`.
 
-The full local Compose stack includes:
+The devcontainer Compose stack already starts the web app and the API. It also includes:
 
 - `web` on `3000`
 - `api` on `8000`
@@ -16,22 +16,22 @@ The full local Compose stack includes:
 - `kafka` on `9092`
 
 1. Open the repository in the devcontainer.
-2. From the container terminal, change into `/workspace/apps/web`.
-3. Start the development server:
+2. Visit [http://localhost:3000](http://localhost:3000).
+
+If you need to restart the web server from the workspace terminal, run:
 
 ```bash
-pnpm dev
+pnpm dev:web
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the app by modifying `app/page.tsx`. The page auto-updates as you edit files.
+You can start editing the app by modifying [`apps/web/src/app/page.tsx`](/Users/michaelolave/Projects/active/ClubCRM/apps/web/src/app/page.tsx). The page auto-updates as you edit files.
 
 ## Notes
 
 - The devcontainer runs with Docker Compose alongside the API and local data services.
-- `node_modules` is stored in a Docker volume for the containerized workspace.
+- The PNPM store is persisted in a Docker volume, and the API virtualenv is persisted in a separate Docker volume.
 - File watching is configured with polling for reliable live reload in containers.
+- If you need to restart or validate the web app manually, use the root scripts from the workspace terminal.
 
 ## Learn More
 

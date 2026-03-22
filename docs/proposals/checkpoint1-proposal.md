@@ -148,7 +148,7 @@ Next.js Frontend
 - Document database: MongoDB
 - Cache: Redis
 - Event streaming: Kafka
-- Orchestration: Docker Compose
+- Development environment: repository devcontainer backed by Docker Compose
 
 ## Why This Topic Fits a Team of 4
 
@@ -178,7 +178,7 @@ It is challenging enough to justify 4 contributors, but still realistic to finis
 
 ### By Sunday, April 5, 2026
 
-- `docker compose -f infra/docker-compose.yml up` starts the project services
+- open the repository in the devcontainer and let it start the project services
 - PostgreSQL running with seed data
 - FastAPI connected to the local data stack
 - first core workflow demonstrable

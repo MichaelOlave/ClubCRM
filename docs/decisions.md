@@ -56,8 +56,8 @@
 - Decision: a member exists once per organization and can belong to multiple clubs.
 - Rationale: this avoids duplicate member records and supports cross-club participation cleanly.
 
-### ADR-010: Standard local development uses Docker Compose
+### ADR-010: Standard local development uses the repository devcontainer
 
 - Status: accepted
-- Decision: run the app and infrastructure services with `docker compose` using `infra/docker-compose.yml`, and use the devcontainer Compose override for the persistent `workspace` container.
-- Rationale: the team needs one repeatable local setup for frontend, backend, and all supporting data services.
+- Decision: standard development happens in the repository devcontainer, which uses `infra/docker-compose.yml` together with `.devcontainer/docker-compose.devcontainer.yml` to bring up the workspace, app services, and supporting infrastructure.
+- Rationale: the team needs one repeatable local setup for frontend, backend, and all supporting data services, and the devcontainer makes that workflow the default for every contributor.

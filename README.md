@@ -1,6 +1,6 @@
 # ClubCRM
 
-ClubCRM is a multi-database club management platform with:
+ClubCRM is a devcontainer-first monorepo for a club management platform with:
 
 - Next.js web app
 - FastAPI API
@@ -9,16 +9,35 @@ ClubCRM is a multi-database club management platform with:
 - Redis for caching and short-lived data
 - Kafka for domain events and async workflows
 
-## Local Development
+Current implementation status:
 
-The recommended workflow is the repository devcontainer.
+- `apps/web` renders a health-check page that probes the API
+- `apps/api` exposes `GET /health`
+- the local data and app stack is wired up through the repository devcontainer
 
-The devcontainer uses:
+## Development Environment
+
+All development is expected to happen inside the repository devcontainer.
+
+Before opening the devcontainer, create the local environment file that the Compose services read:
+
+```bash
+cp .env.example .env
+```
+
+Then open the repository in the devcontainer. The devcontainer uses:
 
 - `infra/docker-compose.yml`
 - `.devcontainer/docker-compose.devcontainer.yml`
 
-Services started by the devcontainer:
+When the devcontainer starts, it:
+
+- mounts the repository at `/workspace`
+- starts the `workspace`, `web`, `api`, `postgres`, `mongodb`, `redis`, and `kafka` services
+- runs `.devcontainer/post-create.sh`
+- bootstraps dependencies with `pnpm bootstrap`
+
+Available services:
 
 - `workspace`
 - `web`
@@ -37,29 +56,13 @@ Forwarded ports:
 - `6379` redis
 - `9092` kafka
 
-Create your local environment file before starting the stack:
-
-```bash
-cp .env.example .env
-```
-
-To run the application stack directly with Docker Compose:
-
-```bash
-docker compose -f infra/docker-compose.yml up --build
-```
-
-The Docker services and local dev scripts both read configuration from the repository root `.env`.
-
-To start the devcontainer-only workspace override as well:
-
-```bash
-docker compose -f infra/docker-compose.yml -f .devcontainer/docker-compose.devcontainer.yml up --build
-```
+The `web` and `api` development servers are already started by the devcontainer Compose stack. Use the root scripts below only when you intentionally restart a service from the workspace terminal, run checks manually, or debug outside the default process.
 
 ## Quality Checks
 
-Bootstrap dependencies and install Git hooks:
+From inside the devcontainer workspace:
+
+Bootstrap dependencies and install Git hooks again if needed:
 
 ```bash
 pnpm bootstrap
@@ -76,6 +79,16 @@ Run repository checks locally:
 ```bash
 pnpm verify
 ```
+
+Manual app entrypoints:
+
+```bash
+pnpm dev:web
+pnpm dev:api
+pnpm dev
+```
+
+These commands are for manual restart or debugging from the devcontainer terminal. They are not required for the normal first-run workflow because the devcontainer already starts the app services.
 
 ## Docs
 

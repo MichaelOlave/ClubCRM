@@ -163,8 +163,9 @@ Why it fits:
 
 Current local development setup:
 
-- Docker Compose runs PostgreSQL, MongoDB, Redis, and Kafka from `infra/docker-compose.yml`
-- the repository devcontainer adds a persistent `workspace` service
+- the repository devcontainer is the standard development environment
+- the devcontainer uses Docker Compose under the hood with `infra/docker-compose.yml` and `.devcontainer/docker-compose.devcontainer.yml`
+- the devcontainer starts the `workspace` service plus PostgreSQL, MongoDB, Redis, Kafka, the API, and the web app
 - the local developer ports are `3000`, `8000`, `5432`, `27017`, `6379`, and `9092`
 
 ## Example Data Flow
@@ -183,6 +184,7 @@ Current local development setup:
 - Document Database: MongoDB
 - Cache Layer: Redis
 - Event Streaming: Kafka
+- Development Environment: repository devcontainer backed by Docker Compose
 
 ## Methodology
 

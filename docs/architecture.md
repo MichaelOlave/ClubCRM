@@ -52,7 +52,9 @@ Next.js Frontend
 
 ## Local Development Environment
 
-Local development should be Docker-based so every team member can start the project the same way.
+All day-to-day development should happen in the repository devcontainer so every team member uses the same environment.
+
+Before opening the devcontainer, create `.env` from `.env.example` at the repository root. The Compose services read that file during startup.
 
 The repository devcontainer uses Docker Compose with these files:
 
@@ -87,6 +89,8 @@ Forwarded local ports:
 - `6379` for Redis
 - `9092` for Kafka
 
+The `web` and `api` development servers already run inside the devcontainer Compose stack. Root scripts such as `pnpm dev:web`, `pnpm dev:api`, and `pnpm dev` are manual restart and debugging entrypoints, not the default first-run workflow.
+
 ## Repository Shape
 
 ```text
@@ -104,7 +108,23 @@ Forwarded local ports:
   decisions.md
 ```
 
-## Backend Architectural Style
+## Current Backend Implementation
+
+Today the backend codebase is still in an early scaffolded state. The implemented files are:
+
+```text
+/apps/api/src
+  main.py
+  config.py
+  /presentation
+    /http
+      /routes
+        health.py
+```
+
+The sections below describe the target backend architecture as the project grows beyond the current health-check slice.
+
+## Target Backend Architectural Style
 
 Inside the backend, use a clean or hexagonal style with feature modules.
 
@@ -115,7 +135,7 @@ Separate:
 - infrastructure details
 - delivery concerns such as HTTP routes
 
-Suggested structure:
+Suggested target structure:
 
 ```text
 /apps/api/src

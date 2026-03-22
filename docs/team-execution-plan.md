@@ -58,7 +58,7 @@ Own:
 
 Definition of done:
 
-- reviewer can run `docker compose -f infra/docker-compose.yml up`
+- reviewer can open the repository in the devcontainer and use the forwarded ports immediately
 - caches populate for dashboard reads
 - at least one event is published and demonstrated
 
@@ -92,7 +92,6 @@ Definition of done:
 /docs
   architecture.md
   schema.md
-  demo-script.md
 ```
 
 ## MVP Feature Contract
@@ -126,7 +125,7 @@ Anything else should be labeled stretch.
 
 ### Checkpoint 3: Proof of Concept due Sunday, April 5, 2026
 
-- Docker Compose working
+- repository devcontainer working end to end
 - PostgreSQL, MongoDB, Redis, and Kafka all starting locally
 - seed data loaded
 - one real app workflow demonstrated

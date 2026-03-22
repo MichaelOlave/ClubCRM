@@ -21,7 +21,7 @@ This file applies to work inside `apps/web`.
 
 ## Environment
 
-- Use the repository devcontainer workflow whenever possible.
+- Use the repository devcontainer workflow as the default development environment.
 - The repository is mounted at `/workspace` inside the devcontainer.
 - Work from `/workspace/apps/web` when running app-local commands.
 - Dependencies are installed during `.devcontainer/post-create.sh` via `pnpm bootstrap`.
@@ -35,6 +35,8 @@ The default local stack includes:
 - `mongodb` on port `27017`
 - `redis` on port `6379`
 - `kafka` on port `9092`
+
+The devcontainer Compose stack already starts `web` and `api`, so root scripts such as `pnpm dev:web`, `pnpm dev:api`, and `pnpm dev` are for manual restart, debugging, or validation rather than first-run setup.
 
 ## Workspace Context
 
@@ -64,9 +66,9 @@ Important files:
 From the repository root:
 
 - `pnpm bootstrap` installs Node dependencies and provisions the API virtualenv/tooling
-- `pnpm dev:web` starts the web app on `0.0.0.0`
-- `pnpm dev:api` starts the FastAPI app from the Python virtualenv
-- `pnpm dev` runs both app entrypoints together
+- `pnpm dev:web` restarts or runs the web app on `0.0.0.0`
+- `pnpm dev:api` restarts or runs the FastAPI app from the Python virtualenv
+- `pnpm dev` restarts or runs both app entrypoints together
 - `pnpm build:web` runs the production web build
 - `pnpm lint:web` runs the web ESLint checks
 - `pnpm lint` runs the repo lint pipeline across both stacks
