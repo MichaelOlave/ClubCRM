@@ -9,9 +9,12 @@ services:
         required: true
       - path: ../.env
         required: false
-    command: >
-      sh -c "bash ./scripts/bootstrap.sh &&
-      bash ./scripts/dev-api.sh"
+    command:
+      - /bin/sh
+      - -lc
+      - |
+        python3 ./scripts/bootstrap.py
+        exec python3 ./scripts/dev_api.py
     volumes:
       - ..:/workspace
       - pnpm_store:/pnpm/store
@@ -34,10 +37,13 @@ services:
         required: true
       - path: ../.env
         required: false
-    command: >
-      sh -c "corepack enable &&
-      pnpm install --config.confirmModulesPurge=false &&
-      pnpm dev:web"
+    command:
+      - /bin/sh
+      - -lc
+      - |
+        corepack enable
+        pnpm install --config.confirmModulesPurge=false
+        exec python3 ./scripts/dev_web.py
     volumes:
       - ..:/workspace
       - pnpm_store:/pnpm/store

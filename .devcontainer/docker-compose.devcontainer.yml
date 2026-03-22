@@ -4,7 +4,7 @@ services:
       context: ..
       dockerfile: .devcontainer/Dockerfile
     working_dir: /workspace
-    command: sleep infinity
+    command: ["sleep", "infinity"]
     volumes:
       - ..:/workspace
       - pnpm_store:/pnpm/store
