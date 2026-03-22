@@ -11,13 +11,13 @@ The goal of this guide is to keep contributions consistent across both sides of 
 
 The repository devcontainer is the standard development environment for this project.
 
-Before opening the devcontainer, create the local environment file from the repository root:
+The Compose stack reads default values from `.env.example`. If you need local overrides, create the environment file from the repository root before opening the devcontainer:
 
 ```bash
 cp .env.example .env
 ```
 
-Then open the project in the devcontainer.
+If `.env` is absent, the repository falls back to the checked-in example values. Then open the project in the devcontainer.
 
 The devcontainer already automates the initial setup for contributors:
 

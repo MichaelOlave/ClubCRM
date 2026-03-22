@@ -19,13 +19,13 @@ Current implementation status:
 
 All development is expected to happen inside the repository devcontainer.
 
-Before opening the devcontainer, create the local environment file that the Compose services read:
+The Compose stack loads defaults from `.env.example`. If you need to override any local settings, create a root `.env` before opening the devcontainer:
 
 ```bash
 cp .env.example .env
 ```
 
-Then open the repository in the devcontainer. The devcontainer uses:
+If you do not create `.env`, the checked-in example values are used automatically. Then open the repository in the devcontainer. The devcontainer uses:
 
 - `infra/docker-compose.yml`
 - `.devcontainer/docker-compose.devcontainer.yml`

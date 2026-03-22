@@ -5,7 +5,10 @@ services:
       dockerfile: .devcontainer/Dockerfile
     working_dir: /workspace
     env_file:
-      - ../.env
+      - path: ../.env.example
+        required: true
+      - path: ../.env
+        required: false
     command: >
       sh -c "bash ./scripts/bootstrap.sh &&
       bash ./scripts/dev-api.sh"
@@ -27,7 +30,10 @@ services:
       dockerfile: .devcontainer/Dockerfile
     working_dir: /workspace
     env_file:
-      - ../.env
+      - path: ../.env.example
+        required: true
+      - path: ../.env
+        required: false
     command: >
       sh -c "corepack enable &&
       pnpm install --config.confirmModulesPurge=false &&
@@ -46,7 +52,10 @@ services:
     image: postgres:17
     restart: unless-stopped
     env_file:
-      - ../.env
+      - path: ../.env.example
+        required: true
+      - path: ../.env
+        required: false
     ports:
       - "5432:5432"
     volumes:
@@ -72,7 +81,10 @@ services:
     image: confluentinc/cp-kafka:7.8.0
     restart: unless-stopped
     env_file:
-      - ../.env
+      - path: ../.env.example
+        required: true
+      - path: ../.env
+        required: false
     ports:
       - "9092:9092"
     volumes:
