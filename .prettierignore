@@ -1,0 +1,7 @@
+apps/api/.venv/
+apps/web/.next/
+node_modules/
+.pnpm-store/
+dist/
+build/
+coverage/
