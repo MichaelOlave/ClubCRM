@@ -74,6 +74,18 @@ Prefer root scripts for shared workflow, CI parity, and cross-app changes.
 - Group automated commits by similar concern or file area instead of mixing unrelated work into one commit.
 - Keep refactors, behavior changes, and documentation updates in separate commits when practical.
 
+## Git Workflow
+
+- Use one branch per logical change.
+- Open one focused pull request per branch.
+- Create a new branch for each feature, bug fix, non-trivial refactor, docs or workflow update, or cross-app API contract change.
+- Keep unrelated work off the same branch.
+- A branch may touch both `apps/web` and `apps/api` when the change is still one coherent feature or contract update.
+- Isolate setup, ports, service assumptions, repo structure, and health-check flow changes in their own branch and update docs in the same pull request.
+- Treat commits as checkpoints inside the branch. Prefer a few small, descriptive commits over one large mixed-purpose commit.
+- Separate refactors from behavior changes when practical.
+- Before opening a pull request, run the narrowest relevant root-level checks for the area you changed and include a short verification summary.
+
 ## Quality Bar
 
 Before finishing substantial work, run the most relevant checks for the area you changed.

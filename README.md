@@ -90,6 +90,23 @@ pnpm dev
 
 These commands are for manual restart or debugging from the devcontainer terminal. They are not required for the normal first-run workflow because the devcontainer already starts the app services.
 
+## Git Workflow
+
+Use Git with a simple default: one logical change per branch and one focused pull request per branch.
+
+- Create a new branch for each feature, bug fix, non-trivial refactor, docs or workflow update, or cross-app API contract change.
+- Keep unrelated work out of the same branch, even inside this monorepo.
+- If a change touches both `apps/web` and `apps/api` but is still one coherent feature or contract update, keep it in one branch and one pull request.
+- If you are changing setup, ports, service assumptions, repo structure, or the health-check flow, isolate that work in its own branch and update docs in the same pull request.
+
+Commits are checkpoints inside a branch. Prefer a few small, descriptive commits over one large mixed-purpose commit.
+
+- Separate refactors from behavior changes when practical.
+- Keep commit messages specific to the actual change.
+- Group related documentation updates with the behavior or workflow change they explain unless the docs work is large enough to stand on its own.
+
+Before opening a pull request, run the narrowest relevant checks from the repository root and include a short verification summary in the pull request description.
+
 ## Docs
 
 - `docs/contributing.md` for contribution workflow and code standards
