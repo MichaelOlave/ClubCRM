@@ -9,9 +9,15 @@ The goal of this guide is to keep contributions consistent across both sides of 
 
 ## Getting Started
 
-The recommended development workflow is the repository devcontainer.
+The repository devcontainer is the standard development environment for this project.
 
-Open the project in the devcontainer first.
+Before opening the devcontainer, create the local environment file from the repository root:
+
+```bash
+cp .env.example .env
+```
+
+Then open the project in the devcontainer.
 
 The devcontainer already automates the initial setup for contributors:
 
@@ -29,7 +35,7 @@ pnpm bootstrap
 
 ## Development Workflow
 
-The commands below are expected to be run from inside the devcontainer workspace unless you have intentionally set up an equivalent local environment.
+The commands below are expected to be run from inside the devcontainer workspace.
 
 In the standard devcontainer flow, the Compose stack already includes:
 
@@ -40,7 +46,7 @@ In the standard devcontainer flow, the Compose stack already includes:
 - `redis`
 - `kafka`
 
-Use the commands below when you need to restart a service manually, run it outside the default Compose process, or verify behavior from the workspace terminal.
+Use the commands below when you need to restart a service manually from the workspace terminal, debug outside the default Compose-managed process, or verify behavior after changing the app code.
 
 Run the web app:
 

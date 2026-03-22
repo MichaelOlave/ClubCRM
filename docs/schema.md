@@ -1,5 +1,7 @@
 # Schema Overview
 
+This document describes the target data model. For the expected development workflow, use the repository devcontainer and follow [`docs/contributing.md`](/Users/michaelolave/Projects/active/ClubCRM/docs/contributing.md).
+
 ## Core Entity Model
 
 The application centers around one organization, many clubs, and shared member records.
