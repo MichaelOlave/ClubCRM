@@ -1,0 +1,17 @@
+services:
+  workspace:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    working_dir: /workspace
+    command: sleep infinity
+    volumes:
+      - ..:/workspace
+      - pnpm_store:/pnpm/store
+      - api_venv:/workspace/apps/api/.venv
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+
+volumes:
+  pnpm_store:
+  api_venv:
