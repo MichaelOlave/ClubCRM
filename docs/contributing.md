@@ -66,6 +66,21 @@ Run both:
 pnpm dev
 ```
 
+## Git Workflow
+
+Use Git with a simple rule: one logical change per branch, and one focused pull request for that branch.
+
+- Create a new branch for each feature, bug fix, non-trivial refactor, docs or workflow update, or cross-app API contract change.
+- Keep unrelated work off the same branch, even when the files live in the same app.
+- A change may span both `apps/web` and `apps/api` when it is still one coherent feature or contract update.
+- Treat setup, ports, service assumptions, repo structure, and health-check flow changes as higher-risk work. Isolate them in their own branch and update docs in the same pull request.
+
+Commits are checkpoints within the branch, while the pull request is the reviewable unit that should represent one mergeable story.
+
+- Prefer a few small, descriptive commits over one large mixed-purpose commit.
+- Separate refactors from behavior changes when practical.
+- Keep commit messages specific to the actual change.
+
 ## Formatting and Linting
 
 ClubCRM uses language-specific tools with a shared automation workflow:
@@ -147,6 +162,7 @@ pnpm verify
 Before opening a pull request:
 
 - make sure formatting and linting pass
+- run the narrowest relevant checks from the repository root for the area you changed
 - run `pnpm verify` for CI-equivalent checks when your change affects app behavior, shared tooling, or build output
 - verify the changed application still runs locally
 - keep the PR focused on one logical change
