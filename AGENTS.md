@@ -51,7 +51,7 @@ Run shared commands from the repository root unless there is a strong reason to 
 - `pnpm check:api` runs the backend validation step.
 - `pnpm lint` runs the shared lint pipeline.
 - `pnpm verify` runs the CI-facing verification pipeline.
-- `apps/api/.venv/bin/pre-commit run --all-files` runs all configured Git hooks manually.
+- `pnpm precommit:all` runs all configured Git hooks manually.
 
 Prefer root scripts for shared workflow, CI parity, and cross-app changes.
 

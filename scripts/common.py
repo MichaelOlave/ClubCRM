@@ -2,16 +2,19 @@ from __future__ import annotations
 
 import os
 import pathlib
+import shutil
 import subprocess
 import sys
-from typing import Iterable
-
+from collections.abc import Iterable
+from typing import NoReturn
 
 ROOT_DIR = pathlib.Path(__file__).resolve().parent.parent
 API_DIR = ROOT_DIR / "apps" / "api"
 VENV_DIR = API_DIR / ".venv"
 ENV_EXAMPLE_FILE = ROOT_DIR / ".env.example"
 ENV_FILE = pathlib.Path(os.environ.get("CLUBCRM_ENV_FILE", ROOT_DIR / ".env"))
+WINDOWS_BATCH_SUFFIXES = {".bat", ".cmd"}
+WINDOWS_VENV_EXTENSIONS = (".exe", ".cmd", ".bat")
 
 
 def load_env_file() -> None:
@@ -34,16 +37,87 @@ def ensure_env_file() -> None:
     ENV_FILE.write_text(ENV_EXAMPLE_FILE.read_text(encoding="utf-8"), encoding="utf-8")
 
 
+def venv_bin_dir() -> pathlib.Path:
+    return VENV_DIR / ("Scripts" if os.name == "nt" else "bin")
+
+
+def venv_executable(name: str) -> pathlib.Path:
+    scripts_dir = venv_bin_dir()
+
+    if pathlib.Path(name).suffix:
+        candidates = [scripts_dir / name]
+    else:
+        candidates = [scripts_dir / name]
+
+        if os.name == "nt":
+            candidates = [
+                scripts_dir / f"{name}{extension}"
+                for extension in WINDOWS_VENV_EXTENSIONS
+            ] + candidates
+
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+
+    return candidates[0]
+
+
+def require_api_venv_python() -> pathlib.Path:
+    venv_python = venv_executable("python")
+    if not venv_python.is_file():
+        fail("API virtualenv is missing. Run 'pnpm bootstrap' first.")
+
+    return venv_python
+
+
+def _prepare_command(command: Iterable[str]) -> list[str]:
+    prepared_command = list(command)
+    if not prepared_command:
+        raise ValueError("command must not be empty")
+
+    executable = prepared_command[0]
+    executable_path = pathlib.Path(executable)
+
+    if executable_path.parent != pathlib.Path("."):
+        resolved_executable = executable
+    else:
+        resolved_executable = shutil.which(executable) or executable
+
+    if os.name != "nt":
+        prepared_command[0] = resolved_executable
+        return prepared_command
+
+    executable_suffix = pathlib.Path(resolved_executable).suffix.lower()
+    if executable_suffix in WINDOWS_BATCH_SUFFIXES:
+        return ["cmd", "/c", resolved_executable, *prepared_command[1:]]
+
+    prepared_command[0] = resolved_executable
+    return prepared_command
+
+
 def run(command: Iterable[str], *, cwd: pathlib.Path | None = None) -> None:
-    subprocess.run(list(command), check=True, cwd=cwd or ROOT_DIR)
+    subprocess.run(_prepare_command(command), check=True, cwd=cwd or ROOT_DIR)
 
 
-def exec_command(command: list[str], *, cwd: pathlib.Path | None = None) -> None:
-    if cwd is not None:
-        os.chdir(cwd)
-    os.execvp(command[0], command)
+def exec_command(command: Iterable[str], *, cwd: pathlib.Path | None = None) -> NoReturn:
+    completed_process = subprocess.run(
+        _prepare_command(command),
+        check=False,
+        cwd=cwd or ROOT_DIR,
+    )
+    raise SystemExit(completed_process.returncode)
 
 
-def fail(message: str) -> "NoReturn":
+def exec_api_module(module: str, *args: str, cwd: pathlib.Path | None = None) -> NoReturn:
+    venv_python = require_api_venv_python()
+    exec_command([str(venv_python), "-m", module, *args], cwd=cwd)
+
+
+def run_api_module(module: str, *args: str, cwd: pathlib.Path | None = None) -> None:
+    venv_python = require_api_venv_python()
+    run([str(venv_python), "-m", module, *args], cwd=cwd)
+
+
+def fail(message: str) -> NoReturn:
     print(message, file=sys.stderr)
     raise SystemExit(1)

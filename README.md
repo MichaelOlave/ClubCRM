@@ -74,10 +74,12 @@ Bootstrap dependencies and install Git hooks again if needed:
 pnpm bootstrap
 ```
 
+The root `pnpm` scripts are the cross-platform contract. They resolve the right Python launcher and virtualenv paths for the current OS, so prefer them over calling `.venv/bin/...` or shell scripts directly.
+
 Run all configured Git hooks manually:
 
 ```bash
-apps/api/.venv/bin/pre-commit run --all-files
+pnpm precommit:all
 ```
 
 Run repository checks locally:

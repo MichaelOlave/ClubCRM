@@ -36,6 +36,8 @@ If you need to rerun setup manually from inside the devcontainer, use:
 pnpm bootstrap
 ```
 
+Prefer the root `pnpm` scripts over direct `.venv/bin/...` paths or shell wrappers. They resolve the correct Python launcher and virtualenv layout for the current OS.
+
 ## Development Workflow
 
 The commands below are expected to be run from inside the devcontainer workspace.
@@ -106,7 +108,7 @@ After setup, Git hooks should run automatically on commit through `pre-commit`.
 To run all hooks manually across the repository:
 
 ```bash
-apps/api/.venv/bin/pre-commit run --all-files
+pnpm precommit:all
 ```
 
 ### Manual Checks
