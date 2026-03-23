@@ -29,8 +29,9 @@ You can start editing the app by modifying [`apps/web/src/app/page.tsx`](/Users/
 ## Notes
 
 - The devcontainer runs with Docker Compose alongside the API and local data services.
-- The PNPM store is persisted in a Docker volume, and the API virtualenv is persisted in a separate Docker volume.
+- The PNPM store, workspace `node_modules`, web `node_modules`, web `.next`, and the API virtualenv are persisted in Docker volumes.
 - File watching is configured with polling for reliable live reload in containers.
+- The web service waits for the API health check before it starts.
 - If you need to restart or validate the web app manually, use the root scripts from the workspace terminal.
 
 ## Learn More

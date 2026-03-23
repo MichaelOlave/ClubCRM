@@ -18,12 +18,24 @@ services:
     volumes:
       - ..:/workspace
       - pnpm_store:/pnpm/store
+      - workspace_node_modules:/workspace/node_modules
+      - web_node_modules:/workspace/apps/web/node_modules
       - api_venv:/workspace/apps/api/.venv
     depends_on:
-      - postgres
-      - mongodb
-      - redis
-      - kafka
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:${API_PORT:-8000}/health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
 
   web:
     build:
@@ -43,10 +55,14 @@ services:
     volumes:
       - ..:/workspace
       - pnpm_store:/pnpm/store
+      - workspace_node_modules:/workspace/node_modules
+      - web_node_modules:/workspace/apps/web/node_modules
+      - web_next:/workspace/apps/web/.next
     environment:
       CHOKIDAR_USEPOLLING: "true"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
   postgres:
     image: postgres:17
@@ -58,18 +74,40 @@ services:
         required: false
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-clubcrm} -d ${POSTGRES_DB:-clubcrm}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
 
   mongodb:
     image: mongo:8
     restart: unless-stopped
     volumes:
       - mongodb_data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'mongosh --quiet --eval "db.adminCommand({ ping: 1 }).ok" mongodb://localhost:27017/admin | grep 1 >/dev/null',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
 
   redis:
     image: redis:7
     restart: unless-stopped
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
 
   kafka:
     image: confluentinc/cp-kafka:7.8.0
@@ -90,9 +128,19 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: ${KAFKA_AUTO_CREATE_TOPICS_ENABLE:-true}
     volumes:
       - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 20s
 
 volumes:
   pnpm_store:
+  workspace_node_modules:
+  web_node_modules:
+  web_next:
   api_venv:
   postgres_data:
   mongodb_data:

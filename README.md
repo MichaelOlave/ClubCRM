@@ -38,8 +38,12 @@ When the devcontainer starts, it:
 - generates `.devcontainer/docker-compose.ports.yml` with the first available host port for each required service
 - mounts the repository at `/workspace`
 - starts the `workspace`, `web`, `api`, `postgres`, `mongodb`, `redis`, and `kafka` services
-- runs `.devcontainer/post-create.sh`
+- runs the devcontainer `postCreateCommand` (`python3 ./scripts/bootstrap.py`)
 - bootstraps dependencies with `pnpm bootstrap`
+
+To keep local I/O fast on bind-mounted workspaces, the devcontainer persists the PNPM store, workspace
+`node_modules`, web `node_modules`, web `.next`, and the API virtualenv in Docker volumes. The `api`
+and `web` services also wait for their dependencies to report healthy before they start.
 
 Available services:
 

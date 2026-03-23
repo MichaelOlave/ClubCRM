@@ -24,7 +24,7 @@ This file applies to work inside `apps/web`.
 - Use the repository devcontainer workflow as the default development environment.
 - The repository is mounted at `/workspace` inside the devcontainer.
 - Work from `/workspace/apps/web` when running app-local commands.
-- Dependencies are installed during `.devcontainer/post-create.sh` via `pnpm bootstrap`.
+- Dependencies are installed during the devcontainer `postCreateCommand` (`python3 ./scripts/bootstrap.py`), which runs `pnpm bootstrap`.
 - Prefer the containerized workflow instead of setting up a separate host-machine Node environment.
 
 The default local stack includes:
