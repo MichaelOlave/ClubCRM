@@ -39,8 +39,6 @@ services:
       - /bin/sh
       - -lc
       - |
-        corepack enable
-        pnpm install --config.confirmModulesPurge=false
         exec python3 ./scripts/dev_web.py
     volumes:
       - ..:/workspace
