@@ -82,6 +82,10 @@ When the devcontainer opens, it starts:
 - `redis`
 - `kafka`
 
+The devcontainer persists the PNPM store, workspace `node_modules`, web `node_modules`, web `.next`,
+and the API virtualenv in Docker volumes so dependency-heavy paths stay off the bind-mounted workspace.
+The `api` and `web` services wait for their dependencies to pass health checks before they start.
+
 Forwarded local ports:
 
 - `3000` or the next available host port for the web app

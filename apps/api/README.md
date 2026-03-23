@@ -15,7 +15,10 @@ src/
 
 ## Run locally
 
-Use the repository devcontainer for local development. Before opening it, create `.env` from `.env.example` at the repository root. The devcontainer opens the repo at `/workspace`, runs `.devcontainer/post-create.sh`, and starts the API service on port `8000`.
+Use the repository devcontainer for local development. Before opening it, create `.env` from
+`.env.example` at the repository root. The devcontainer opens the repo at `/workspace`, runs its
+bootstrap `postCreateCommand` (`python3 ./scripts/bootstrap.py`), waits for the local backing services
+to report healthy, and starts the API service on port `8000`.
 
 The devcontainer Compose stack also starts these supporting services:
 

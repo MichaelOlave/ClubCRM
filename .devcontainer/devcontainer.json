@@ -31,11 +31,17 @@
   "customizations": {
     "vscode": {
       "settings": {
-        "python.defaultInterpreterPath": "/usr/bin/python3",
-        "terminal.integrated.defaultProfile.linux": "bash"
+        "python.defaultInterpreterPath": "/workspace/apps/api/.venv/bin/python",
+        "python.terminal.activateEnvironment": true,
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff"
+        }
       },
       "extensions": [
         "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
         "ms-azuretools.vscode-docker",
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode"
