@@ -29,11 +29,13 @@ If you do not create `.env`, the checked-in example values are used automaticall
 
 - `infra/docker-compose.yml`
 - `.devcontainer/docker-compose.devcontainer.yml`
+- `.devcontainer/docker-compose.ports.yml` generated during startup
 
 The repository enforces LF line endings for devcontainer and shell files so the same checkout works on macOS and Windows hosts. Devcontainer startup no longer depends on checked-out shell scripts, so you should not need any host-side normalization step just to open the environment.
 
 When the devcontainer starts, it:
 
+- generates `.devcontainer/docker-compose.ports.yml` with the first available host port for each required service
 - mounts the repository at `/workspace`
 - starts the `workspace`, `web`, `api`, `postgres`, `mongodb`, `redis`, and `kafka` services
 - runs `.devcontainer/post-create.sh`
@@ -51,12 +53,14 @@ Available services:
 
 Forwarded ports:
 
-- `3000` web
-- `8000` api
-- `5432` postgres
-- `27017` mongodb
-- `6379` redis
-- `9092` kafka
+- `3000` or the next available port for web
+- `8000` or the next available port for api
+- `5432` or the next available port for postgres
+- `27017` or the next available port for mongodb
+- `6379` or the next available port for redis
+- `9092` or the next available port for kafka
+
+If a default host port is already in use, the devcontainer remaps that service to the next free port such as `3001`. The resolved host-port bindings are written to `.devcontainer/docker-compose.ports.yml` during startup.
 
 The `web` and `api` development servers are already started by the devcontainer Compose stack. Use the root scripts below only when you intentionally restart a service from the workspace terminal, run checks manually, or debug outside the default process.
 

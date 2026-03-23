@@ -50,3 +50,6 @@ ENV/
 build/
 tmp/
 temp/
+
+# Devcontainer generated files
+.devcontainer/docker-compose.ports.yml

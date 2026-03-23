@@ -19,8 +19,6 @@ services:
       - ..:/workspace
       - pnpm_store:/pnpm/store
       - api_venv:/workspace/apps/api/.venv
-    ports:
-      - "8000:8000"
     depends_on:
       - postgres
       - mongodb
@@ -49,8 +47,6 @@ services:
       - pnpm_store:/pnpm/store
     environment:
       CHOKIDAR_USEPOLLING: "true"
-    ports:
-      - "3000:3000"
     depends_on:
       - api
 
@@ -62,24 +58,18 @@ services:
         required: true
       - path: ../.env
         required: false
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
   mongodb:
     image: mongo:8
     restart: unless-stopped
-    ports:
-      - "27017:27017"
     volumes:
       - mongodb_data:/data/db
 
   redis:
     image: redis:7
     restart: unless-stopped
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
 
@@ -100,8 +90,6 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: ${KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR:-1}
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: ${KAFKA_TRANSACTION_STATE_LOG_MIN_ISR:-1}
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: ${KAFKA_AUTO_CREATE_TOPICS_ENABLE:-true}
-    ports:
-      - "9092:9092"
     volumes:
       - kafka_data:/var/lib/kafka/data
 

@@ -1,6 +1,28 @@
 {
   "name": "ClubCRM",
-  "dockerComposeFile": ["../infra/docker-compose.yml", "docker-compose.devcontainer.yml"],
+  "dockerComposeFile": [
+    "../infra/docker-compose.yml",
+    "docker-compose.devcontainer.yml",
+    "docker-compose.ports.yml"
+  ],
+  "initializeCommand": [
+    "docker",
+    "run",
+    "--rm",
+    "-v",
+    "${localWorkspaceFolder}:/workspace",
+    "-v",
+    "/var/run/docker.sock:/var/run/docker.sock",
+    "-w",
+    "/workspace",
+    "-e",
+    "WORKSPACE_FOLDER=/workspace",
+    "-e",
+    "PORT_PROBE_IMAGE=node:22-alpine",
+    "node:22-alpine",
+    "node",
+    ".devcontainer/prepare-ports.mjs"
+  ],
   "service": "workspace",
   "runServices": ["workspace", "postgres", "mongodb", "redis", "kafka", "api", "web"],
   "workspaceFolder": "/workspace",

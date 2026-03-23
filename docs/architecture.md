@@ -60,6 +60,7 @@ The repository devcontainer uses Docker Compose with these files:
 
 - `infra/docker-compose.yml`
 - `.devcontainer/docker-compose.devcontainer.yml`
+- `.devcontainer/docker-compose.ports.yml` generated at startup
 
 The full local stack includes:
 
@@ -72,6 +73,7 @@ The full local stack includes:
 
 When the devcontainer opens, it starts:
 
+- generates `.devcontainer/docker-compose.ports.yml` with the first available host port for each required service
 - `workspace`
 - `web`
 - `api`
@@ -82,12 +84,14 @@ When the devcontainer opens, it starts:
 
 Forwarded local ports:
 
-- `3000` for the web app
-- `8000` for the API
-- `5432` for PostgreSQL
-- `27017` for MongoDB
-- `6379` for Redis
-- `9092` for Kafka
+- `3000` or the next available host port for the web app
+- `8000` or the next available host port for the API
+- `5432` or the next available host port for PostgreSQL
+- `27017` or the next available host port for MongoDB
+- `6379` or the next available host port for Redis
+- `9092` or the next available host port for Kafka
+
+When a default host port is occupied, the devcontainer remaps that service to the next free port and records the final bindings in `.devcontainer/docker-compose.ports.yml`.
 
 The `web` and `api` development servers already run inside the devcontainer Compose stack. Root scripts such as `pnpm dev:web`, `pnpm dev:api`, and `pnpm dev` are manual restart and debugging entrypoints, not the default first-run workflow.
 
