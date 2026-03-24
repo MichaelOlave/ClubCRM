@@ -164,9 +164,9 @@ Why it fits:
 Current local development setup:
 
 - the repository devcontainer is the standard development environment
-- the devcontainer uses Docker Compose under the hood with `infra/docker-compose.yml` and `.devcontainer/docker-compose.devcontainer.yml`
+- the devcontainer uses Docker Compose under the hood with `infra/docker-compose.yml`, `.devcontainer/docker-compose.devcontainer.yml`, and a generated `.devcontainer/docker-compose.ports.yml`
 - the devcontainer starts the `workspace` service plus PostgreSQL, MongoDB, Redis, Kafka, the API, and the web app
-- the local developer ports are `3000`, `8000`, `5432`, `27017`, `6379`, and `9092`
+- the default local developer ports are `3000`, `8000`, `5432`, `27017`, `6379`, and `9092`, with automatic remapping to the next free host port when needed
 
 ## Example Data Flow
 

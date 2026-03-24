@@ -73,7 +73,7 @@ From the repository root:
 - `pnpm lint:web` runs the web ESLint checks
 - `pnpm lint` runs the repo lint pipeline across both stacks
 - `pnpm lint:api` runs Ruff against the backend
-- `pnpm check:api` compiles the backend package for a quick sanity check
+- `pnpm check:api` bytecode-compiles `apps/api/src` for a quick sanity check
 - `pnpm verify` runs the repo verification pipeline
 
 From `apps/web`:
