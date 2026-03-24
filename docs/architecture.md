@@ -12,6 +12,13 @@ The goal is to keep the system:
 - realistic enough to demonstrate strong database design
 - small enough to finish well
 
+This project now supports two related course deliverables:
+
+- a primary database-project workstream centered on application design, data modeling, and multi-database responsibilities
+- a separate networking workstream centered on deployment, orchestration, cluster networking, and persistent storage
+
+The application architecture in this document remains the main source of truth for the core ClubCRM system. The networking workstream builds on top of that application rather than replacing it.
+
 ## Core Architecture Decision
 
 The project will be built as a modular monolith with clean architecture principles inside the backend.
@@ -22,6 +29,8 @@ This means:
 - one frontend application
 - Docker-managed supporting infrastructure
 - no microservice split for the MVP
+
+For the database-focused work, the application should remain a modular monolith even if the deployment target later uses Kubernetes. The networking course deliverable should demonstrate orchestration around this architecture, not split the app into separate business services.
 
 ## Why Not Microservices
 
@@ -34,7 +43,7 @@ Microservices would add extra cost for this scope:
 - more debugging overhead
 - more time spent on infrastructure than features
 
-For a database final project, a modular monolith keeps the architecture clear without adding unnecessary operational complexity.
+For the main database project, a modular monolith keeps the architecture clear without adding unnecessary operational complexity.
 
 ## High-Level System Shape
 
@@ -49,6 +58,30 @@ Next.js Frontend
         +--> Redis        (cache / short-lived data)
         +--> Kafka        (domain events / async workflows)
 ```
+
+## Workstream Boundary
+
+The project has two layers of responsibility:
+
+- core application architecture, owned by the main database-project plan
+- deployment and orchestration architecture, owned by the companion networking plan
+
+The core application layer includes:
+
+- frontend behavior
+- backend module structure
+- relational and document data responsibilities
+- cache and event-driven application behavior
+
+The companion networking layer includes:
+
+- `k3s` cluster deployment
+- `Longhorn` persistent storage
+- ingress and service routing
+- Kubernetes service communication
+- deployment reliability and recovery behavior
+
+See [docs/team-execution-plan.md](/Users/michaelolave/Projects/active/ClubCRM/docs/team-execution-plan.md) for the main four-person application plan and [docs/networking-team-execution-plan.md](/Users/michaelolave/Projects/active/ClubCRM/docs/networking-team-execution-plan.md) for the separate two-person networking workstream.
 
 ## Local Development Environment
 
@@ -99,6 +132,8 @@ When a default host port is occupied, the devcontainer remaps that service to th
 
 The `web` and `api` development servers already run inside the devcontainer Compose stack. Root scripts such as `pnpm dev:web`, `pnpm dev:api`, and `pnpm dev` are manual restart and debugging entrypoints, not the default first-run workflow.
 
+Docker Compose in the devcontainer remains the standard local development environment for the full team. If the networking workstream deploys the application to `k3s`, treat that as a companion deployment target for the networking deliverable, not as a replacement for the default development workflow.
+
 ## Repository Shape
 
 ```text
@@ -115,6 +150,8 @@ The `web` and `api` development servers already run inside the devcontainer Comp
   schema.md
   decisions.md
 ```
+
+The repository may also grow deployment artifacts for the networking workstream, such as Kubernetes manifests, Helm values, or environment-specific deployment documentation. Those artifacts should support the existing app architecture rather than redefine it.
 
 ## Current Backend Implementation
 
