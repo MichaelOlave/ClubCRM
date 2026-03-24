@@ -15,15 +15,45 @@ This is enough to clearly demonstrate all required databases without overbuildin
 
 ## Ownership Split for a Team of 4
 
-### Member 1: PostgreSQL and Core Backend
+Use a lead-and-support model for each workstream. One person is the lead developer responsible for driving decisions and keeping the section moving, but implementation and review should still be shared across the team.
 
-Own:
+### Michael: Project Lead and Frontend, Testing, Docs, Dev Environment, and Docker Lead
 
-- relational schema
-- SQLAlchemy models
-- Alembic migrations
-- clubs, members, memberships, events, announcements CRUD
-- seed data for structured entities
+Lead responsibilities:
+
+- coordinate the overall project timeline and integration points
+- lead the admin-facing UI, forms UI, dashboard, and CRUD screens
+- lead testing coordination across frontend and backend workflows
+- lead README, screenshots, demo script, and presentation support
+- lead the devcontainer, Docker Compose, and environment setup experience
+
+Primary support from the team:
+
+- Chuck supports API contract alignment and backend integration
+- Patrick supports forms UX and MongoDB-connected workflow integration
+- Lily supports Redis and Kafka integration touches that affect the dashboard, caching, and local environment
+
+Definition of done:
+
+- frontend clearly demonstrates all major flows
+- README explains architecture and setup
+- reviewer can open the repository in the devcontainer and use the forwarded ports immediately
+- live demo sequence is smooth and repeatable
+
+### Chuck: PostgreSQL and Core Backend Lead
+
+Lead responsibilities:
+
+- lead the relational schema design
+- lead SQLAlchemy models and Alembic migrations
+- lead clubs, members, memberships, events, and announcements CRUD
+- lead seed data for structured entities
+
+Primary support from the team:
+
+- Michael supports API-to-frontend coordination, testing, and docs
+- Patrick supports workflows that move approved MongoDB submissions into PostgreSQL records
+- Lily supports caching and event-driven concerns tied to core backend actions
 
 Definition of done:
 
@@ -31,14 +61,20 @@ Definition of done:
 - core API endpoints work
 - constraints and relationships are documented
 
-### Member 2: MongoDB and Form Workflows
+### Patrick: MongoDB and Form Workflows Lead
 
-Own:
+Lead responsibilities:
 
-- form document schema strategy
-- join request, RSVP, and feedback submission endpoints
-- MongoDB persistence adapter
-- approval flow that converts selected submissions into PostgreSQL records
+- lead the form document schema strategy
+- lead join request, RSVP, and feedback submission endpoints
+- lead the MongoDB persistence adapter
+- lead the approval flow that converts selected submissions into PostgreSQL records
+
+Primary support from the team:
+
+- Michael supports forms UI, end-to-end testing, and demo flow
+- Chuck supports the structured PostgreSQL follow-up records and backend contract design
+- Lily supports Redis or Kafka usage where form submissions trigger cached views or events
 
 Definition of done:
 
@@ -46,37 +82,26 @@ Definition of done:
 - at least one submission type is visible in UI
 - one structured follow-up workflow is implemented
 
-### Member 3: Docker, Redis, Kafka, and Dev Experience
+### Lily: Redis and Kafka Design Lead
 
-Own:
+Lead responsibilities:
 
-- Docker Compose
-- environment config
-- Redis caching adapters
-- Kafka producer and one consumer or observable event flow
-- health checks and startup reliability
+- lead the Redis caching design and adapters
+- lead the Kafka producer and one consumer or observable event flow
+- lead event and cache design decisions that support dashboard and workflow performance
+- help drive health checks and startup reliability for the distributed pieces of the local stack
+
+Primary support from the team:
+
+- Michael supports Docker, devcontainer, environment config, and dashboard integration
+- Chuck supports emitting events from core backend workflows
+- Patrick supports form-driven events and cached read models connected to submissions
 
 Definition of done:
 
-- reviewer can open the repository in the devcontainer and use the forwarded ports immediately
 - caches populate for dashboard reads
 - at least one event is published and demonstrated
-
-### Member 4: Next.js Frontend, Demo Flow, and Docs
-
-Own:
-
-- admin-facing UI
-- forms UI
-- dashboard and CRUD screens
-- README, screenshots, demo script, and presentation support
-- testing coordination
-
-Definition of done:
-
-- frontend clearly demonstrates all major flows
-- README explains architecture and setup
-- live demo sequence is smooth and repeatable
+- Redis and Kafka responsibilities are clearly integrated into the main app workflows
 
 ## Suggested Repo Shape
 

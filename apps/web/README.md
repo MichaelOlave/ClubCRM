@@ -4,7 +4,7 @@ This is the ClubCRM web client, built with [Next.js](https://nextjs.org).
 
 ## Getting Started
 
-Use the repository devcontainer for local development. Before opening it, create `.env` from `.env.example` at the repository root. The devcontainer mounts the repo at `/workspace`, installs dependencies with `pnpm`, and forwards the web app on port `3000`.
+Use the repository devcontainer for local development. Before opening it, create `.env` from `.env.example` at the repository root. The devcontainer mounts the repo at `/workspace`, installs dependencies with `pnpm`, and forwards the web app on port `3000` or the next available host port.
 
 The devcontainer Compose stack already starts the web app and the API. It also includes:
 
@@ -16,7 +16,7 @@ The devcontainer Compose stack already starts the web app and the API. It also i
 - `kafka` on `9092`
 
 1. Open the repository in the devcontainer.
-2. Visit [http://localhost:3000](http://localhost:3000).
+2. Open the forwarded web URL on host port `3000` or the next available port if `3000` is already taken. The resolved host-port bindings are written to `.devcontainer/docker-compose.ports.yml`.
 
 If you need to restart the web server from the workspace terminal, run:
 

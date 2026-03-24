@@ -18,7 +18,7 @@ src/
 Use the repository devcontainer for local development. Before opening it, create `.env` from
 `.env.example` at the repository root. The devcontainer opens the repo at `/workspace`, runs its
 bootstrap `postCreateCommand` (`python3 ./scripts/bootstrap.py`), waits for the local backing services
-to report healthy, and starts the API service on port `8000`.
+to report healthy, and starts the API service on container port `8000`.
 
 The devcontainer Compose stack also starts these supporting services:
 
@@ -33,7 +33,8 @@ If you need to restart the API from the workspace terminal, use the root script:
 pnpm dev:api
 ```
 
-The API is available at `http://127.0.0.1:8000` when the devcontainer is running.
+The API is forwarded to host port `8000` or the next available host port when the devcontainer is
+running. The resolved binding is written to `.devcontainer/docker-compose.ports.yml`.
 
 ## Endpoints
 

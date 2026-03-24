@@ -258,13 +258,13 @@ The scripts also hide implementation details such as:
 
 - Strong CI parity.
 - Easier onboarding because contributors can learn a few root commands.
-- Shell scripts provide one place to encode environment assumptions.
+- The helper scripts provide one place to encode environment assumptions.
 - Good separation between developer-facing commands and raw tool invocations.
 
 ### Cons
 
 - Some commands are slightly redundant.
-- `pnpm dev` uses shell backgrounding rather than a dedicated process manager, which is simple but less robust.
+- `pnpm dev` relies on a small custom Node launcher instead of an off-the-shelf process manager, which keeps the setup simple but still leaves some orchestration logic to maintain in-repo.
 - Repo-wide automation currently depends partly on the API virtualenv layout, especially for `pre-commit`.
 
 ### Net assessment

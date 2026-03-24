@@ -59,5 +59,5 @@
 ### ADR-010: Standard local development uses the repository devcontainer
 
 - Status: accepted
-- Decision: standard development happens in the repository devcontainer, which uses `infra/docker-compose.yml` together with `.devcontainer/docker-compose.devcontainer.yml` to bring up the workspace, app services, and supporting infrastructure.
+- Decision: standard development happens in the repository devcontainer, which uses `infra/docker-compose.yml`, `.devcontainer/docker-compose.devcontainer.yml`, and a generated `.devcontainer/docker-compose.ports.yml` to bring up the workspace, app services, and supporting infrastructure.
 - Rationale: the team needs one repeatable local setup for frontend, backend, and all supporting data services, and the devcontainer makes that workflow the default for every contributor.
