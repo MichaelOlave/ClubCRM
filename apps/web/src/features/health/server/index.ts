@@ -1,5 +1,5 @@
-import { apiFetch } from "@/lib/api";
-import { env } from "@/lib/env";
+import { apiFetch } from "@/lib/api/client";
+import { env } from "@/lib/env/server";
 import type { HealthCheckResult } from "@/features/health/types";
 
 const API_BASE_URLS = [env.apiBaseUrl, "http://api:8000", "http://localhost:8000"].filter(
