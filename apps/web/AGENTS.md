@@ -107,6 +107,81 @@ Current app behavior to keep in mind:
 
 Do not remove or change this behavior casually unless the task explicitly calls for it.
 
+## Frontend Structure
+
+The web app uses a **feature-first** layout under `src/`:
+
+```
+src/
+  app/              # Routes, layouts, loading/error files, metadata — composition only
+    (auth)/         # Route group; owns its own layout.tsx
+    (dashboard)/
+    (marketing)/
+  features/         # Default home for anything tied to one business capability
+    <feature>/
+      api/          # Feature request functions and response mapping
+      components/   # Feature-specific presentational components
+      hooks/        # Feature-local React hooks (optional)
+      model/        # View models, selectors, constants, business-facing UI shaping
+      server/       # Server-only loaders/actions for App Router server components
+      types/        # Feature-owned input/output/view types
+      index.ts      # Public surface — routes import only this, not deep internals
+  components/
+    ui/             # Generic, business-agnostic UI primitives (button, card, badge…)
+    layout/         # App shell, sidebar, header, page container wrappers
+  hooks/            # Cross-feature React hooks (useDebounce, useMediaQuery…)
+  lib/
+    api/            # Shared fetch base and request helpers (apiFetch)
+    env/            # Environment variable parsing and config access
+    utils/          # Pure utility helpers with no feature ownership
+  types/            # Truly app-wide types only; prefer feature-local types first
+  proxy.ts          # Auth redirects and route guards (Next.js 16+ convention — replaces middleware.ts)
+```
+
+### Placement rules
+
+- Code that mentions one business concept belongs in that feature folder.
+- Two features sharing the same visual primitive but not the same business meaning → `components/ui`.
+- Two features sharing the same business workflow → extract a shared feature submodule only after the second real use.
+- Something used by only one route → keep it inside that route segment or feature, not in global shared folders.
+- Do not create catch-all folders (`helpers`, `common`, `shared`) without a narrow subcategory.
+
+### Import direction (enforced by ESLint)
+
+```
+app → features → components → lib
+```
+
+- `lib/` and `components/` must **not** import from `features/` or `app/`.
+- Run `pnpm lint:web` to check. Violations are errors, not warnings.
+
+### proxy.ts (auth/redirects)
+
+In Next.js 16+, the route guard file is `src/proxy.ts` (not `middleware.ts` — that convention is deprecated). Do not create this file with an empty stub; it requires a real function export. Add it only when auth redirect logic exists.
+
+### Hooks placement
+
+- Cross-feature hooks → `src/hooks/`
+- Feature-local hooks → `features/<feature>/hooks/`
+
+### Test placement
+
+Tests are **co-located**, not in a top-level `__tests__` folder:
+
+- `features/<feature>/**/__tests__/*.test.tsx`
+- `app/**/__tests__/*.test.tsx`
+
+### Adding a new feature
+
+1. Create `src/features/<feature>/` with the sub-folders you need.
+2. Add a route in `src/app/.../page.tsx` that imports only from `@/features/<feature>`.
+3. Touch `src/components/ui` or `src/components/layout` only for genuinely generic UI.
+4. Run `pnpm lint:web` and `pnpm build:web` before finishing.
+
+### Note on `features/health`
+
+The health feature is a structural scaffold, not a business feature. It demonstrates the folder layout but will not grow into sub-pages or stateful workflows. Do not model domain features directly on it — treat it as a reference for the folder shape only.
+
 ## Quality Bar
 
 Before finishing substantial web changes, run the most relevant checks:

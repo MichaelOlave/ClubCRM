@@ -13,6 +13,24 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // Import direction: lib/ and components/ must not import from features/ or app/.
+  // Enforces: app → features → components → lib
+  {
+    files: ["src/lib/**", "src/components/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/features/**", "**/app/**"],
+              message: "lib/ and components/ must not import from features/ or app/.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;
