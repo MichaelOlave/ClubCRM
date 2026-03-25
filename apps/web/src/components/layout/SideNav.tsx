@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { useActivePath } from "@/hooks/useActivePath";
@@ -19,11 +20,23 @@ export function SideNav({ items }: Props) {
         <div className="space-y-4">
           <div className="space-y-2">
             <Badge variant="warning">Admin MVP</Badge>
-            <div>
-              <p className="text-sm font-medium uppercase tracking-[0.24em] text-amber-700">
-                ClubCRM
-              </p>
-              <h1 className="mt-2 text-2xl font-semibold text-zinc-950">Workspace</h1>
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[1.25rem] border border-amber-200 bg-amber-50 shadow-sm">
+                <Image
+                  alt="ClubCRM logo"
+                  className="h-10 w-10 scale-110 rounded-lg"
+                  height={40}
+                  priority
+                  src="/favicon.ico"
+                  width={40}
+                />
+              </div>
+              <div>
+                <p className="text-sm font-medium uppercase tracking-[0.24em] text-amber-700">
+                  ClubCRM
+                </p>
+                <h1 className="mt-2 text-2xl font-semibold text-zinc-950">Workspace</h1>
+              </div>
             </div>
             <p className="text-sm leading-6 text-zinc-600">
               Lightweight route groups, feature folders, and reusable primitives for the first admin
