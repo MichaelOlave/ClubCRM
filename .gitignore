@@ -43,8 +43,8 @@ __pycache__/
 htmlcov/
 .venv/
 venv/
-env/
-ENV/
+# env/
+# ENV/
 
 # Misc build artifacts
 build/
