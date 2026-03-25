@@ -3,9 +3,10 @@ import Link from "next/link";
 type Props = {
   status: string;
   endpoint: string;
+  refreshHref?: string;
 };
 
-export function HealthMetaCard({ status, endpoint }: Props) {
+export function HealthMetaCard({ status, endpoint, refreshHref = "/system/health" }: Props) {
   return (
     <div className="flex flex-col justify-between rounded-[1.5rem] border border-amber-200 bg-amber-50 p-6 sm:p-8">
       <div className="space-y-5">
@@ -24,7 +25,7 @@ export function HealthMetaCard({ status, endpoint }: Props) {
 
       <Link
         className="mt-8 inline-flex h-11 items-center justify-center rounded-full bg-zinc-950 px-5 text-sm font-medium text-white transition hover:bg-zinc-800"
-        href="/"
+        href={refreshHref}
       >
         Refresh status
       </Link>
