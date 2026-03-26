@@ -1,11 +1,3 @@
-http://{$SERVER_IP} {
-	import clubcrm_routes
-}
-
-{$DOMAIN}, www.{$DOMAIN} {
-	import clubcrm_routes
-}
-
 (clubcrm_routes) {
 	@api path /api/*
 	handle @api {
@@ -16,4 +8,12 @@ http://{$SERVER_IP} {
 	handle {
 		reverse_proxy web:3000
 	}
+}
+
+http://{$SERVER_IP} {
+	import clubcrm_routes
+}
+
+{$DOMAIN}, www.{$DOMAIN} {
+	import clubcrm_routes
 }
