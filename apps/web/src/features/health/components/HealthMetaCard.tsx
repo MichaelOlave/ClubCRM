@@ -24,7 +24,7 @@ export function HealthMetaCard({ status, endpoint, refreshHref = "/system/health
       </div>
 
       <Link
-        className="mt-8 inline-flex h-11 items-center justify-center rounded-full bg-zinc-950 px-5 text-sm font-medium text-white transition hover:bg-zinc-800"
+        className="mt-8 inline-flex h-11 items-center justify-center rounded-full bg-amber-300 px-5 text-sm font-medium transition hover:bg-amber-600"
         href={refreshHref}
       >
         Refresh status
