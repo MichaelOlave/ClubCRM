@@ -1,0 +1,19 @@
+(clubcrm_routes) {
+	@api path /api/*
+	handle @api {
+		uri strip_prefix /api
+		reverse_proxy api:8000
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}
+
+http://{$SERVER_IP} {
+	import clubcrm_routes
+}
+
+{$DOMAIN}, www.{$DOMAIN} {
+	import clubcrm_routes
+}
