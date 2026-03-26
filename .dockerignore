@@ -1,2 +1,12 @@
 *
+!.dockerignore
 !.devcontainer/
+!.devcontainer/**
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!tsconfig.base.json
+!apps/api/
+!apps/api/**
+!apps/web/
+!apps/web/**

@@ -123,6 +123,7 @@ Before opening a pull request, run the narrowest relevant checks from the reposi
 
 - `docs/contributing.md` for contribution workflow and code standards
 - `docs/architecture.md` for system structure and local environment rules
+- `docs/oracle-docker-deploy.md` for the current Oracle VM deployment path
 - `docs/schema.md` for data modeling notes
 - `docs/decisions.md` for architecture decisions
 - `docs/team-execution-plan.md` for scope and ownership guidance

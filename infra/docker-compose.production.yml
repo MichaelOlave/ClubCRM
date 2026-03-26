@@ -1,0 +1,60 @@
+services:
+  api:
+    image: ${API_IMAGE:-clubcrm-api:deploy}
+    restart: unless-stopped
+    env_file:
+      - ../.env.example
+      - ../.env.production
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  web:
+    image: ${WEB_IMAGE:-clubcrm-web:deploy}
+    restart: unless-stopped
+    env_file:
+      - ../.env.production
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/system/health').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    env_file:
+      - ../.env.production
+    depends_on:
+      web:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
