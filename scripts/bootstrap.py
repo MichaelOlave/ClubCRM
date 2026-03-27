@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import os
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -169,10 +170,22 @@ def install_pre_commit_hook(venv_python: Path, requirements_dev: Path) -> None:
         run([str(venv_python), "-m", "pre_commit", "install"])
 
 
+def require_uv() -> str:
+    uv = shutil.which("uv")
+    if uv is None:
+        fail(
+            "uv is required to bootstrap API Python dependencies. "
+            "Rebuild the devcontainer or install uv, then rerun 'pnpm bootstrap'."
+        )
+
+    return uv
+
+
 def main() -> None:
     os.chdir(ROOT_DIR)
     ensure_env_file()
 
+    uv = require_uv()
     requirements = API_DIR / "requirements.txt"
     requirements_dev = API_DIR / "requirements-dev.txt"
     venv_python = venv_executable("python")
@@ -191,11 +204,11 @@ def main() -> None:
             run([sys.executable, "-m", "venv", str(venv_python.parent.parent)])
             run(
                 [
-                    str(venv_python),
-                    "-m",
+                    uv,
                     "pip",
                     "install",
-                    "--no-cache-dir",
+                    "--python",
+                    str(venv_python),
                     "-r",
                     str(requirements),
                 ]
@@ -204,11 +217,11 @@ def main() -> None:
             if requirements_dev.is_file():
                 run(
                     [
-                        str(venv_python),
-                        "-m",
+                        uv,
                         "pip",
                         "install",
-                        "--no-cache-dir",
+                        "--python",
+                        str(venv_python),
                         "-r",
                         str(requirements_dev),
                     ]

@@ -25,7 +25,7 @@ The devcontainer already automates the initial setup for contributors:
 - it generates `.devcontainer/docker-compose.ports.yml` with the first available host ports for the local stack
 - it runs the devcontainer `postCreateCommand` (`python3 ./scripts/bootstrap.py`)
 - that command runs `pnpm bootstrap`
-- `pnpm bootstrap` installs Node and Python dependencies and installs `pre-commit` hooks when available
+- `pnpm bootstrap` installs Node dependencies, installs API Python dependencies with `uv`, and installs `pre-commit` hooks when available
 - Docker Compose also starts the supporting local services and app containers defined by the repo
 
 The devcontainer persists the PNPM store, workspace `node_modules`, web `node_modules`, web `.next`,
