@@ -41,6 +41,7 @@ When the devcontainer starts, it:
 - starts the `workspace`, `web`, `api`, `postgres`, `mongodb`, `redis`, and `kafka` services
 - runs the devcontainer `postCreateCommand` (`python3 ./scripts/bootstrap.py`)
 - bootstraps dependencies with `pnpm bootstrap`, which installs API Python packages with `uv`
+- exposes localhost TCP proxies inside the attached `workspace` container so editor-driven forwarding from `127.0.0.1` reaches the sibling `web`, `api`, and data services
 
 To keep local I/O fast on bind-mounted workspaces, the devcontainer persists the PNPM store, workspace
 `node_modules`, web `node_modules`, web `.next`, and the API virtualenv in Docker volumes. The `api`
@@ -105,6 +106,8 @@ pnpm dev
 ```
 
 These commands are for manual restart or debugging from the devcontainer terminal. They are not required for the normal first-run workflow because the devcontainer already starts the app services.
+
+In the current devcontainer workflow, the web development server uses `next dev --webpack` to avoid a Tailwind/Turbopack workspace resolution issue during local startup. Production builds still use `next build`.
 
 ## Git Workflow
 
