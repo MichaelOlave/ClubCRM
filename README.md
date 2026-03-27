@@ -127,6 +127,11 @@ Before opening a pull request, run the narrowest relevant checks from the reposi
 
 - `docs/contributing.md` for contribution workflow and code standards
 - `docs/architecture.md` for system structure and local environment rules
+- `docs/module-implementation-flow.md` for step-by-step guidance on growing a module or feature slice
+- `docs/postgresql-implementation-flow.md` for relational system-of-record implementation guidance
+- `docs/mongodb-implementation-flow.md` for document-store implementation guidance
+- `docs/redis-implementation-flow.md` for caching and short-lived data implementation guidance
+- `docs/kafka-implementation-flow.md` for async event publication implementation guidance
 - `docs/oracle-docker-deploy.md` for the current Oracle VM deployment path
 - `docs/schema.md` for data modeling notes
 - `docs/decisions.md` for architecture decisions
