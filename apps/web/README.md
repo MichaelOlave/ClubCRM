@@ -2,6 +2,12 @@
 
 This is the ClubCRM web client, built with [Next.js](https://nextjs.org).
 
+The current frontend is a UI-first MVP with:
+
+- admin routes for the dashboard, clubs, members, and diagnostics
+- public routes for login and club join-form previews
+- feature-owned server modules that provide view models while the backend contract is still minimal
+
 ## Getting Started
 
 Use the repository devcontainer for local development. Before opening it, create `.env` from `.env.example` at the repository root. The devcontainer mounts the repo at `/workspace`, installs dependencies with `pnpm`, and forwards the web app on port `3000` or the next available host port.
@@ -24,7 +30,12 @@ If you need to restart the web server from the workspace terminal, run:
 pnpm dev:web
 ```
 
-You can start editing the app by modifying [`apps/web/src/app/page.tsx`](/Users/michaelolave/Projects/active/ClubCRM/apps/web/src/app/page.tsx). The page auto-updates as you edit files.
+The homepage currently redirects to `/dashboard`, so the most useful entry points to edit are usually:
+
+- [`src/app/page.tsx`](src/app/page.tsx) for the root redirect
+- [`src/app/(app)/dashboard/page.tsx`](src/app/%28app%29/dashboard/page.tsx) for the admin landing page
+- [`src/app/(app)/system/health/page.tsx`](src/app/%28app%29/system/health/page.tsx) for the API diagnostics surface
+- [`src/app/(public)/login/page.tsx`](src/app/%28public%29/login/page.tsx) or [`src/app/(public)/join/[clubId]/page.tsx`](src/app/%28public%29/join/%5BclubId%5D/page.tsx) for public entry points
 
 ## Notes
 
@@ -32,6 +43,7 @@ You can start editing the app by modifying [`apps/web/src/app/page.tsx`](/Users/
 - The PNPM store, workspace `node_modules`, web `node_modules`, web `.next`, and the API virtualenv are persisted in Docker volumes.
 - File watching is configured with polling for reliable live reload in containers.
 - The web service waits for the API health check before it starts.
+- Most frontend data is currently provided by server-side view-model modules under `src/features/*/server`; only `/system/health` currently calls the FastAPI backend.
 - If you need to restart or validate the web app manually, use the root scripts from the workspace terminal.
 
 ## Learn More

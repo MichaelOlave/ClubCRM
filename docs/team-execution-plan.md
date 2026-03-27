@@ -13,7 +13,7 @@ Use the existing ClubCRM concept and keep the MVP narrow:
 
 This is enough to clearly demonstrate all required databases without overbuilding.
 
-This document is the main four-person team plan for the database-class project scope. The separate two-person networking and deployment workstream is documented in [docs/networking-team-execution-plan.md](/Users/michaelolave/Projects/active/ClubCRM/docs/networking-team-execution-plan.md).
+This document is the main four-person team plan for the database-class project scope. The separate two-person networking and deployment workstream is documented in [networking-team-execution-plan.md](networking-team-execution-plan.md).
 
 ## Ownership Split for a Team of 4
 
@@ -107,7 +107,7 @@ Definition of done:
 
 Note:
 
-- `k3s`, `Longhorn`, Kubernetes ingress, and deployment orchestration for the networking course are tracked separately in [docs/networking-team-execution-plan.md](/Users/michaelolave/Projects/active/ClubCRM/docs/networking-team-execution-plan.md)
+- `k3s`, `Longhorn`, Kubernetes ingress, and deployment orchestration for the networking course are tracked separately in [networking-team-execution-plan.md](networking-team-execution-plan.md)
 
 ## Suggested Repo Shape
 

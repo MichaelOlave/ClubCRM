@@ -1,6 +1,6 @@
 # Schema Overview
 
-This document describes the target data model. For the expected development workflow, use the repository devcontainer and follow [`docs/contributing.md`](/Users/michaelolave/Projects/active/ClubCRM/docs/contributing.md).
+This document describes the target data model. For the expected development workflow, use the repository devcontainer and follow the [contributing guide](contributing.md).
 
 ## Core Entity Model
 

@@ -44,7 +44,7 @@ The devcontainer Compose stack already starts `web` and `api`, so root scripts s
 - The backend lives in `apps/api` and is a FastAPI service.
 - The repo is a `pnpm` workspace with apps under `apps/*`.
 - Root scripts are the source of truth for shared checks and common workflows across both stacks.
-- The web package currently uses the App Router under `src/app`.
+- The web package currently uses the App Router under `src/app` with `(app)` and `(public)` route groups.
 
 Important files:
 
@@ -100,10 +100,14 @@ Treat the root scripts as the CI-facing contract unless there is a strong reason
 
 Current app behavior to keep in mind:
 
-- `src/app/page.tsx` is currently a server-rendered health-check page.
-- It probes the API using `API_BASE_URL`, then `http://api:8000`, then `http://localhost:8000`.
+- `src/app/page.tsx` currently redirects `/` to `/dashboard`.
+- Admin routes live under `src/app/(app)`, and public entry points live under `src/app/(public)`.
+- The current admin MVP includes dashboard, clubs, members, and `/system/health`; public routes currently cover `/login` and `/join/[clubId]`.
+- Most feature data currently comes from server-side view-model modules in `src/features/*/server`, so the frontend is ahead of the backend contract.
+- `src/app/(app)/system/health/page.tsx` preserves the API diagnostics flow.
+- The diagnostics flow probes the API using `API_BASE_URL`, then `http://api:8000`, then `http://localhost:8000`.
 - The expected backend response comes from `apps/api/src/presentation/http/routes/health.py` and returns `{"status": "ok"}`.
-- The page exports `dynamic = "force-dynamic"` and uses `fetch(..., { cache: "no-store" })`.
+- The diagnostics page exports `dynamic = "force-dynamic"` and uses `fetch(..., { cache: "no-store" })`.
 
 Do not remove or change this behavior casually unless the task explicitly calls for it.
 
@@ -113,29 +117,38 @@ The web app uses a **feature-first** layout under `src/`:
 
 ```
 src/
-  app/              # Routes, layouts, loading/error files, metadata — composition only
-    (auth)/         # Route group; owns its own layout.tsx
-    (dashboard)/
-    (marketing)/
-  features/         # Default home for anything tied to one business capability
+  app/                    # Routes, layouts, and metadata — composition only
+    (app)/                # Admin shell route group
+      dashboard/
+      clubs/
+      members/
+      system/health/
+    (public)/             # Public entry points
+      login/
+      join/[clubId]/
+  features/               # Default home for business-facing feature code
+    auth/
+    clubs/
+    dashboard/
+    forms/join-request/
+    health/
+    members/
+    memberships/
     <feature>/
-      api/          # Feature request functions and response mapping
-      components/   # Feature-specific presentational components
-      hooks/        # Feature-local React hooks (optional)
-      model/        # View models, selectors, constants, business-facing UI shaping
-      server/       # Server-only loaders/actions for App Router server components
-      types/        # Feature-owned input/output/view types
-      index.ts      # Public surface — routes import only this, not deep internals
+      components/         # Feature-specific presentational components
+      server/             # Server-only loaders/actions for App Router server components
+      types/              # Feature-owned input/output/view types
+      index.ts            # Public surface — routes import only this, not deep internals
   components/
-    ui/             # Generic, business-agnostic UI primitives (button, card, badge…)
-    layout/         # App shell, sidebar, header, page container wrappers
-  hooks/            # Cross-feature React hooks (useDebounce, useMediaQuery…)
+    ui/                   # Generic, business-agnostic UI primitives
+    layout/               # App shell, sidebar, header, page container wrappers
+  hooks/                  # Cross-feature React hooks
   lib/
-    api/            # Shared fetch base and request helpers (apiFetch)
-    env/            # Environment variable parsing and config access
-    utils/          # Pure utility helpers with no feature ownership
-  types/            # Truly app-wide types only; prefer feature-local types first
-  proxy.ts          # Auth redirects and route guards (Next.js 16+ convention — replaces middleware.ts)
+    api/                  # Shared fetch base and request helpers
+    env/                  # Environment variable parsing and config access
+    utils/                # Pure utility helpers with no feature ownership
+  types/                  # Truly app-wide types only; prefer feature-local types first
+  proxy.ts                # Future auth redirects and route guards if the app needs them
 ```
 
 ### Placement rules
@@ -180,7 +193,7 @@ Tests are **co-located**, not in a top-level `__tests__` folder:
 
 ### Note on `features/health`
 
-The health feature is a structural scaffold, not a business feature. It demonstrates the folder layout but will not grow into sub-pages or stateful workflows. Do not model domain features directly on it — treat it as a reference for the folder shape only.
+The health feature is both a useful reference and a real diagnostics slice. It demonstrates the folder layout while preserving the current API connectivity check on `/system/health`. Do not model domain features directly on it, but it is a real runtime path rather than a dead scaffold.
 
 ## Quality Bar
 

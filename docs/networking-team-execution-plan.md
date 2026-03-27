@@ -4,7 +4,7 @@
 
 This document covers only the two-person network programming workstream for ClubCRM.
 
-It is a companion to the main four-person database team plan in [docs/team-execution-plan.md](/Users/michaelolave/Projects/active/ClubCRM/docs/team-execution-plan.md), not a replacement for it.
+It is a companion to the main four-person database team plan in [team-execution-plan.md](team-execution-plan.md), not a replacement for it.
 
 ## Networking Workstream Goal
 

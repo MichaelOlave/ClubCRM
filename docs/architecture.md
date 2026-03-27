@@ -81,7 +81,7 @@ The companion networking layer includes:
 - Kubernetes service communication
 - deployment reliability and recovery behavior
 
-See [docs/team-execution-plan.md](/Users/michaelolave/Projects/active/ClubCRM/docs/team-execution-plan.md) for the main four-person application plan and [docs/networking-team-execution-plan.md](/Users/michaelolave/Projects/active/ClubCRM/docs/networking-team-execution-plan.md) for the separate two-person networking workstream.
+See [team-execution-plan.md](team-execution-plan.md) for the main four-person application plan and [networking-team-execution-plan.md](networking-team-execution-plan.md) for the separate two-person networking workstream.
 
 ## Local Development Environment
 
@@ -152,6 +152,39 @@ Docker Compose in the devcontainer remains the standard local development enviro
 ```
 
 The repository may also grow deployment artifacts for the networking workstream, such as Kubernetes manifests, Helm values, or environment-specific deployment documentation. Those artifacts should support the existing app architecture rather than redefine it.
+
+## Current Frontend Implementation
+
+Today the frontend is ahead of the backend contract. The implemented web app uses App Router route groups for an admin shell and public entry points:
+
+```text
+/apps/web/src
+  /app
+    page.tsx                 # redirects / to /dashboard
+    /(app)
+      layout.tsx
+      /dashboard
+      /clubs
+      /members
+      /system
+        /health
+    /(public)
+      layout.tsx
+      /login
+      /join
+        /[clubId]
+  /features
+    /auth
+    /clubs
+    /dashboard
+    /forms
+      /join-request
+    /health
+    /members
+    /memberships
+```
+
+Most current web data is provided by server-side view-model modules under `apps/web/src/features/*/server`. The real cross-app integration remains the diagnostics flow on `/system/health`, which calls the backend `GET /health` endpoint using the health feature.
 
 ## Current Backend Implementation
 

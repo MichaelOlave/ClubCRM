@@ -28,7 +28,7 @@ The strongest quality of the current structure is intentionality. The team has m
 - a single standard development environment
 - explicit documentation of database responsibilities
 
-The main downside is that the operational and architectural surface area is currently much larger than the implemented feature surface area. Right now the code mostly delivers a health-check loop between the web app and the API, while the surrounding platform is already set up for a much larger system.
+The main downside is that the operational and architectural surface area is currently much larger than the implemented backend feature surface area. The frontend already ships a small but coherent admin and public MVP, but only the diagnostics route currently talks to the API while the surrounding platform is already set up for a much larger system.
 
 That is not necessarily wrong. For an early-stage team project, especially one meant to demonstrate several databases and architectural thinking, it can be a smart choice. But it creates an important tradeoff: the project must keep turning that platform complexity into real features, or else the structure will start to feel heavier than the product.
 
@@ -62,16 +62,20 @@ This is a fairly standard modern monorepo shape, with clear separation between:
 
 ### Current Runtime Behavior
 
-Although the project is architected for much more, the implemented runtime behavior is still minimal:
+Although the project is architected for much more, the implemented runtime behavior is still intentionally uneven:
 
-- the frontend renders a health-check page
-- the backend exposes `GET /health`
-- the frontend attempts to reach the backend using configured fallback base URLs
+- `/` redirects to `/dashboard`
+- the frontend renders admin pages for dashboard, clubs, members, and diagnostics
+- the frontend renders public pages for login and club join-form previews
+- most frontend data currently comes from feature-owned server view-model modules
+- the backend exposes only `GET /health`
+- `/system/health` attempts to reach the backend using configured fallback base URLs
 
 So the repo is currently best understood as:
 
 - a strong platform scaffold
-- a small but working vertical slice
+- a UI-first frontend MVP
+- one small but real cross-app vertical slice
 
 That framing matters, because many of the pros and cons below come from the difference between current implementation and intended future state.
 
@@ -129,7 +133,7 @@ The documented architecture explicitly chooses a modular monolith for the MVP. T
 
 This is one of the strongest decisions in the repo.
 
-The current project is still early-stage and currently implements only a health-check slice. Splitting into services now would create operational complexity that the product does not need:
+The current project is still early-stage. The frontend already has a route-grouped MVP, but the backend still exposes only a health slice. Splitting into services now would create operational complexity that the product does not need:
 
 - more deployment boundaries
 - more communication patterns
@@ -322,7 +326,7 @@ The web app uses:
 - App Router
 - Tailwind CSS v4
 
-The current app surface is intentionally small and mostly centered around a single health-check page.
+The current app surface is intentionally small, but it is no longer centered on a single page. The web app now has route-grouped admin and public flows backed by feature-owned view models, with diagnostics kept on a dedicated system-health route.
 
 ### Why this decision makes sense
 
@@ -339,24 +343,24 @@ The App Router is also the right default for a new Next.js project rather than s
 
 - Modern and well-supported frontend stack.
 - Good fit for dashboard, CRUD, and admin UI work.
-- Server-rendered pages make the current health-check flow simple.
-- Very low complexity in the current source layout.
+- Server-rendered pages make the current UI-first MVP and diagnostics flow straightforward.
+- The feature-first layout already gives the team a reasonable growth path.
 
 ### Cons
 
-- The frontend is still close to scaffold level in structure.
+- Most frontend data is still local to the web app, so the backend contract lags behind the UI surface.
 - `next.config.ts` is effectively empty, so the project has little encoded frontend policy yet.
 - The app is using very new framework versions, which is fine, but it increases the need to stay aligned with current framework documentation.
 
 ### Net assessment
 
-This is a strong default choice. The bigger question is not the framework. It is whether the team will add structure gradually and intentionally before the app grows beyond a single route.
+This is a strong default choice. The bigger question is not the framework. It is whether the team will keep the current feature-first shape aligned with a real backend contract as more routes graduate from UI-first prototypes into end-to-end features.
 
-## Decision 8: Use a Server-Rendered Health-Check Page as the Current Web Entry Point
+## Decision 8: Move the Health Check into a Dedicated Diagnostics Route
 
 ### What the decision is
 
-The homepage:
+The health check now lives on `/system/health`, while the homepage redirects to `/dashboard`. The diagnostics route:
 
 - runs on the server
 - exports `dynamic = "force-dynamic"`
@@ -365,7 +369,7 @@ The homepage:
 
 ### Why this decision makes sense
 
-For the current state of the system, this is clever and practical. It proves that:
+For the current state of the system, this is clever and practical. It preserves the original connectivity check while freeing the homepage to become product-facing UI. It proves that:
 
 - the web runtime is alive
 - the API runtime is alive
@@ -376,6 +380,7 @@ This is more useful than a purely client-side test because it validates server-t
 ### Pros
 
 - Excellent early-stage integration check.
+- Keeps infrastructure-specific behavior out of the main product entry point.
 - Avoids CORS complexity.
 - Surfaces real connectivity issues between containers and local host fallbacks.
 - Gives the team a visible status page from day one.
@@ -385,43 +390,51 @@ This is more useful than a purely client-side test because it validates server-t
 - The page is tightly coupled to current infrastructure assumptions such as `api:8000`.
 - `force-dynamic` and `no-store` are correct for a health page but would be a poor default for normal product pages.
 - The fallback behavior only continues on network failure, not on a non-OK HTTP response.
-- As soon as the homepage becomes real product UI, this logic will feel misplaced.
+- The route is still the only live frontend-to-backend integration path, so the product shell is ahead of the API contract.
 
 ### Net assessment
 
-This is a very good decision for the current stage. The only caveat is that it should eventually move into a dedicated diagnostics surface once the homepage becomes application-facing.
+This is a very good decision for the current stage. The move into a dedicated diagnostics surface already happened, and it was the right call. The next challenge is not placement anymore; it is growing more real backend-backed routes around it.
 
-## Decision 9: Keep the Frontend Source Tree Extremely Small
+## Decision 9: Use Route Groups and Feature Folders to Grow Beyond the Initial Scaffold
 
 ### What the decision is
 
-The meaningful frontend source currently lives almost entirely in:
+The meaningful frontend source now spans route groups, shared primitives, and feature folders such as:
 
 - `src/app/layout.tsx`
 - `src/app/page.tsx`
-- `src/app/globals.css`
+- `src/app/(app)/dashboard/page.tsx`
+- `src/app/(app)/clubs/...`
+- `src/app/(app)/members/...`
+- `src/app/(app)/system/health/page.tsx`
+- `src/app/(public)/login/page.tsx`
+- `src/app/(public)/join/[clubId]/page.tsx`
+- `src/components/layout/*`
+- `src/components/ui/*`
+- `src/features/*`
 
-There is no deeper component, feature, or data-access structure yet.
+The app already uses a lightweight feature-first pattern with feature-owned `server`, `components`, and `types` modules.
 
 ### Why this decision makes sense
 
-At the current size of the app, adding more folders would mostly be ceremony. A tiny source tree keeps the project easy to read and easy to reshape.
+At the current size of the app, this is a good middle ground. The team moved past a single-file scaffold without jumping all the way to a heavy design system or client-state architecture.
 
 ### Pros
 
-- Very low cognitive overhead.
-- Easy to navigate.
-- Easy to refactor before more features land.
+- Clear separation between admin and public route groups.
+- Shared layout and UI primitives already exist for reuse.
+- Feature folders communicate where future business logic should live.
 
 ### Cons
 
-- The structure does not yet communicate how future features should be organized.
-- Adding more pages without introducing conventions could create messy growth.
-- There is no shared UI or feature layer yet, so reuse patterns are not established.
+- The current pattern is still UI-first and does not yet prove long-term boundaries against real API integrations.
+- Some feature folders currently serve mock or view-model data rather than backend-backed behavior.
+- Without discipline, the shared UI layer and feature `server` modules could become a dumping ground as more slices land.
 
 ### Net assessment
 
-This is appropriate for now. It becomes a liability only if the team starts adding real features without first introducing a lightweight organizational pattern.
+This is a healthy next step beyond the initial scaffold. It becomes a liability only if the backend and domain contracts fail to catch up to the structure the frontend now advertises.
 
 ## Decision 10: Use Tailwind and Font Variables for the Frontend Styling Baseline
 
@@ -712,12 +725,11 @@ This is a healthy quality setup. It is slightly heavier than necessary today, bu
 - The modular monolith choice is appropriate.
 - The development environment is standardized.
 - Documentation is unusually strong for an early-stage project.
-- The health-check slice is small but useful because it validates real cross-app connectivity.
+- The diagnostics slice is still small but useful because it validates real cross-app connectivity.
 
 ## Biggest Structural Weaknesses
 
-- The implemented application is still much smaller than the surrounding platform.
-- Several docs describe future architecture more than current code.
+- The backend and data layers are still much smaller than the frontend shell and surrounding platform.
 - The local stack is heavy relative to present functionality.
 - Some structure is still scaffold-like rather than intentionally matured.
 - The project has not yet proven that each database and service meaningfully earns its place.

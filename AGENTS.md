@@ -9,6 +9,7 @@ This file applies to the entire repository unless a deeper `AGENTS.md` overrides
 - This is a dual-language monorepo: TypeScript and Next.js in `apps/web`, Python and FastAPI in `apps/api`.
 - Do not assume a change is isolated to one app until you have checked the shared scripts, docs, and API contract.
 - Prefer small, focused changes over broad refactors. Separate cleanup from behavior changes when practical.
+- Use subagents when it makes sense, especially for well-scoped parallel or specialized work that can advance the task without blocking the next local step.
 
 ## Environment
 
@@ -30,10 +31,11 @@ This file applies to the entire repository unless a deeper `AGENTS.md` overrides
 
 Current implementation is still early-stage:
 
-- `apps/web` currently centers on a health-check page.
-- `apps/api` currently exposes `GET /health`.
+- `apps/web` now ships a UI-first MVP: `/` redirects to `/dashboard`, the admin shell includes dashboard, clubs, members, and `/system/health`, and the public surface currently covers `/login` and `/join/[clubId]`.
+- `apps/api` currently exposes only `GET /health`, which powers the web diagnostics surface.
+- Most frontend data currently comes from server-side view-model modules in `apps/web/src/features/*/server`, so treat the UI as ahead of the backend contract.
 
-Do not casually rewrite repo structure, ports, service assumptions, or the health-check flow unless the task explicitly calls for it.
+Do not casually rewrite repo structure, ports, service assumptions, or the diagnostics and health-check flow unless the task explicitly calls for it.
 
 ## Commands
 
@@ -48,7 +50,7 @@ Run shared commands from the repository root unless there is a strong reason to 
 - `pnpm format` runs formatting across the repo.
 - `pnpm format:check` checks formatting across the repo.
 - `pnpm lint:web` runs frontend ESLint checks.
-- `pnpm check:api` runs the backend validation step.
+- `pnpm check:api` bytecode-compiles `apps/api/src` for a quick backend sanity check.
 - `pnpm lint` runs the shared lint pipeline.
 - `pnpm verify` runs the CI-facing verification pipeline.
 - `pnpm precommit:all` runs all configured Git hooks manually.
@@ -81,7 +83,7 @@ Prefer root scripts for shared workflow, CI parity, and cross-app changes.
 - Create a new branch for each feature, bug fix, non-trivial refactor, docs or workflow update, or cross-app API contract change.
 - Keep unrelated work off the same branch.
 - A branch may touch both `apps/web` and `apps/api` when the change is still one coherent feature or contract update.
-- Isolate setup, ports, service assumptions, repo structure, and health-check flow changes in their own branch and update docs in the same pull request.
+- Isolate setup, ports, service assumptions, repo structure, and diagnostics or health-check flow changes in their own branch and update docs in the same pull request.
 - Treat commits as checkpoints inside the branch. Prefer a few small, descriptive commits over one large mixed-purpose commit.
 - Separate refactors from behavior changes when practical.
 - Before opening a pull request, run the narrowest relevant root-level checks for the area you changed and include a short verification summary.

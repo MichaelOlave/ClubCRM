@@ -82,7 +82,7 @@ Use Git with a simple rule: one logical change per branch, and one focused pull 
 - Create a new branch for each feature, bug fix, non-trivial refactor, docs or workflow update, or cross-app API contract change.
 - Keep unrelated work off the same branch, even when the files live in the same app.
 - A change may span both `apps/web` and `apps/api` when it is still one coherent feature or contract update.
-- Treat setup, ports, service assumptions, repo structure, and health-check flow changes as higher-risk work. Isolate them in their own branch and update docs in the same pull request.
+- Treat setup, ports, service assumptions, repo structure, and diagnostics or health-check flow changes as higher-risk work. Isolate them in their own branch and update docs in the same pull request.
 
 Commits are checkpoints within the branch, while the pull request is the reviewable unit that should represent one mergeable story.
 
@@ -129,6 +129,9 @@ Run API validation:
 pnpm check:api
 ```
 
+This is a quick backend sanity check that bytecode-compiles `apps/api/src`. For Ruff-based checks,
+use `pnpm lint:api` and `pnpm format:api:check`.
+
 Run the repository lint pipeline:
 
 ```bash
@@ -161,7 +164,7 @@ pnpm verify
 ### Python Standards
 
 - Let `Ruff` own both formatting and linting.
-- Follow the current Ruff settings in [`pyproject.toml`](/Users/michaelolave/Projects/active/ClubCRM/pyproject.toml).
+- Follow the current Ruff settings in [`pyproject.toml`](../pyproject.toml).
 - Use `snake_case` for functions, variables, and modules.
 - Use `PascalCase` for classes.
 - Prefer explicit, readable imports and straightforward control flow.
@@ -188,4 +191,4 @@ Update documentation when your change affects:
 - architecture or domain decisions
 - public behavior that teammates need to know about
 
-Relevant project docs live in [`docs/`](/Users/michaelolave/Projects/active/ClubCRM/docs).
+Relevant project docs live in the `docs/` directory.
