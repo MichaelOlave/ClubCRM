@@ -1,7 +1,9 @@
+import Link from "next/link";
+
+import { Alert, AlertDescription } from "@/components/shadcn/alert";
+import { Button } from "@/components/shadcn/button";
+import { Card } from "@/components/shadcn/card";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { Toast } from "@/components/ui/Toast";
 import { MemberDirectory } from "@/features/members";
 import { getMemberList } from "@/features/members/server";
 
@@ -13,11 +15,11 @@ export default async function MembersPage() {
       <PageHeader
         actions={
           <>
-            <Button href="/clubs" variant="secondary">
-              View clubs
+            <Button asChild variant="secondary">
+              <Link href="/clubs">View clubs</Link>
             </Button>
-            <Button href="/dashboard" variant="ghost">
-              Back to dashboard
+            <Button asChild variant="ghost">
+              <Link href="/dashboard">Back to dashboard</Link>
             </Button>
           </>
         }
@@ -26,15 +28,17 @@ export default async function MembersPage() {
         title="Member directory"
       />
 
-      <Toast tone="info">
-        This route is where create-member and assign-to-club drawers can plug in later without
-        changing the page structure.
-      </Toast>
+      <Alert variant="info">
+        <AlertDescription>
+          This route is where create-member and assign-to-club drawers can plug in later without
+          changing the page structure.
+        </AlertDescription>
+      </Alert>
 
-      <Card className="space-y-5">
+      <Card className="space-y-5 rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
         <div className="space-y-2">
-          <h2 className="text-2xl font-semibold text-zinc-950">Organization members</h2>
-          <p className="text-sm leading-6 text-zinc-600">
+          <h2 className="text-2xl font-semibold text-foreground">Organization members</h2>
+          <p className="text-sm leading-6 text-muted-foreground">
             Shared records prevent duplicate member entries when someone belongs to more than one
             club.
           </p>

@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Badge } from "@/components/ui/Badge";
+
+import { Badge } from "@/components/shadcn/badge";
 import { useActivePath } from "@/hooks/useActivePath";
 import { cn } from "@/lib/utils/cn";
 import type { NavItem } from "@/types/ui";
@@ -16,12 +17,12 @@ export function SideNav({ items }: Props) {
 
   return (
     <aside className="w-full shrink-0 lg:max-w-72">
-      <div className="sticky top-4 rounded-[2rem] border border-zinc-200 bg-white/90 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur">
+      <div className="sticky top-4 rounded-[2rem] border border-border bg-card/90 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur">
         <div className="space-y-4">
           <div className="space-y-2">
             <Badge variant="warning">Admin MVP</Badge>
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[1.25rem] border border-amber-200 bg-amber-50 shadow-sm">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[1.25rem] border border-brand-border bg-brand-surface shadow-sm">
                 <Image
                   alt="ClubCRM logo"
                   className="h-10 w-10 scale-110 rounded-lg"
@@ -32,13 +33,13 @@ export function SideNav({ items }: Props) {
                 />
               </div>
               <div>
-                <p className="text-sm font-medium uppercase tracking-[0.24em] text-amber-700">
+                <p className="text-sm font-medium uppercase tracking-[0.24em] text-brand">
                   ClubCRM
                 </p>
-                <h1 className="mt-2 text-2xl font-semibold text-zinc-950">Workspace</h1>
+                <h1 className="mt-2 text-2xl font-semibold text-foreground">Workspace</h1>
               </div>
             </div>
-            <p className="text-sm leading-6 text-zinc-600">
+            <p className="text-sm leading-6 text-muted-foreground">
               Lightweight route groups, feature folders, and reusable primitives for the first admin
               flows.
             </p>
@@ -53,17 +54,24 @@ export function SideNav({ items }: Props) {
                   className={cn(
                     "block rounded-[1.25rem] border px-4 py-3 transition",
                     active
-                      ? "border-zinc-950 bg-zinc-950 text-white"
-                      : "border-transparent bg-zinc-50 text-zinc-700 hover:border-zinc-200 hover:bg-white"
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-transparent bg-muted/40 text-foreground hover:border-border hover:bg-card"
                   )}
                   href={item.href}
                   key={item.href}
                 >
-                  <p className="text-sm font-semibold">{item.label}</p>
+                  <p
+                    className={cn(
+                      "text-sm font-semibold",
+                      active ? "text-primary-foreground" : "text-brand"
+                    )}
+                  >
+                    {item.label}
+                  </p>
                   <p
                     className={cn(
                       "mt-1 text-sm leading-5",
-                      active ? "text-zinc-300" : "text-zinc-500"
+                      active ? "text-primary-foreground/80" : "text-muted-foreground"
                     )}
                   >
                     {item.description}

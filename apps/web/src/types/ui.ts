@@ -19,5 +19,3 @@ export type TabItem = {
   count?: number;
   content: ReactNode;
 };
-
-export type ToastTone = "info" | "success" | "warning";

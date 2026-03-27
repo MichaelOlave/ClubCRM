@@ -1,8 +1,10 @@
+import Link from "next/link";
+
+import { Badge } from "@/components/shadcn/badge";
+import { Button } from "@/components/shadcn/button";
+import { DataTable } from "@/components/shadcn/data-table";
+import { EmptyState } from "@/components/shadcn/empty-state";
 import type { ClubRecord } from "@/types/api";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { Table } from "@/components/ui/Table";
 import { formatDateTime } from "@/lib/utils/formatters";
 import type { TableColumn } from "@/types/ui";
 
@@ -17,7 +19,7 @@ function getStatusVariant(status: ClubRecord["status"]) {
     case "planning":
       return "warning";
     case "archived":
-      return "danger";
+      return "destructive";
     default:
       return "muted";
   }
@@ -29,8 +31,8 @@ const columns: Array<TableColumn<ClubRecord>> = [
     header: "Club",
     render: (club) => (
       <div className="space-y-1">
-        <p className="font-semibold text-zinc-950">{club.name}</p>
-        <p className="max-w-md text-sm leading-6 text-zinc-600">{club.description}</p>
+        <p className="font-semibold text-foreground">{club.name}</p>
+        <p className="max-w-md text-sm leading-6 text-muted-foreground">{club.description}</p>
       </div>
     ),
   },
@@ -60,8 +62,8 @@ const columns: Array<TableColumn<ClubRecord>> = [
     key: "link",
     header: "Open",
     render: (club) => (
-      <Button href={`/clubs/${club.id}`} size="sm" variant="secondary">
-        View
+      <Button asChild size="sm" variant="secondary">
+        <Link href={`/clubs/${club.id}`}>View</Link>
       </Button>
     ),
     align: "right",
@@ -70,7 +72,7 @@ const columns: Array<TableColumn<ClubRecord>> = [
 
 export function ClubDirectory({ clubs }: Props) {
   return (
-    <Table
+    <DataTable
       columns={columns}
       emptyState={
         <EmptyState

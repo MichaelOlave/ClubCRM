@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+
+import { Button } from "@/components/shadcn/button";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Button } from "@/components/ui/Button";
 import { ClubProfile } from "@/features/clubs";
 import { getClubDetail } from "@/features/clubs/server";
 import { getMembershipsForClub } from "@/features/memberships/server";
@@ -26,11 +28,11 @@ export default async function ClubDetailPage({ params }: Props) {
       <PageHeader
         actions={
           <>
-            <Button href={`/join/${clubId}`} variant="secondary">
-              Open public form
+            <Button asChild variant="secondary">
+              <Link href={`/join/${clubId}`}>Open public form</Link>
             </Button>
-            <Button href="/clubs" variant="ghost">
-              Back to clubs
+            <Button asChild variant="ghost">
+              <Link href="/clubs">Back to clubs</Link>
             </Button>
           </>
         }

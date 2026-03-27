@@ -1,8 +1,8 @@
+import { Badge } from "@/components/shadcn/badge";
+import { Card } from "@/components/shadcn/card";
+import { DataTable } from "@/components/shadcn/data-table";
+import { EmptyState } from "@/components/shadcn/empty-state";
 import type { MembershipTableModel } from "@/features/memberships/types";
-import { Badge } from "@/components/ui/Badge";
-import { Card } from "@/components/ui/Card";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { Table } from "@/components/ui/Table";
 import { formatDate } from "@/lib/utils/formatters";
 import type { TableColumn } from "@/types/ui";
 
@@ -12,8 +12,10 @@ const columns: Array<TableColumn<MembershipTableModel["memberships"][number]>> =
     header: "Assignment",
     render: (membership) => (
       <div className="space-y-1">
-        <p className="font-semibold text-zinc-950">{membership.memberName}</p>
-        <p className="text-xs uppercase tracking-[0.14em] text-zinc-500">{membership.clubName}</p>
+        <p className="font-semibold text-foreground">{membership.memberName}</p>
+        <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+          {membership.clubName}
+        </p>
       </div>
     ),
   },
@@ -45,13 +47,13 @@ export function MembershipTable({
   title = "Memberships",
 }: MembershipTableModel) {
   return (
-    <Card className="space-y-5">
+    <Card className="space-y-5 rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
       <div className="space-y-2">
-        <h3 className="text-xl font-semibold text-zinc-950">{title}</h3>
-        <p className="text-sm leading-6 text-zinc-600">{description}</p>
+        <h3 className="text-xl font-semibold text-foreground">{title}</h3>
+        <p className="text-sm leading-6 text-muted-foreground">{description}</p>
       </div>
 
-      <Table
+      <DataTable
         columns={columns}
         emptyState={
           <EmptyState

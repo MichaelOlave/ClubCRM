@@ -1,8 +1,10 @@
+import Link from "next/link";
+
+import { Badge } from "@/components/shadcn/badge";
+import { Button } from "@/components/shadcn/button";
+import { DataTable } from "@/components/shadcn/data-table";
+import { EmptyState } from "@/components/shadcn/empty-state";
 import type { MemberRecord } from "@/types/api";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { Table } from "@/components/ui/Table";
 import type { TableColumn } from "@/types/ui";
 
 type Props = {
@@ -19,10 +21,10 @@ const columns: Array<TableColumn<MemberRecord>> = [
     header: "Member",
     render: (member) => (
       <div className="space-y-1">
-        <p className="font-semibold text-zinc-950">
+        <p className="font-semibold text-foreground">
           {member.firstName} {member.lastName}
         </p>
-        <p className="text-sm text-zinc-600">{member.email}</p>
+        <p className="text-sm text-muted-foreground">{member.email}</p>
       </div>
     ),
   },
@@ -51,8 +53,8 @@ const columns: Array<TableColumn<MemberRecord>> = [
     key: "open",
     header: "Open",
     render: (member) => (
-      <Button href={`/members/${member.id}`} size="sm" variant="secondary">
-        View profile
+      <Button asChild size="sm" variant="secondary">
+        <Link href={`/members/${member.id}`}>View profile</Link>
       </Button>
     ),
     align: "right",
@@ -61,7 +63,7 @@ const columns: Array<TableColumn<MemberRecord>> = [
 
 export function MemberDirectory({ members }: Props) {
   return (
-    <Table
+    <DataTable
       columns={columns}
       emptyState={
         <EmptyState
