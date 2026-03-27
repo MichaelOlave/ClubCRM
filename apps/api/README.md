@@ -1,17 +1,71 @@
 # API
 
-Basic FastAPI service for ClubCRM, following the documented backend layout under `src/`.
+FastAPI service for ClubCRM, organized as feature modules with capability-based database
+abstractions under `src/`.
 
 ## Structure
 
 ```text
 src/
   main.py
-  config.py
+  config/
+    settings.py
+  bootstrap/
+    app_factory.py
+    dependencies.py
   presentation/
     http/
-      routes/
+      router.py
+      exception_handlers.py
+  modules/
+    system/
+      presentation/
+        http/
+          routes.py
+    clubs/
+      domain/
+      application/
+        commands/
+        queries/
+        ports/
+      presentation/
+        http/
+    members/
+    memberships/
+    events/
+    announcements/
+    forms/
+    auth/
+  infrastructure/
+    postgres/
+      client.py
+      unit_of_work.py
+      repositories/
+    mongodb/
+      client.py
+      stores/
+    redis/
+      client.py
+      caches/
+    kafka/
+      client.py
+      publishers/
+tests/
+  unit/
+    modules/
+    infrastructure/
 ```
+
+The API does not use one generic database gateway. Abstractions live in
+`modules/*/application/ports/` and are expressed by capability:
+
+- `Repository` for relational data in PostgreSQL
+- `Store` for document persistence in MongoDB
+- `Cache` for Redis-backed read models
+- `Publisher` for Kafka-backed async side effects
+
+Concrete adapters live in `src/infrastructure/*`, and `src/bootstrap/dependencies.py` is the
+manual wiring layer that binds ports to implementations.
 
 ## Run locally
 
