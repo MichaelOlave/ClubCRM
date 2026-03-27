@@ -11,8 +11,9 @@ ClubCRM is a devcontainer-first monorepo for a club management platform with:
 
 Current implementation status:
 
-- `apps/web` renders a health-check page that probes the API
-- `apps/api` exposes `GET /health`
+- `apps/web` now provides a UI-first MVP: `/` redirects to `/dashboard`, admin pages live under `src/app/(app)`, and public entry points live under `src/app/(public)`
+- the frontend currently includes dashboard, club and member directory/detail pages, login and join-form previews, plus a dedicated `/system/health` diagnostics route
+- `apps/api` still exposes only `GET /health`, which powers the web diagnostics page while the rest of the frontend stays ahead of the backend contract
 - the local data and app stack is wired up through the repository devcontainer
 
 ## Development Environment
@@ -92,6 +93,9 @@ Run repository checks locally:
 pnpm verify
 ```
 
+For backend-only sanity checks, `pnpm check:api` currently bytecode-compiles `apps/api/src`. Use
+`pnpm lint:api` and `pnpm format:api:check` for Ruff-based lint and formatting checks.
+
 Manual app entrypoints:
 
 ```bash
@@ -109,7 +113,7 @@ Use Git with a simple default: one logical change per branch and one focused pul
 - Create a new branch for each feature, bug fix, non-trivial refactor, docs or workflow update, or cross-app API contract change.
 - Keep unrelated work out of the same branch, even inside this monorepo.
 - If a change touches both `apps/web` and `apps/api` but is still one coherent feature or contract update, keep it in one branch and one pull request.
-- If you are changing setup, ports, service assumptions, repo structure, or the health-check flow, isolate that work in its own branch and update docs in the same pull request.
+- If you are changing setup, ports, service assumptions, repo structure, or the diagnostics and health-check flow, isolate that work in its own branch and update docs in the same pull request.
 
 Commits are checkpoints inside a branch. Prefer a few small, descriptive commits over one large mixed-purpose commit.
 
