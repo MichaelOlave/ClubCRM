@@ -32,7 +32,7 @@ This file applies to the entire repository unless a deeper `AGENTS.md` overrides
 Current implementation is still early-stage:
 
 - `apps/web` now ships a UI-first MVP: `/` redirects to `/dashboard`, the admin shell includes dashboard, clubs, members, and `/system/health`, and the public surface currently covers `/login` and `/join/[clubId]`.
-- `apps/api` currently exposes only `GET /health`, which powers the web diagnostics surface.
+- `apps/api` now includes bootstrap, config, infrastructure, module, and test layers, but `GET /health` is still the only live endpoint powering the web diagnostics surface.
 - Most frontend data currently comes from server-side view-model modules in `apps/web/src/features/*/server`, so treat the UI as ahead of the backend contract.
 
 Do not casually rewrite repo structure, ports, service assumptions, or the diagnostics and health-check flow unless the task explicitly calls for it.

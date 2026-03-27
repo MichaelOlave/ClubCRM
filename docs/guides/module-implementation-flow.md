@@ -15,14 +15,14 @@ target architecture.
 
 Database-specific companion guides:
 
-- `docs/postgresql-implementation-flow.md`
-- `docs/mongodb-implementation-flow.md`
-- `docs/redis-implementation-flow.md`
-- `docs/kafka-implementation-flow.md`
+- [PostgreSQL Implementation Flow](postgresql-implementation-flow.md)
+- [MongoDB Implementation Flow](mongodb-implementation-flow.md)
+- [Redis Implementation Flow](redis-implementation-flow.md)
+- [Kafka Implementation Flow](kafka-implementation-flow.md)
 
 ## Before You Touch Code
 
-1. Read `README.md`, `docs/contributing.md`, and `docs/architecture.md`.
+1. Read [README.md](../../README.md), [docs/contributing.md](../contributing.md), and [docs/architecture.md](../architecture.md).
 2. Confirm whether the work is:
    - web-only
    - API-only
@@ -341,9 +341,9 @@ Update docs in the same change when teammates need to know about:
 
 For most module growth, the minimum doc touch is one of:
 
-- `README.md`
-- `docs/contributing.md`
-- `docs/architecture.md`
+- [README.md](../../README.md)
+- [docs/contributing.md](../contributing.md)
+- [docs/architecture.md](../architecture.md)
 - a module-specific guide like this one
 
 ## Step 7: Verify the Narrowest Meaningful Surface

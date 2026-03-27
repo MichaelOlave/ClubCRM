@@ -55,7 +55,8 @@ Important files:
 - `apps/web/src/app/page.tsx`
 - `apps/web/src/app/globals.css`
 - `apps/api/src/main.py`
-- `apps/api/src/presentation/http/routes/health.py`
+- `apps/api/src/presentation/http/router.py`
+- `apps/api/src/modules/system/presentation/http/routes.py`
 - `apps/web/README.md`
 - `apps/api/README.md`
 - `docs/contributing.md`
@@ -106,7 +107,7 @@ Current app behavior to keep in mind:
 - Most feature data currently comes from server-side view-model modules in `src/features/*/server`, so the frontend is ahead of the backend contract.
 - `src/app/(app)/system/health/page.tsx` preserves the API diagnostics flow.
 - The diagnostics flow probes the API using `API_BASE_URL`, then `http://api:8000`, then `http://localhost:8000`.
-- The expected backend response comes from `apps/api/src/presentation/http/routes/health.py` and returns `{"status": "ok"}`.
+- The expected backend response comes from `apps/api/src/modules/system/presentation/http/routes.py` and returns `{"status": "ok"}`.
 - The diagnostics page exports `dynamic = "force-dynamic"` and uses `fetch(..., { cache: "no-store" })`.
 
 Do not remove or change this behavior casually unless the task explicitly calls for it.
@@ -121,7 +122,9 @@ src/
     (app)/                # Admin shell route group
       dashboard/
       clubs/
+        [clubId]/
       members/
+        [memberId]/
       system/health/
     (public)/             # Public entry points
       login/

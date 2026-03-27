@@ -121,8 +121,11 @@ Note:
 /infra
   docker-compose.yml
 /docs
+  README.md
   architecture.md
   schema.md
+  /guides
+  /plans
 ```
 
 ## MVP Feature Contract

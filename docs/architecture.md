@@ -81,7 +81,7 @@ The companion networking layer includes:
 - Kubernetes service communication
 - deployment reliability and recovery behavior
 
-See [team-execution-plan.md](team-execution-plan.md) for the main four-person application plan and [networking-team-execution-plan.md](networking-team-execution-plan.md) for the separate two-person networking workstream.
+See [plans/team-execution-plan.md](plans/team-execution-plan.md) for the main four-person application plan and [plans/networking-team-execution-plan.md](plans/networking-team-execution-plan.md) for the separate two-person networking workstream.
 
 ## Local Development Environment
 
@@ -146,9 +146,17 @@ Docker Compose in the devcontainer remains the standard local development enviro
 /infra
   docker-compose.yml
 /docs
+  README.md
+  /analysis
+  /assets
   architecture.md
+  contributing.md
   schema.md
   decisions.md
+  /deployment
+  /guides
+  /plans
+  /proposals
 ```
 
 The repository may also grow deployment artifacts for the networking workstream, such as Kubernetes manifests, Helm values, or environment-specific deployment documentation. Those artifacts should support the existing app architecture rather than redefine it.
@@ -165,7 +173,9 @@ Today the frontend is ahead of the backend contract. The implemented web app use
       layout.tsx
       /dashboard
       /clubs
+        /[clubId]
       /members
+        /[memberId]
       /system
         /health
     /(public)
@@ -188,19 +198,48 @@ Most current web data is provided by server-side view-model modules under `apps/
 
 ## Current Backend Implementation
 
-Today the backend codebase is still in an early scaffolded state. The implemented files are:
+Today the backend is no longer just a single-route scaffold. The live API surface is still small,
+but the repo already encodes the intended backend layering through bootstrap, shared router
+composition, feature modules, infrastructure adapters, and unit tests.
 
 ```text
 /apps/api/src
   main.py
-  config.py
+  /bootstrap
+    app_factory.py
+    dependencies.py
+  /config
+    settings.py
   /presentation
     /http
-      /routes
-        health.py
+      router.py
+      exception_handlers.py
+  /infrastructure
+    /postgres
+    /mongodb
+    /redis
+    /kafka
+  /modules
+    /system
+      /presentation
+        /http
+          routes.py
+    /clubs
+    /forms
+    /members
+    /memberships
+    /events
+    /announcements
+    /auth
+/apps/api/tests
+  /unit
+    /modules
+    /infrastructure
 ```
 
-The sections below describe the target backend architecture as the project grows beyond the current health-check slice.
+Only `GET /health` currently has a concrete public handler. The sections below describe how that
+module-first structure should keep growing as more endpoints and real persistence behavior are
+added.
 
 ## Target Backend Architectural Style
 
@@ -217,17 +256,78 @@ Suggested target structure:
 
 ```text
 /apps/api/src
-  /domain
-  /application
-  /infrastructure
+  main.py
+  /bootstrap
+  /config
   /presentation
+    /http
+      router.py
+      exception_handlers.py
+  /infrastructure
   /modules
+    /system
+      /presentation
+        /http
     /clubs
+      /domain
+      /application
+        /commands
+        /queries
+        /ports
+      /presentation
+        /http
     /members
+      /domain
+      /application
+        /commands
+        /queries
+        /ports
+      /presentation
+        /http
+    /memberships
+      /domain
+      /application
+        /commands
+        /queries
+        /ports
+      /presentation
+        /http
     /forms
+      /domain
+      /application
+        /commands
+        /queries
+        /ports
+      /presentation
+        /http
     /events
+      /domain
+      /application
+        /commands
+        /queries
+        /ports
+      /presentation
+        /http
     /announcements
+      /domain
+      /application
+        /commands
+        /queries
+        /ports
+      /presentation
+        /http
     /auth
+      /domain
+      /application
+        /commands
+        /queries
+        /ports
+      /presentation
+        /http
+/apps/api/tests
+  /unit
+    /modules
+    /infrastructure
 ```
 
 ## Layer Responsibilities
