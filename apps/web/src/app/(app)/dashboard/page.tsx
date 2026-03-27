@@ -1,5 +1,7 @@
+import Link from "next/link";
+
+import { Button } from "@/components/shadcn/button";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Button } from "@/components/ui/Button";
 import { DashboardOverview } from "@/features/dashboard";
 import { getDashboardViewModel } from "@/features/dashboard/server";
 
@@ -11,11 +13,11 @@ export default async function DashboardPage() {
       <PageHeader
         actions={
           <>
-            <Button href="/clubs" variant="secondary">
-              Browse clubs
+            <Button asChild variant="secondary">
+              <Link href="/clubs">Browse clubs</Link>
             </Button>
-            <Button href="/join/chess-society" variant="ghost">
-              Preview join form
+            <Button asChild variant="ghost">
+              <Link href="/join/chess-society">Preview join form</Link>
             </Button>
           </>
         }

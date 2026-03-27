@@ -70,6 +70,8 @@ If a default host port is already in use, the devcontainer remaps that service t
 
 The `web` and `api` development servers are already started by the devcontainer Compose stack. Use the root scripts below only when you intentionally restart a service from the workspace terminal, run checks manually, or debug outside the default process.
 
+The repository now tracks a minimal VS Code workspace setting and Tailwind CSS custom-data file so Tailwind v4 directives used in [`apps/web/src/app/globals.css`](apps/web/src/app/globals.css) do not show false "unknown at rule" diagnostics in editors that use the VS Code CSS language service.
+
 ## Quality Checks
 
 From inside the devcontainer workspace:

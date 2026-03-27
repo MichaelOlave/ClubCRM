@@ -1,0 +1,41 @@
+{
+  "version": 1.1,
+  "atDirectives": [
+    {
+      "name": "@apply",
+      "description": "Inline Tailwind utility classes into a custom CSS rule."
+    },
+    {
+      "name": "@config",
+      "description": "Load a legacy Tailwind JavaScript config file for compatibility."
+    },
+    {
+      "name": "@custom-variant",
+      "description": "Define a custom variant that can be reused in Tailwind class names."
+    },
+    {
+      "name": "@plugin",
+      "description": "Load a legacy Tailwind plugin for compatibility."
+    },
+    {
+      "name": "@reference",
+      "description": "Reference another stylesheet so Tailwind can resolve theme values and utilities."
+    },
+    {
+      "name": "@source",
+      "description": "Register additional content sources for Tailwind class detection."
+    },
+    {
+      "name": "@theme",
+      "description": "Declare Tailwind design tokens directly in CSS."
+    },
+    {
+      "name": "@utility",
+      "description": "Define a custom Tailwind utility in CSS."
+    },
+    {
+      "name": "@variant",
+      "description": "Apply an existing Tailwind variant inside a CSS rule."
+    }
+  ]
+}

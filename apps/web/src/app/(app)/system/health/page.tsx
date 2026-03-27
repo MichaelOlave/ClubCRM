@@ -1,5 +1,7 @@
+import Link from "next/link";
+
+import { Button } from "@/components/shadcn/button";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Button } from "@/components/ui/Button";
 import { HealthOverview } from "@/features/health";
 import { getHealthCheck } from "@/features/health/server";
 
@@ -13,11 +15,11 @@ export default async function SystemHealthPage() {
       <PageHeader
         actions={
           <>
-            <Button href="/dashboard" variant="secondary">
-              Back to dashboard
+            <Button asChild variant="secondary">
+              <Link href="/dashboard">Back to dashboard</Link>
             </Button>
-            <Button href="/system/health" variant="ghost">
-              Refresh
+            <Button asChild variant="ghost">
+              <Link href="/system/health">Refresh</Link>
             </Button>
           </>
         }

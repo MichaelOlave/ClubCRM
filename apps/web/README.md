@@ -46,6 +46,18 @@ The homepage currently redirects to `/dashboard`, so the most useful entry point
 - Most frontend data is currently provided by server-side view-model modules under `src/features/*/server`; only `/system/health` currently calls the FastAPI backend.
 - If you need to restart or validate the web app manually, use the root scripts from the workspace terminal.
 
+## shadcn/ui
+
+The frontend is configured for `shadcn/ui` with Tailwind v4. To keep the existing ClubCRM primitives available during migration, generated shadcn components are routed to `src/components/shadcn` instead of `src/components/ui`.
+
+From `apps/web`, add new shadcn components with:
+
+```bash
+pnpm dlx shadcn@latest add button
+```
+
+The generated imports will resolve through `components.json`, so future shadcn components should stay isolated from the existing `src/components/ui` layer until the migration is complete.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
