@@ -26,6 +26,10 @@ jobs:
         with:
           python-version: "3.11"
 
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.10.10"
+
       - name: Bootstrap toolchain
         run: pnpm bootstrap
 
