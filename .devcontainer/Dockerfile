@@ -1,9 +1,11 @@
 FROM node:22-bookworm-slim
 
+ARG UV_VERSION=0.10.10
+
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PNPM_HOME=/pnpm
 ENV PNPM_STORE_DIR=/pnpm/store
-ENV PATH=/pnpm:$PATH
+ENV PATH=/root/.local/bin:/pnpm:$PATH
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -12,9 +14,10 @@ RUN apt-get update \
         git \
         openssh-client \
         python3 \
-        python3-pip \
         python3-venv \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+RUN curl -LsSf https://astral.sh/uv/${UV_VERSION}/install.sh | sh
 
 RUN corepack enable

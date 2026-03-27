@@ -1,2 +1,8 @@
+alembic==1.18.4
+aiokafka==0.13.0
 fastapi==0.116.1
+psycopg[binary]==3.3.3
+pymongo==4.16.0
+redis==7.4.0
+sqlalchemy==2.0.48
 uvicorn[standard]==0.35.0
