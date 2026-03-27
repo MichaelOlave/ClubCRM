@@ -26,15 +26,15 @@ The current Oracle host is a small Ubuntu VM, so the production deployment keeps
 - `api`
 - `caddy`
 
-The local development-only backing services in [`infra/docker-compose.yml`](../infra/docker-compose.yml) are intentionally excluded from this production stack because the currently deployed backend still only exposes `/health`, and the frontend only needs `API_BASE_URL` for the diagnostics surface on `/system/health`.
+The local development-only backing services in [`infra/docker-compose.yml`](../../infra/docker-compose.yml) are intentionally excluded from this production stack because the currently deployed backend still only exposes `/health`, and the frontend only needs `API_BASE_URL` for the diagnostics surface on `/system/health`.
 
 ## Files
 
-- [`apps/web/Dockerfile`](../apps/web/Dockerfile) builds the Next.js app as a standalone production image.
-- [`apps/api/Dockerfile`](../apps/api/Dockerfile) builds the FastAPI app image.
-- [`infra/docker-compose.production.yml`](../infra/docker-compose.production.yml) runs `web`, `api`, and `caddy`.
-- [`infra/Caddyfile`](../infra/Caddyfile) fronts the app and proxies `/api/*` to the backend.
-- [`.github/workflows/deploy-oci.yml`](../.github/workflows/deploy-oci.yml) builds images on GitHub Actions, streams them to the Oracle host over SSH, then asks the server to pull the latest repo state and restart the stack.
+- [`apps/web/Dockerfile`](../../apps/web/Dockerfile) builds the Next.js app as a standalone production image.
+- [`apps/api/Dockerfile`](../../apps/api/Dockerfile) builds the FastAPI app image.
+- [`infra/docker-compose.production.yml`](../../infra/docker-compose.production.yml) runs `web`, `api`, and `caddy`.
+- [`infra/Caddyfile`](../../infra/Caddyfile) fronts the app and proxies `/api/*` to the backend.
+- [`.github/workflows/deploy-oci.yml`](../../.github/workflows/deploy-oci.yml) builds images on GitHub Actions, streams them to the Oracle host over SSH, then asks the server to pull the latest repo state and restart the stack.
 
 ## Server Expectations
 
@@ -48,7 +48,7 @@ The Oracle host should have:
 
 ## Production Environment
 
-Create `/opt/clubcrm/.env.production` from [`.env.production.example`](../.env.production.example) and keep at least these values set:
+Create `/opt/clubcrm/.env.production` from [`.env.production.example`](../../.env.production.example) and keep at least these values set:
 
 ```dotenv
 DOMAIN=clubcrm.org
@@ -60,7 +60,7 @@ API_IMAGE=clubcrm-api:deploy
 
 ## Deployment Flow
 
-Production deploys are handled by [`.github/workflows/deploy-oci.yml`](../.github/workflows/deploy-oci.yml):
+Production deploys are handled by [`.github/workflows/deploy-oci.yml`](../../.github/workflows/deploy-oci.yml):
 
 - GitHub Actions builds the `web` and `api` images
 - the workflow streams those images to the Oracle host over SSH

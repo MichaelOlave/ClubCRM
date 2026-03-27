@@ -13,7 +13,7 @@ Current implementation status:
 
 - `apps/web` now provides a UI-first MVP: `/` redirects to `/dashboard`, admin pages live under `src/app/(app)`, and public entry points live under `src/app/(public)`
 - the frontend currently includes dashboard, club and member directory/detail pages, login and join-form previews, plus a dedicated `/system/health` diagnostics route
-- `apps/api` still exposes only `GET /health`, which powers the web diagnostics page while the rest of the frontend stays ahead of the backend contract
+- `apps/api` now includes bootstrap, config, infrastructure, module, and test layers, but `GET /health` is still the only live endpoint powering the web diagnostics page while the rest of the frontend stays ahead of the backend contract
 - the local data and app stack is wired up through the repository devcontainer
 
 ## Development Environment
@@ -125,14 +125,18 @@ Before opening a pull request, run the narrowest relevant checks from the reposi
 
 ## Docs
 
+- `docs/README.md` for a categorized map of the project documentation
 - `docs/contributing.md` for contribution workflow and code standards
 - `docs/architecture.md` for system structure and local environment rules
-- `docs/module-implementation-flow.md` for step-by-step guidance on growing a module or feature slice
-- `docs/postgresql-implementation-flow.md` for relational system-of-record implementation guidance
-- `docs/mongodb-implementation-flow.md` for document-store implementation guidance
-- `docs/redis-implementation-flow.md` for caching and short-lived data implementation guidance
-- `docs/kafka-implementation-flow.md` for async event publication implementation guidance
-- `docs/oracle-docker-deploy.md` for the current Oracle VM deployment path
 - `docs/schema.md` for data modeling notes
 - `docs/decisions.md` for architecture decisions
-- `docs/team-execution-plan.md` for scope and ownership guidance
+- `docs/guides/module-implementation-flow.md` for step-by-step guidance on growing a module or feature slice
+- `docs/guides/postgresql-implementation-flow.md` for relational system-of-record implementation guidance
+- `docs/guides/mongodb-implementation-flow.md` for document-store implementation guidance
+- `docs/guides/redis-implementation-flow.md` for caching and short-lived data implementation guidance
+- `docs/guides/kafka-implementation-flow.md` for async event publication implementation guidance
+- `docs/plans/team-execution-plan.md` for scope and ownership guidance
+- `docs/plans/networking-team-execution-plan.md` for the companion networking workstream
+- `docs/deployment/oracle-docker-deploy.md` for the current Oracle VM deployment path
+- `docs/analysis/current-project-structure-analysis.md` for a detailed review of the repo's current shape
+- `docs/proposals/` for course proposal drafts

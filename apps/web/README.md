@@ -33,9 +33,9 @@ pnpm dev:web
 The homepage currently redirects to `/dashboard`, so the most useful entry points to edit are usually:
 
 - [`src/app/page.tsx`](src/app/page.tsx) for the root redirect
-- [`src/app/(app)/dashboard/page.tsx`](src/app/%28app%29/dashboard/page.tsx) for the admin landing page
-- [`src/app/(app)/system/health/page.tsx`](src/app/%28app%29/system/health/page.tsx) for the API diagnostics surface
-- [`src/app/(public)/login/page.tsx`](src/app/%28public%29/login/page.tsx) or [`src/app/(public)/join/[clubId]/page.tsx`](src/app/%28public%29/join/%5BclubId%5D/page.tsx) for public entry points
+- [`src/app/(app)/dashboard/page.tsx`](<src/app/(app)/dashboard/page.tsx>) for the admin landing page
+- [`src/app/(app)/system/health/page.tsx`](<src/app/(app)/system/health/page.tsx>) for the API diagnostics surface
+- [`src/app/(public)/login/page.tsx`](<src/app/(public)/login/page.tsx>) or [`src/app/(public)/join/[clubId]/page.tsx`](<src/app/(public)/join/[clubId]/page.tsx>) for public entry points
 
 ## Notes
 
