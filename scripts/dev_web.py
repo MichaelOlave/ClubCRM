@@ -35,7 +35,17 @@ def main() -> None:
     load_env_file()
     wait_for_node_dependencies()
     exec_command(
-        ["pnpm", "--filter", "web", "exec", "next", "dev", "--hostname", "0.0.0.0"],
+        [
+            "pnpm",
+            "--filter",
+            "web",
+            "exec",
+            "next",
+            "dev",
+            "--webpack",
+            "--hostname",
+            "0.0.0.0",
+        ],
         cwd=ROOT_DIR,
     )
 

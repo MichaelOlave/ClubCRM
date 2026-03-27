@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
+import json
 import os
 import shutil
 import sys
 import time
+from collections.abc import Iterable
 from pathlib import Path
 
 from common import (
@@ -24,12 +26,17 @@ BOOTSTRAP_LOCK_TIMEOUT_SECONDS = 300
 BOOTSTRAP_LOCK_STALE_SECONDS = 1800
 BOOTSTRAP_LOCK_POLL_INTERVAL_SECONDS = 0.5
 BOOTSTRAP_INPUT_FILES = (
+    ROOT_DIR / ".npmrc",
     ROOT_DIR / "package.json",
     ROOT_DIR / "pnpm-lock.yaml",
     ROOT_DIR / "pnpm-workspace.yaml",
     ROOT_DIR / "apps" / "web" / "package.json",
     API_DIR / "requirements.txt",
     API_DIR / "requirements-dev.txt",
+)
+NODE_WORKSPACE_MANIFESTS = (
+    ROOT_DIR / "package.json",
+    ROOT_DIR / "apps" / "web" / "package.json",
 )
 
 
@@ -48,10 +55,42 @@ def bootstrap_fingerprint() -> str:
     return digest.hexdigest()
 
 
+def _node_package_names(package_manifest: Path) -> Iterable[str]:
+    try:
+        package_data = json.loads(package_manifest.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return ()
+
+    package_names: list[str] = []
+
+    for section_name in ("dependencies", "devDependencies"):
+        section = package_data.get(section_name, {})
+        if isinstance(section, dict):
+            package_names.extend(
+                package_name
+                for package_name, package_version in section.items()
+                if isinstance(package_name, str) and isinstance(package_version, str)
+            )
+
+    return package_names
+
+
+def _node_package_manifest_path(package_manifest: Path, package_name: str) -> Path:
+    return package_manifest.parent / "node_modules" / Path(package_name) / "package.json"
+
+
 def node_dependencies_ready() -> bool:
-    return (ROOT_DIR / "node_modules" / "prettier" / "package.json").is_file() and (
-        ROOT_DIR / "apps" / "web" / "node_modules" / "next" / "package.json"
-    ).is_file()
+    # The devcontainer persists root and app node_modules in separate volumes, so
+    # a shallow check can miss newly added web packages after a branch switch.
+    for package_manifest in NODE_WORKSPACE_MANIFESTS:
+        if not package_manifest.is_file():
+            return False
+
+        for package_name in _node_package_names(package_manifest):
+            if not _node_package_manifest_path(package_manifest, package_name).is_file():
+                return False
+
+    return True
 
 
 def python_dependencies_ready(

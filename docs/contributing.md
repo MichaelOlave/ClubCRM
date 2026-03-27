@@ -27,6 +27,7 @@ The devcontainer already automates the initial setup for contributors:
 - that command runs `pnpm bootstrap`
 - `pnpm bootstrap` installs Node dependencies, installs API Python dependencies with `uv`, and installs `pre-commit` hooks when available
 - Docker Compose also starts the supporting local services and app containers defined by the repo
+- the attached `workspace` container proxies localhost service ports to the sibling `web`, `api`, and data-service containers so editor port forwarding from `127.0.0.1` reaches the running stack
 
 The devcontainer persists the PNPM store, workspace `node_modules`, web `node_modules`, web `.next`,
 and the API virtualenv in Docker volumes so dependency installs and hot-reload output stay off the
@@ -62,6 +63,8 @@ Run the web app:
 ```bash
 pnpm dev:web
 ```
+
+This path currently runs `next dev --webpack` in development to avoid a Tailwind/Turbopack workspace resolution issue in the devcontainer. Production builds still use `next build`.
 
 Run the API:
 
