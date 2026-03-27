@@ -50,15 +50,9 @@ def get_settings() -> Settings:
             base_url=os.getenv("API_BASE_URL", "http://api:8000"),
         ),
         postgres=PostgresSettings(
-            url=os.getenv(
-                "DATABASE_URL", "postgresql://clubcrm:clubcrm@postgres:5432/clubcrm"
-            )
+            url=os.getenv("DATABASE_URL", "postgresql://clubcrm:clubcrm@postgres:5432/clubcrm")
         ),
-        mongodb=MongoDBSettings(
-            url=os.getenv("MONGODB_URL", "mongodb://mongodb:27017/clubcrm")
-        ),
+        mongodb=MongoDBSettings(url=os.getenv("MONGODB_URL", "mongodb://mongodb:27017/clubcrm")),
         redis=RedisSettings(url=os.getenv("REDIS_URL", "redis://redis:6379/0")),
-        kafka=KafkaSettings(
-            bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
-        ),
+        kafka=KafkaSettings(bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")),
     )
