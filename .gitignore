@@ -56,3 +56,7 @@ temp/
 
 # Devcontainer generated files
 .devcontainer/docker-compose.ports.yml
+
+
+# Claude
+.claude/settings.local.json
