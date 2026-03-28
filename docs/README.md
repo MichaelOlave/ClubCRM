@@ -32,3 +32,4 @@ Use this directory as the main entry point for project documentation.
 ## Assets
 
 - [System Diagram](assets/system-diagram.png)
+- [Network Diagram](assets/network-arcitecture.png)
