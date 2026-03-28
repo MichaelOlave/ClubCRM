@@ -12,9 +12,7 @@ export default function PublicLayout({
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] max-w-6xl flex-col gap-8">
         <header className="flex flex-col gap-4 rounded-[1.75rem] border border-border bg-card/85 px-6 py-5 shadow-[0_24px_70px_rgba(15,23,42,0.06)] backdrop-blur sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
-            <p className="text-sm font-medium uppercase tracking-[0.24em] text-brand">
-              ClubCRM
-            </p>
+            <p className="text-sm font-medium uppercase tracking-[0.24em] text-brand">ClubCRM</p>
             <div>
               <Link className="text-2xl font-semibold tracking-tight text-foreground" href="/login">
                 Public entry points

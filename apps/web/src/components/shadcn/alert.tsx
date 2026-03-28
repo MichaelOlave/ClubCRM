@@ -3,23 +3,20 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
-const alertVariants = cva(
-  "relative w-full rounded-[1.5rem] border px-4 py-3 text-sm leading-6",
-  {
-    variants: {
-      variant: {
-        default: "border-border bg-card text-card-foreground",
-        destructive: "border-destructive/20 bg-destructive/10 text-destructive",
-        info: "border-info-border bg-info text-info-foreground",
-        success: "border-success-border bg-success text-success-foreground",
-        warning: "border-warning-border bg-warning text-warning-foreground",
-      },
+const alertVariants = cva("relative w-full rounded-[1.5rem] border px-4 py-3 text-sm leading-6", {
+  variants: {
+    variant: {
+      default: "border-border bg-card text-card-foreground",
+      destructive: "border-destructive/20 bg-destructive/10 text-destructive",
+      info: "border-info-border bg-info text-info-foreground",
+      success: "border-success-border bg-success text-success-foreground",
+      warning: "border-warning-border bg-warning text-warning-foreground",
     },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-);
+  },
+  defaultVariants: {
+    variant: "default",
+  },
+});
 
 function Alert({
   className,

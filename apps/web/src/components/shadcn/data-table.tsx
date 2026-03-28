@@ -2,14 +2,7 @@ import type { ReactNode } from "react";
 
 import type { TableColumn } from "@/types/ui";
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "./table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./table";
 
 type DataTableProps<T> = {
   columns: Array<TableColumn<T>>;
@@ -18,12 +11,7 @@ type DataTableProps<T> = {
   rows: T[];
 };
 
-export function DataTable<T>({
-  columns,
-  emptyState,
-  keyExtractor,
-  rows,
-}: DataTableProps<T>) {
+export function DataTable<T>({ columns, emptyState, keyExtractor, rows }: DataTableProps<T>) {
   if (!rows.length) {
     return emptyState ? <>{emptyState}</> : null;
   }
