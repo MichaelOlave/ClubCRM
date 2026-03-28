@@ -63,7 +63,9 @@ export function ClubProfile({ detail, memberships }: Props) {
               <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Members
               </p>
-              <p className="mt-1 text-sm font-semibold text-foreground">{detail.club.memberCount}</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {detail.club.memberCount}
+              </p>
             </div>
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
@@ -141,7 +143,9 @@ export function ClubProfile({ detail, memberships }: Props) {
                     {formatDateTime(announcement.publishedAt)}
                   </p>
                 </div>
-                <h4 className="mt-3 text-base font-semibold text-foreground">{announcement.title}</h4>
+                <h4 className="mt-3 text-base font-semibold text-foreground">
+                  {announcement.title}
+                </h4>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   {announcement.excerpt}
                 </p>

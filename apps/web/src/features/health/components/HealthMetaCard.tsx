@@ -13,9 +13,7 @@ export function HealthMetaCard({ status, endpoint, refreshHref = "/system/health
     <div className="flex flex-col justify-between rounded-[1.5rem] border border-brand-border bg-brand-surface p-6 sm:p-8">
       <div className="space-y-5">
         <div>
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-brand">
-            Health check
-          </p>
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-brand">Health check</p>
           <p className="mt-2 text-2xl font-semibold text-foreground">{status}</p>
         </div>
 

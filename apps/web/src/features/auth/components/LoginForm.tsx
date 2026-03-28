@@ -11,9 +11,7 @@ export function LoginForm({ description, helperText, title }: LoginViewModel) {
     <Card className="w-full max-w-lg rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
       <div className="space-y-6">
         <div className="space-y-3">
-          <p className="text-sm font-medium uppercase tracking-[0.24em] text-brand">
-            Public entry
-          </p>
+          <p className="text-sm font-medium uppercase tracking-[0.24em] text-brand">Public entry</p>
           <div className="space-y-2">
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
             <p className="text-sm leading-7 text-muted-foreground">{description}</p>
@@ -23,11 +21,7 @@ export function LoginForm({ description, helperText, title }: LoginViewModel) {
         <form className="space-y-4">
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
             <span>Email address</span>
-            <Input
-              autoComplete="email"
-              placeholder="you@champlain.edu"
-              type="email"
-            />
+            <Input autoComplete="email" placeholder="you@champlain.edu" type="email" />
             <span className="text-xs font-normal text-muted-foreground">
               Use your organization admin or club manager email.
             </span>

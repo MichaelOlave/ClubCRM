@@ -29,31 +29,26 @@ function SheetOverlay({
   );
 }
 
-const sheetVariants = cva(
-  "fixed z-50 border bg-card p-6 text-card-foreground shadow-lg sm:p-8",
-  {
-    variants: {
-      side: {
-        top: "inset-x-4 top-4 rounded-[1.5rem]",
-        bottom: "inset-x-4 bottom-4 rounded-[1.5rem]",
-        left: "left-4 top-4 h-[calc(100%-2rem)] w-[calc(100%-2rem)] max-w-xl rounded-[1.5rem]",
-        right:
-          "right-4 top-4 h-[calc(100%-2rem)] w-[calc(100%-2rem)] max-w-xl rounded-[1.5rem]",
-      },
+const sheetVariants = cva("fixed z-50 border bg-card p-6 text-card-foreground shadow-lg sm:p-8", {
+  variants: {
+    side: {
+      top: "inset-x-4 top-4 rounded-[1.5rem]",
+      bottom: "inset-x-4 bottom-4 rounded-[1.5rem]",
+      left: "left-4 top-4 h-[calc(100%-2rem)] w-[calc(100%-2rem)] max-w-xl rounded-[1.5rem]",
+      right: "right-4 top-4 h-[calc(100%-2rem)] w-[calc(100%-2rem)] max-w-xl rounded-[1.5rem]",
     },
-    defaultVariants: {
-      side: "right",
-    },
-  }
-);
+  },
+  defaultVariants: {
+    side: "right",
+  },
+});
 
 function SheetContent({
   className,
   children,
   side = "right",
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content> &
-  VariantProps<typeof sheetVariants>) {
+}: React.ComponentProps<typeof DialogPrimitive.Content> & VariantProps<typeof sheetVariants>) {
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -70,11 +65,7 @@ function SheetContent({
 
 function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div
-      data-slot="sheet-header"
-      className={cn("flex flex-col gap-2", className)}
-      {...props}
-    />
+    <div data-slot="sheet-header" className={cn("flex flex-col gap-2", className)} {...props} />
   );
 }
 
@@ -88,10 +79,7 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function SheetTitle({
-  className,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Title>) {
+function SheetTitle({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) {
   return (
     <DialogPrimitive.Title
       data-slot="sheet-title"

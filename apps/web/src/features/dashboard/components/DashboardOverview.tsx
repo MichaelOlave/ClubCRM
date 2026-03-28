@@ -58,7 +58,9 @@ export function DashboardOverview({ viewModel }: Props) {
           >
             <Badge variant={getBadgeVariant(metric.tone)}>{metric.label}</Badge>
             <div className="space-y-2">
-              <p className="text-4xl font-semibold tracking-tight text-foreground">{metric.value}</p>
+              <p className="text-4xl font-semibold tracking-tight text-foreground">
+                {metric.value}
+              </p>
               <p className="text-sm leading-6 text-muted-foreground">{metric.detail}</p>
             </div>
           </Card>
@@ -86,7 +88,9 @@ export function DashboardOverview({ viewModel }: Props) {
                       </p>
                     </div>
                     <h3 className="mt-3 text-lg font-semibold text-foreground">{item.title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{item.description}</p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      {item.description}
+                    </p>
                   </div>
                 ))}
               </div>

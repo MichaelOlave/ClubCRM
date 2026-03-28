@@ -12,9 +12,7 @@ export function PageHeader({ actions, description, eyebrow, title }: Props) {
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="space-y-3">
         {eyebrow ? (
-          <p className="text-sm font-medium uppercase tracking-[0.24em] text-brand">
-            {eyebrow}
-          </p>
+          <p className="text-sm font-medium uppercase tracking-[0.24em] text-brand">{eyebrow}</p>
         ) : null}
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
