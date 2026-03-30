@@ -6,7 +6,7 @@ services:
     working_dir: /workspace
     command:
       - /bin/sh
-      - -lc
+      - -c
       - |
         python3 ./scripts/devcontainer_tcp_proxies.py \
           3000:web:3000 \
