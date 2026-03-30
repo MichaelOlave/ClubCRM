@@ -1,3 +1,5 @@
 {
-  "css.customData": [".vscode/tailwindcss.custom-data.json"]
+  "css.customData": [".vscode/tailwindcss.custom-data.json"],
+  "python.defaultInterpreterPath": "${workspaceFolder}/apps/api/.venv/bin/python",
+  "python.analysis.extraPaths": ["${workspaceFolder}/apps/api"]
 }

@@ -11,7 +11,7 @@ services:
         required: false
     command:
       - /bin/sh
-      - -lc
+      - -c
       - |
         python3 ./scripts/bootstrap.py
         exec python3 ./scripts/dev_api.py
@@ -49,7 +49,7 @@ services:
         required: false
     command:
       - /bin/sh
-      - -lc
+      - -c
       - |
         exec python3 ./scripts/dev_web.py
     volumes:
