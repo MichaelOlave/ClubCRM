@@ -136,6 +136,10 @@ pnpm check:api
 This is a quick backend sanity check that bytecode-compiles `apps/api/src`. For Ruff-based checks,
 use `pnpm lint:api` and `pnpm format:api:check`.
 
+The API development server limits reload watching to `apps/api/src` and forces polling in the
+standard dev workflow so containerized development stays reliable on Windows-hosted and WSL-backed
+workspaces.
+
 Run the repository lint pipeline:
 
 ```bash

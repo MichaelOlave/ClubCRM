@@ -111,6 +111,7 @@ pnpm dev
 These commands are for manual restart or debugging from the devcontainer terminal. They are not required for the normal first-run workflow because the devcontainer already starts the app services.
 
 In the current devcontainer workflow, the web development server uses `next dev --webpack` to avoid a Tailwind/Turbopack workspace resolution issue during local startup. Production builds still use `next build`.
+The API development server now limits reload watching to `apps/api/src` and forces polling so Windows-hosted devcontainers and WSL-backed file mounts stay more reliable during startup and code reloads.
 
 ## Git Workflow
 
