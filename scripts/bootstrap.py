@@ -209,22 +209,47 @@ def install_pre_commit_hook(venv_python: Path, requirements_dev: Path) -> None:
         run([str(venv_python), "-m", "pre_commit", "install"])
 
 
-def require_uv() -> str:
-    uv = shutil.which("uv")
-    if uv is None:
-        fail(
-            "uv is required to bootstrap API Python dependencies. "
-            "Rebuild the devcontainer or install uv, then rerun 'pnpm bootstrap'."
-        )
+def find_uv() -> str | None:
+    return shutil.which("uv")
 
-    return uv
+
+def ensure_venv_pip(venv_python: Path) -> None:
+    run([str(venv_python), "-m", "ensurepip", "--upgrade"])
+
+
+def install_python_requirements(venv_python: Path, requirements_file: Path, *, uv: str | None) -> None:
+    if uv is not None:
+        run(
+            [
+                uv,
+                "pip",
+                "install",
+                "--python",
+                str(venv_python),
+                "-r",
+                str(requirements_file),
+            ]
+        )
+        return
+
+    run(
+        [
+            str(venv_python),
+            "-m",
+            "pip",
+            "install",
+            "--disable-pip-version-check",
+            "-r",
+            str(requirements_file),
+        ]
+    )
 
 
 def main() -> None:
     os.chdir(ROOT_DIR)
     ensure_env_file()
 
-    uv = require_uv()
+    uv = find_uv()
     requirements = API_DIR / "requirements.txt"
     requirements_dev = API_DIR / "requirements-dev.txt"
     venv_python = venv_executable("python")
@@ -241,30 +266,18 @@ def main() -> None:
 
         if requirements.is_file():
             run([sys.executable, "-m", "venv", str(venv_python.parent.parent)])
-            run(
-                [
-                    uv,
-                    "pip",
-                    "install",
-                    "--python",
-                    str(venv_python),
-                    "-r",
-                    str(requirements),
-                ]
-            )
+
+            if uv is None:
+                print(
+                    "uv is not installed in this environment; "
+                    "bootstrapping API Python dependencies with pip instead."
+                )
+                ensure_venv_pip(venv_python)
+
+            install_python_requirements(venv_python, requirements, uv=uv)
 
             if requirements_dev.is_file():
-                run(
-                    [
-                        uv,
-                        "pip",
-                        "install",
-                        "--python",
-                        str(venv_python),
-                        "-r",
-                        str(requirements_dev),
-                    ]
-                )
+                install_python_requirements(venv_python, requirements_dev, uv=uv)
 
         install_pre_commit_hook(venv_python, requirements_dev)
         BOOTSTRAP_STATE_FILE.write_text(f"{fingerprint}\n", encoding="utf-8")

@@ -40,7 +40,7 @@ When the devcontainer starts, it:
 - mounts the repository at `/workspace`
 - starts the `workspace`, `web`, `api`, `postgres`, `mongodb`, `redis`, and `kafka` services
 - runs the devcontainer `postCreateCommand` (`python3 ./scripts/bootstrap.py`)
-- bootstraps dependencies with `pnpm bootstrap`, which installs API Python packages with `uv`
+- bootstraps dependencies with `pnpm bootstrap`, which prefers `uv` for API Python packages and falls back to the virtualenv's `pip` when `uv` is unavailable
 - exposes localhost TCP proxies inside the attached `workspace` container so editor-driven forwarding from `127.0.0.1` reaches the sibling `web`, `api`, and data services
 
 To keep local I/O fast on bind-mounted workspaces, the devcontainer persists the PNPM store, workspace
@@ -83,6 +83,7 @@ pnpm bootstrap
 ```
 
 The root `pnpm` scripts are the cross-platform contract. They resolve the right Python launcher and virtualenv paths for the current OS, so prefer them over calling `.venv/bin/...` or shell scripts directly.
+They also do not require a separate host-side `uv` install just to bootstrap the API environment.
 
 Run all configured Git hooks manually:
 

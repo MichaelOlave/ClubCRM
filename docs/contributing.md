@@ -25,7 +25,7 @@ The devcontainer already automates the initial setup for contributors:
 - it generates `.devcontainer/docker-compose.ports.yml` with the first available host ports for the local stack
 - it runs the devcontainer `postCreateCommand` (`python3 ./scripts/bootstrap.py`)
 - that command runs `pnpm bootstrap`
-- `pnpm bootstrap` installs Node dependencies, installs API Python dependencies with `uv`, and installs `pre-commit` hooks when available
+- `pnpm bootstrap` installs Node dependencies, prefers `uv` for API Python dependencies, falls back to the virtualenv's `pip` when `uv` is unavailable, and installs `pre-commit` hooks when available
 - Docker Compose also starts the supporting local services and app containers defined by the repo
 - the attached `workspace` container proxies localhost service ports to the sibling `web`, `api`, and data-service containers so editor port forwarding from `127.0.0.1` reaches the running stack
 
@@ -42,6 +42,7 @@ pnpm bootstrap
 ```
 
 Prefer the root `pnpm` scripts over direct `.venv/bin/...` paths or shell wrappers. They resolve the correct Python launcher and virtualenv layout for the current OS.
+They also avoid requiring a separate host-side `uv` install for bootstrap.
 
 ## Development Workflow
 
