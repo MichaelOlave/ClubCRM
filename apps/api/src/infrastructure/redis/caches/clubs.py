@@ -1,17 +1,47 @@
+# from src.infrastructure.redis.client import RedisClient
+# from src.modules.clubs.application.ports.club_summary_cache import ClubSummaryCache
+# from src.modules.clubs.domain.entities import Club
+
+
+# class RedisClubSummaryCache(ClubSummaryCache):
+#     def __init__(self, client: RedisClient) -> None:
+#         self.client = client
+#         self._cache: dict[str, list[Club]] = {}
+
+#     def get(self, organization_id: str) -> list[Club] | None:
+#         _ = self.client
+#         return self._cache.get(organization_id)
+
+#     def set(self, organization_id: str, clubs: list[Club]) -> None:
+#         _ = self.client
+#         self._cache[organization_id] = list(clubs)
+
+from dataclasses import asdict
+
 from src.infrastructure.redis.client import RedisClient
 from src.modules.clubs.application.ports.club_summary_cache import ClubSummaryCache
 from src.modules.clubs.domain.entities import Club
 
 
 class RedisClubSummaryCache(ClubSummaryCache):
+    TTL_SECONDS = 90
+
     def __init__(self, client: RedisClient) -> None:
         self.client = client
-        self._cache: dict[str, list[Club]] = {}
+
+    def _key(self, organization_id: str) -> str:
+        return f"clubcrm:dashboard:summary:{organization_id}"
 
     def get(self, organization_id: str) -> list[Club] | None:
-        _ = self.client
-        return self._cache.get(organization_id)
+        data = self.client.get_json(self._key(organization_id))
+        if data is None:
+            return None
+        return [Club(**item) for item in data]
 
     def set(self, organization_id: str, clubs: list[Club]) -> None:
-        _ = self.client
-        self._cache[organization_id] = list(clubs)
+        payload = [asdict(club) for club in clubs]
+        self.client.set_json(
+            self._key(organization_id),
+            payload,
+            ttl_seconds=self.TTL_SECONDS,
+        )
