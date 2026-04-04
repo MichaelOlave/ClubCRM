@@ -34,7 +34,7 @@ The local development-only backing services in [`infra/docker-compose.yml`](../.
 - [`apps/api/Dockerfile`](../../apps/api/Dockerfile) builds the FastAPI app image.
 - [`infra/docker-compose.production.yml`](../../infra/docker-compose.production.yml) runs `web`, `api`, and `caddy`.
 - [`infra/Caddyfile`](../../infra/Caddyfile) fronts the app and proxies `/api/*` to the backend.
-- [`.github/workflows/deploy-oci.yml`](../../.github/workflows/deploy-oci.yml) builds images on GitHub Actions, streams them to the Oracle host over SSH, then asks the server to pull the latest repo state and restart the stack.
+- [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) verifies the repo on GitHub Actions and, after `main` passes verification, builds the production images, streams them to the Oracle host over SSH, then asks the server to pull the latest repo state and restart the stack.
 
 ## Server Expectations
 
@@ -60,12 +60,19 @@ API_IMAGE=clubcrm-api:deploy
 
 ## Deployment Flow
 
-Production deploys are handled by [`.github/workflows/deploy-oci.yml`](../../.github/workflows/deploy-oci.yml):
+Production deploys are handled by the `deploy-production` job in [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml):
 
-- GitHub Actions builds the `web` and `api` images
+- GitHub Actions first runs `pnpm verify`
+- only successful pushes to `main` continue to deployment
+- the deploy job builds the `web` and `api` images
 - the workflow streams those images to the Oracle host over SSH
 - the host pulls the latest repo state in `/opt/clubcrm`
 - `docker compose -f infra/docker-compose.production.yml up -d --remove-orphans` refreshes the stack
+
+This keeps the production artifact centered on Docker images, which makes the future move to
+Kubernetes mainly a deployment-target change. The verification step and image-build boundary can stay
+the same even when the final rollout command later changes from `docker compose` to Kubernetes
+manifests or Helm.
 
 ## DNS and TLS
 

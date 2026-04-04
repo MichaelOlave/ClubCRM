@@ -22,3 +22,9 @@ repos:
         language: system
         files: ^apps/web/.*\.(js|jsx|mjs|ts|tsx)$
         pass_filenames: false
+      - id: verify-repository
+        name: verify repository
+        entry: pnpm verify
+        language: system
+        pass_filenames: false
+        always_run: true

@@ -1,12 +1,5 @@
-# from dataclasses import dataclass
-
-
-# @dataclass(frozen=True)
-# class RedisClient:
-#     url: str
-
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
 from typing import Any
 
 import redis

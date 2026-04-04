@@ -1,5 +1,5 @@
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from src.infrastructure.redis.client import RedisClient
@@ -28,7 +28,7 @@ class RedisSessionStore:
             user_id=user_id,
             club_id=club_id,
             role=role,
-            created_at=datetime.now(timezone.utc).isoformat(),
+            created_at=datetime.now(UTC).isoformat(),
         )
         self.client.set_json(
             self._key(session_id),

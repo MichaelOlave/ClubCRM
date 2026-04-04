@@ -92,7 +92,7 @@ Treat the root scripts as the CI-facing contract unless there is a strong reason
 - Keep changes aligned with existing Next.js App Router patterns in `src/app`.
 - Check whether the change depends on backend routes, payloads, or environment variables before editing.
 - Preserve TypeScript, ESLint, and Prettier compatibility.
-- Respect the backend Python toolchain: Ruff, the in-repo `apps/api/.venv`, and the shell scripts in `scripts/` are part of the standard workflow.
+- Respect the backend Python toolchain: Ruff, the in-repo `apps/api/.venv`, and the root `pnpm` plus Python/Node helper scripts are part of the standard workflow.
 - Preserve Python-side expectations when the web app reads API responses.
 - Do not "fix" backend, infra, port, or container assumptions from the web side without checking the repo workflow first.
 - Avoid editing generated or environment-specific artifacts such as `apps/api/.venv` unless the task explicitly requires it.
