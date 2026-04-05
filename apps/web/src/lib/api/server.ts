@@ -1,8 +1,8 @@
 import { env } from "@/lib/env/server";
 
-const INTERNAL_API_BASE_URLS = [env.apiBaseUrl, "http://api:8000", "http://localhost:8000"].filter(
-  (value): value is string => Boolean(value)
-);
+const INTERNAL_API_BASE_URLS = Array.from(
+  new Set([env.apiBaseUrl, env.webApiPublicBaseUrl, "http://api:8000", "http://localhost:8000"])
+).filter((value): value is string => Boolean(value));
 
 export function getInternalApiBaseUrls(): string[] {
   return INTERNAL_API_BASE_URLS;

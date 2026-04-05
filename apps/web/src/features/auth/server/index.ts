@@ -47,7 +47,7 @@ export async function getLoginViewModel(): Promise<LoginViewModel> {
     statusMessage:
       "The login handoff is wired, but the web app could not reach the backend session endpoint to confirm the current auth state.",
     endpointLabel: sessionResult.endpoint,
-    helperText: `${sessionResult.details} If your browser reaches the API on a different host port, update WEB_API_PUBLIC_BASE_URL in the repo .env file.`,
+    helperText: `${sessionResult.details} If the web server cannot reach the API on its default target, update API_BASE_URL in the repo .env file. If your browser reaches the API on a remapped host port, keep WEB_API_PUBLIC_BASE_URL aligned with that origin.`,
     loginHref: "/api/auth/login",
     user: null,
   };

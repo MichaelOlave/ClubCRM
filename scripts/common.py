@@ -27,7 +27,19 @@ def load_env_file() -> None:
             continue
 
         key, value = line.split("=", 1)
-        os.environ.setdefault(key.strip(), value.strip())
+        os.environ.setdefault(key.strip(), _normalize_env_value(value))
+
+
+def _normalize_env_value(value: str) -> str:
+    normalized_value = value.strip()
+    if (
+        len(normalized_value) >= 2
+        and normalized_value[0] == normalized_value[-1]
+        and normalized_value[0] in {'"', "'"}
+    ):
+        return normalized_value[1:-1]
+
+    return normalized_value
 
 
 def ensure_env_file() -> None:

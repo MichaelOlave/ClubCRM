@@ -45,7 +45,8 @@ The homepage currently redirects authenticated users to `/dashboard` and everyon
 - File watching is configured with polling for reliable live reload in containers.
 - The web service waits for the API health check before it starts.
 - Most frontend data is currently provided by server-side view-model modules under `src/features/*/server`; `/system/health`, `/login`, and the protected admin route group now call into the FastAPI backend.
-- `API_BASE_URL` is the web server's internal API target, while `WEB_API_PUBLIC_BASE_URL` should stay pointed at the browser-reachable API origin for auth redirects.
+- `API_BASE_URL` is the web server's preferred internal API target.
+- `WEB_API_PUBLIC_BASE_URL` should stay pointed at the browser-reachable API origin for auth redirects, and it also acts as a server-side fallback when the web app cannot reach the Docker hostname directly.
 - The admin shell now redirects unauthenticated requests to `/login` after checking the backend-owned session.
 - If you need to restart or validate the web app manually, use the root scripts from the workspace terminal.
 
