@@ -26,10 +26,7 @@ export default function PublicLayout({
 
           <div className="flex flex-wrap gap-3">
             <Button asChild variant="secondary">
-              <Link href="/dashboard">Admin preview</Link>
-            </Button>
-            <Button asChild variant="ghost">
-              <Link href="/system/health">Diagnostics</Link>
+              <Link href="/login">Admin sign in</Link>
             </Button>
           </div>
         </header>

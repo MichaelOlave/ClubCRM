@@ -1,12 +1,5 @@
-# from dataclasses import dataclass
-
-
-# @dataclass(frozen=True)
-# class RedisClient:
-#     url: str
-
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
 from typing import Any
 
 import redis
@@ -42,6 +35,9 @@ class RedisClient:
         if not keys:
             return 0
         return int(self._connection().delete(*keys))
+
+    def expire(self, key: str, ttl_seconds: int) -> bool:
+        return bool(self._connection().expire(key, ttl_seconds))
 
     def ttl(self, key: str) -> int:
         return int(self._connection().ttl(key))

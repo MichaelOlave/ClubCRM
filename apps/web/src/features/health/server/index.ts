@@ -1,14 +1,12 @@
 import { apiFetch } from "@/lib/api/client";
-import { env } from "@/lib/env/server";
+import { buildApiUrl, getInternalApiBaseUrls } from "@/lib/api/server";
 import type { HealthCheckResult } from "@/features/health/types";
 
-const API_BASE_URLS = [env.apiBaseUrl, "http://api:8000", "http://localhost:8000"].filter(
-  (v): v is string => Boolean(v)
-);
+const API_BASE_URLS = getInternalApiBaseUrls();
 
 export async function getHealthCheck(): Promise<HealthCheckResult> {
   for (const baseUrl of API_BASE_URLS) {
-    const endpoint = `${baseUrl.replace(/\/$/, "")}/health`;
+    const endpoint = buildApiUrl(baseUrl, "/health");
 
     try {
       const response = await apiFetch(endpoint, { cache: "no-store" });
@@ -41,7 +39,7 @@ export async function getHealthCheck(): Promise<HealthCheckResult> {
   return {
     connected: false,
     status: "offline",
-    endpoint: API_BASE_URLS[0] ? `${API_BASE_URLS[0].replace(/\/$/, "")}/health` : "Unavailable",
+    endpoint: API_BASE_URLS[0] ? buildApiUrl(API_BASE_URLS[0], "/health") : "Unavailable",
     details: "Unable to reach the API health check from the web app.",
   };
 }

@@ -168,7 +168,7 @@ Today the frontend is ahead of the backend contract. The implemented web app use
 ```text
 /apps/web/src
   /app
-    page.tsx                 # redirects / to /dashboard
+    page.tsx                 # redirects / based on backend auth session
     /(app)
       layout.tsx
       /dashboard
@@ -194,7 +194,7 @@ Today the frontend is ahead of the backend contract. The implemented web app use
     /memberships
 ```
 
-Most current web data is provided by server-side view-model modules under `apps/web/src/features/*/server`. The real cross-app integration remains the diagnostics flow on `/system/health`, which calls the backend `GET /health` endpoint using the health feature.
+Most current web data is provided by server-side view-model modules under `apps/web/src/features/*/server`. The live cross-app integrations today are the diagnostics flow on `/system/health`, which calls the backend `GET /health` endpoint, the protected `/profile` route, which reads `/auth/session` plus request cookies to surface stored identity and auth diagnostics, and the public login route, which reads `/auth/session` and hands off to the backend-owned `/auth/login` flow.
 
 ## Current Backend Implementation
 
@@ -237,9 +237,9 @@ composition, feature modules, infrastructure adapters, and unit tests.
     /infrastructure
 ```
 
-Only `GET /health` currently has a concrete public handler. The sections below describe how that
-module-first structure should keep growing as more endpoints and real persistence behavior are
-added.
+`GET /health` remains the baseline diagnostics handler, and the auth module now exposes a
+backend-owned session flow under `/auth`. The sections below describe how that module-first
+structure should keep growing as more endpoints and real persistence behavior are added.
 
 ## Target Backend Architectural Style
 

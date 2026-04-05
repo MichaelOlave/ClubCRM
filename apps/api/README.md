@@ -94,9 +94,13 @@ The API defaults to host port `8000` when the devcontainer is running, or the ne
 port if `8000` is already in use. The resolved binding is written to
 `.devcontainer/docker-compose.ports.yml`.
 
-## Application Route
+## Application Routes
 
 - `GET /health` used by the web diagnostics page at `/system/health`
+- `GET /auth/login` starts the backend-owned Auth0 login flow or local bypass flow
+- `GET /auth/callback` completes the Auth0 callback and creates the backend session cookie
+- `GET /auth/session` returns the current backend session plus a CSRF token for same-origin requests
+- `POST /auth/logout` clears the backend auth session and redirects through logout
 
 FastAPI's default docs remain enabled as well:
 
