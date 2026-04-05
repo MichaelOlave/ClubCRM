@@ -6,7 +6,7 @@ This document reviews ClubCRM as it exists in the repository today. It focuses o
 shape of the codebase, tooling, and runtime behavior, then explains which structural decisions are
 already paying off and which ones are still ahead of the product.
 
-This snapshot reflects the repository state in March 2026. It is based on the live tree plus the
+This snapshot reflects the repository state in April 2026. It is based on the live tree plus the
 key workflow and architecture sources in `README.md`, `docs/contributing.md`,
 `docs/architecture.md`, `docs/README.md`, `apps/web/README.md`, `apps/api/README.md`,
 `.github/workflows/`, `infra/`, `scripts/`, `apps/web/src`, and `apps/api/src`.
@@ -58,7 +58,6 @@ used by real product behavior.
   package.json
   pnpm-workspace.yaml
   pyproject.toml
-  turbo.json
   uv.lock
 ```
 
@@ -102,8 +101,8 @@ multi-database configuration. A monorepo makes it easier to keep those parts ali
 - The root scripts provide a single contract for bootstrap, build, lint, check, and verify.
 - The workspace is already prepared for future shared packages through `packages/*`, even though no
   shared package exists yet.
-- `turbo.json` is present for pipeline coordination, while the root scripts remain the main
-  human-facing workflow.
+- Node workspace membership is defined in `pnpm-workspace.yaml`, while the Python backend is wired
+  into the same root workflow through the shared bootstrap and verification scripts.
 
 ### Current costs
 
@@ -212,7 +211,7 @@ flows.
 The repo now includes more than local development infrastructure. It also has:
 
 - CI in `.github/workflows/ci.yml`
-- Oracle-targeted deployment automation in `.github/workflows/deploy-oci.yml`
+- Oracle-targeted deployment automation in the `deploy-production` job inside `.github/workflows/ci.yml`
 - a production Compose file in `infra/docker-compose.production.yml`
 - a Caddy reverse proxy in `infra/Caddyfile`
 - app-specific Dockerfiles in `apps/web/Dockerfile` and `apps/api/Dockerfile`

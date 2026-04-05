@@ -33,7 +33,7 @@ If you do not create `.env`, the checked-in example values are used automaticall
 - `.devcontainer/docker-compose.devcontainer.yml`
 - `.devcontainer/docker-compose.ports.yml` generated during startup
 
-The repository enforces LF line endings for devcontainer and shell files so the same checkout works on macOS and Windows hosts. Devcontainer startup no longer depends on checked-out shell scripts, so you should not need any host-side normalization step just to open the environment.
+The repository enforces LF line endings for devcontainer and workflow files so the same checkout works on macOS and Windows hosts. Devcontainer startup no longer depends on host-specific wrapper scripts, so you should not need any host-side normalization step just to open the environment.
 
 When the devcontainer starts, it:
 
@@ -83,7 +83,7 @@ Bootstrap dependencies and install Git hooks again if needed:
 pnpm bootstrap
 ```
 
-The root `pnpm` scripts are the cross-platform contract. They resolve the right Python launcher and virtualenv paths for the current OS, so prefer them over calling `.venv/bin/...` or shell scripts directly.
+The root `pnpm` scripts are the cross-platform contract. They resolve the right Python launcher and virtualenv paths for the current OS, so prefer them over calling `.venv/bin/...` or app runtimes directly.
 They also do not require a separate host-side `uv` install just to bootstrap the API environment.
 
 Run all configured Git hooks manually:

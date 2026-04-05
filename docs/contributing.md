@@ -26,7 +26,7 @@ The devcontainer already automates the initial setup for contributors:
 - it runs the devcontainer `postCreateCommand` (`python3 ./scripts/bootstrap.py`)
 - that command runs `pnpm bootstrap`
 - `pnpm bootstrap` installs Node dependencies, prefers `uv` for API Python dependencies, falls back to the virtualenv's `pip` when `uv` is unavailable, and installs `pre-commit` hooks when available
-- Docker Compose also starts the supporting local services and app containers defined by the repo
+- Docker Compose also starts the full local stack defined by the repo, including `web`, `api`, `postgres`, `mongodb`, `redis`, and `kafka`
 - the attached `workspace` container proxies localhost service ports to the sibling `web`, `api`, and data-service containers so editor port forwarding from `127.0.0.1` reaches the running stack
 
 The devcontainer persists the PNPM store, workspace `node_modules`, web `node_modules`, web `.next`,
@@ -41,7 +41,7 @@ If you need to rerun setup manually from inside the devcontainer, use:
 pnpm bootstrap
 ```
 
-Prefer the root `pnpm` scripts over direct `.venv/bin/...` paths or shell wrappers. They resolve the correct Python launcher and virtualenv layout for the current OS.
+Prefer the root `pnpm` scripts over direct `.venv/bin/...` paths or app runtimes. They resolve the correct Python launcher and virtualenv layout for the current OS.
 They also avoid requiring a separate host-side `uv` install for bootstrap.
 
 ## Development Workflow
@@ -108,10 +108,14 @@ ClubCRM uses language-specific tools with a shared automation workflow:
 This repository already has several automation layers:
 
 - the devcontainer runs post-create setup automatically
-- `pre-commit` runs repository checks automatically on commit
-- GitHub Actions runs the CI workflow automatically on pushes to `main` and on pull requests
+- `pre-commit` runs repository verification automatically on commit and blocks the commit when formatting, linting, or build checks fail
+- GitHub Actions runs the shared verification pipeline automatically on pull requests and on pushes to `main`
+- after verification passes on `main`, GitHub Actions deploys the production stack automatically
 
 After setup, Git hooks should run automatically on commit through `pre-commit`.
+
+The simplest mental model is to treat `pnpm verify` as the single quality gate. Local commits use it
+through `pre-commit`, and GitHub Actions uses the same command before production deploys.
 
 To run all hooks manually across the repository:
 
