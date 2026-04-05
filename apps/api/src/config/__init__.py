@@ -1,5 +1,6 @@
 from src.config.settings import (
     ApiSettings,
+    AuthSettings,
     KafkaSettings,
     MongoDBSettings,
     PostgresSettings,
@@ -10,6 +11,7 @@ from src.config.settings import (
 
 __all__ = [
     "ApiSettings",
+    "AuthSettings",
     "KafkaSettings",
     "MongoDBSettings",
     "PostgresSettings",

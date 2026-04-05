@@ -1,47 +1,41 @@
-from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from dataclasses import asdict
 from uuid import uuid4
 
 from src.infrastructure.redis.client import RedisClient
+from src.modules.auth.application.ports.auth_session_store import (
+    AuthSessionRecord,
+    AuthSessionStore,
+)
 
 
-@dataclass(frozen=True)
-class SessionData:
-    user_id: str
-    club_id: str
-    role: str
-    created_at: str
-
-
-class RedisSessionStore:
-    TTL_SECONDS = 1800
-
-    def __init__(self, client: RedisClient) -> None:
+class RedisAuthSessionStore(AuthSessionStore):
+    def __init__(self, client: RedisClient, ttl_seconds: int) -> None:
         self.client = client
+        self.ttl_seconds = ttl_seconds
 
     def _key(self, session_id: str) -> str:
-        return f"clubcrm:session:{session_id}"
+        return f"clubcrm:auth-session:{session_id}"
 
-    def create(self, user_id: str, club_id: str, role: str) -> str:
+    def create(self, record: AuthSessionRecord) -> str:
         session_id = str(uuid4())
-        session = SessionData(
-            user_id=user_id,
-            club_id=club_id,
-            role=role,
-            created_at=datetime.now(timezone.utc).isoformat(),
-        )
-        self.client.set_json(
-            self._key(session_id),
-            asdict(session),
-            ttl_seconds=self.TTL_SECONDS,
-        )
+        self.save(session_id, record)
         return session_id
 
-    def get(self, session_id: str) -> SessionData | None:
+    def get(self, session_id: str) -> AuthSessionRecord | None:
         data = self.client.get_json(self._key(session_id))
-        if data is None:
+        if not isinstance(data, dict):
             return None
-        return SessionData(**data)
+        return AuthSessionRecord(**data)
+
+    def save(self, session_id: str, record: AuthSessionRecord) -> None:
+        self.client.set_json(
+            self._key(session_id),
+            asdict(record),
+            ttl_seconds=self.ttl_seconds,
+        )
 
     def delete(self, session_id: str) -> None:
         self.client.delete(self._key(session_id))
+
+    def touch(self, session_id: str) -> None:
+        self.client.expire(self._key(session_id), self.ttl_seconds)

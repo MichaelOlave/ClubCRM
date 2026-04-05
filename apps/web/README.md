@@ -4,7 +4,7 @@ This is the ClubCRM web client, built with [Next.js](https://nextjs.org).
 
 The current frontend is a UI-first MVP with:
 
-- admin routes for the dashboard, clubs, members, and diagnostics
+- admin routes for the dashboard, profile, clubs, members, and diagnostics
 - public routes for login and club join-form previews
 - feature-owned server modules that provide view models while the backend contract is still minimal
 
@@ -30,10 +30,11 @@ If you need to restart the web server from the workspace terminal, run:
 pnpm dev:web
 ```
 
-The homepage currently redirects to `/dashboard`, so the most useful entry points to edit are usually:
+The homepage currently redirects authenticated users to `/dashboard` and everyone else to `/login`, so the most useful entry points to edit are usually:
 
 - [`src/app/page.tsx`](src/app/page.tsx) for the root redirect
 - [`src/app/(app)/dashboard/page.tsx`](<src/app/(app)/dashboard/page.tsx>) for the admin landing page
+- [`src/app/(app)/profile/page.tsx`](<src/app/(app)/profile/page.tsx>) for the signed-in auth profile and session diagnostics surface
 - [`src/app/(app)/system/health/page.tsx`](<src/app/(app)/system/health/page.tsx>) for the API diagnostics surface
 - [`src/app/(public)/login/page.tsx`](<src/app/(public)/login/page.tsx>) or [`src/app/(public)/join/[clubId]/page.tsx`](<src/app/(public)/join/[clubId]/page.tsx>) for public entry points
 
@@ -43,7 +44,9 @@ The homepage currently redirects to `/dashboard`, so the most useful entry point
 - The PNPM store, workspace `node_modules`, web `node_modules`, web `.next`, and the API virtualenv are persisted in Docker volumes.
 - File watching is configured with polling for reliable live reload in containers.
 - The web service waits for the API health check before it starts.
-- Most frontend data is currently provided by server-side view-model modules under `src/features/*/server`; only `/system/health` currently calls the FastAPI backend.
+- Most frontend data is currently provided by server-side view-model modules under `src/features/*/server`; `/system/health`, `/login`, and the protected admin route group now call into the FastAPI backend.
+- `API_BASE_URL` is the web server's internal API target, while `WEB_API_PUBLIC_BASE_URL` should stay pointed at the browser-reachable API origin for auth redirects.
+- The admin shell now redirects unauthenticated requests to `/login` after checking the backend-owned session.
 - If you need to restart or validate the web app manually, use the root scripts from the workspace terminal.
 
 ## shadcn/ui

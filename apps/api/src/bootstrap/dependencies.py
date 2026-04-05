@@ -1,4 +1,5 @@
 from functools import lru_cache
+from importlib import import_module
 
 from src.config import Settings, get_settings
 from src.infrastructure.kafka.client import KafkaClient
@@ -12,6 +13,9 @@ from src.infrastructure.postgres.repositories.dashboard import PostgresDashboard
 from src.infrastructure.postgres.unit_of_work import DefaultPostgresUnitOfWork
 from src.infrastructure.redis.caches.clubs import RedisClubSummaryCache
 from src.infrastructure.redis.client import RedisClient
+from src.infrastructure.redis.sessions.session_store import RedisAuthSessionStore
+from src.modules.auth.application.ports.auth_session_store import AuthSessionStore
+from src.modules.auth.application.ports.identity_provider import AuthIdentityProvider
 from src.modules.clubs.application.ports.club_event_publisher import ClubEventPublisher
 from src.modules.clubs.application.ports.club_repository import ClubRepository
 from src.modules.clubs.application.ports.club_summary_cache import ClubSummaryCache
@@ -45,6 +49,44 @@ def get_redis_client() -> RedisClient:
 @lru_cache
 def get_kafka_client() -> KafkaClient:
     return KafkaClient(bootstrap_servers=get_app_settings().kafka.bootstrap_servers)
+
+
+@lru_cache
+def get_auth_session_store() -> AuthSessionStore:
+    return RedisAuthSessionStore(
+        client=get_redis_client(),
+        ttl_seconds=get_app_settings().auth.session_cookie_max_age_seconds,
+    )
+
+
+def get_optional_auth_identity_provider() -> AuthIdentityProvider | None:
+    auth_settings = get_app_settings().auth
+    if not auth_settings.is_auth0_configured():
+        return None
+
+    try:
+        auth0_module = import_module("src.infrastructure.auth.providers.auth0")
+    except ModuleNotFoundError as exc:
+        missing_module_name = exc.name or ""
+        if missing_module_name == "httpx" or missing_module_name.startswith("authlib"):
+            return None
+        raise
+
+    auth0_identity_provider_class = auth0_module.Auth0IdentityProvider
+    return auth0_identity_provider_class(
+        domain=auth_settings.auth0_domain or "",
+        client_id=auth_settings.auth0_client_id or "",
+        client_secret=auth_settings.auth0_client_secret or "",
+        scopes=auth_settings.auth0_scopes,
+    )
+
+
+def get_auth_identity_provider() -> AuthIdentityProvider:
+    provider = get_optional_auth_identity_provider()
+    if provider is None:
+        raise RuntimeError("Auth identity provider is not configured.")
+
+    return provider
 
 
 def get_club_repository() -> ClubRepository:

@@ -1,12 +1,30 @@
 import Link from "next/link";
 
-import { Alert, AlertDescription } from "@/components/shadcn/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/alert";
 import { Button } from "@/components/shadcn/button";
 import { Card } from "@/components/shadcn/card";
-import { Input } from "@/components/shadcn/input";
+import { logout } from "@/features/auth/server/actions";
 import type { LoginViewModel } from "@/features/auth/types";
 
-export function LoginForm({ description, helperText, title }: LoginViewModel) {
+const alertVariantByStatus = {
+  authenticated: "success",
+  "signed-out": "info",
+  unavailable: "warning",
+} as const;
+
+export function LoginForm({
+  description,
+  endpointLabel,
+  helperText,
+  loginHref,
+  status,
+  statusMessage,
+  statusTitle,
+  title,
+  user,
+}: LoginViewModel) {
+  const canAccessAdmin = status === "authenticated";
+
   return (
     <Card className="w-full max-w-lg rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
       <div className="space-y-6">
@@ -18,41 +36,47 @@ export function LoginForm({ description, helperText, title }: LoginViewModel) {
           </div>
         </div>
 
-        <form className="space-y-4">
-          <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
-            <span>Email address</span>
-            <Input autoComplete="email" placeholder="you@champlain.edu" type="email" />
-            <span className="text-xs font-normal text-muted-foreground">
-              Use your organization admin or club manager email.
-            </span>
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
-            <span>Password</span>
-            <Input
-              autoComplete="current-password"
-              placeholder="Enter your password"
-              type="password"
-            />
-            <span className="text-xs font-normal text-muted-foreground">
-              Password auth will be wired once the backend auth module exists.
-            </span>
-          </label>
-          <Button className="w-full" type="button">
-            Continue
-          </Button>
-        </form>
+        <Alert variant={alertVariantByStatus[status]}>
+          <AlertTitle>{statusTitle}</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p>{statusMessage}</p>
+            {user ? (
+              <p>
+                Signed in as <span className="font-medium">{user.name ?? "ClubCRM user"}</span>
+                {user.email ? ` (${user.email})` : ""}.
+              </p>
+            ) : null}
+            <p className="text-xs opacity-80">Session check: {endpointLabel}</p>
+          </AlertDescription>
+        </Alert>
 
-        <Alert variant="warning">
+        <Alert variant="default">
           <AlertDescription>{helperText}</AlertDescription>
         </Alert>
 
         <div className="flex flex-wrap gap-3">
-          <Button asChild variant="secondary">
-            <Link href="/dashboard">Open admin preview</Link>
+          <Button asChild>
+            <a href={loginHref}>
+              {status === "authenticated" ? "Refresh backend sign-in" : "Continue to sign in"}
+            </a>
           </Button>
-          <Button asChild variant="ghost">
-            <Link href="/system/health">View diagnostics</Link>
-          </Button>
+          {canAccessAdmin ? (
+            <Button asChild variant="secondary">
+              <Link href="/dashboard">Open dashboard</Link>
+            </Button>
+          ) : null}
+          {canAccessAdmin ? (
+            <form action={logout}>
+              <Button type="submit" variant="outline">
+                Logout
+              </Button>
+            </form>
+          ) : null}
+          {canAccessAdmin ? (
+            <Button asChild variant="ghost">
+              <Link href="/system/health">View diagnostics</Link>
+            </Button>
+          ) : null}
         </div>
       </div>
     </Card>
