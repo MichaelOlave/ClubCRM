@@ -9,6 +9,7 @@ from src.infrastructure.mongodb.client import MongoDBClient
 from src.infrastructure.mongodb.stores.forms import MongoDBJoinRequestStore
 from src.infrastructure.postgres.client import PostgresClient
 from src.infrastructure.postgres.repositories.clubs import PostgresClubRepository
+from src.infrastructure.postgres.repositories.dashboard import PostgresDashboardRepository
 from src.infrastructure.postgres.unit_of_work import DefaultPostgresUnitOfWork
 from src.infrastructure.redis.caches.clubs import RedisClubSummaryCache
 from src.infrastructure.redis.client import RedisClient
@@ -18,6 +19,7 @@ from src.modules.auth.application.ports.identity_provider import AuthIdentityPro
 from src.modules.clubs.application.ports.club_event_publisher import ClubEventPublisher
 from src.modules.clubs.application.ports.club_repository import ClubRepository
 from src.modules.clubs.application.ports.club_summary_cache import ClubSummaryCache
+from src.modules.dashboard.application.ports.dashboard_repository import DashboardRepository
 from src.modules.forms.application.ports.form_submission_publisher import (
     FormSubmissionPublisher,
 )
@@ -109,3 +111,7 @@ def get_join_request_store() -> JoinRequestStore:
 
 def get_form_submission_publisher() -> FormSubmissionPublisher:
     return KafkaFormSubmissionPublisher(client=get_kafka_client())
+
+
+def get_dashboard_repository() -> DashboardRepository:
+    return PostgresDashboardRepository(client=get_postgres_client())
