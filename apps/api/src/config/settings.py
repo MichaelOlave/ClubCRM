@@ -41,6 +41,7 @@ class AuthSettings:
     session_cookie_https_only: bool
     csrf_cookie_name: str
     csrf_header_name: str
+    public_api_base_url: str | None
     login_success_url: str
     logout_redirect_url: str
     auth0_app_name: str
@@ -105,6 +106,7 @@ def get_settings() -> Settings:
             session_cookie_https_only=_read_bool_env("AUTH_COOKIE_SECURE", False),
             csrf_cookie_name=os.getenv("AUTH_CSRF_COOKIE_NAME", "clubcrm_csrf"),
             csrf_header_name=os.getenv("AUTH_CSRF_HEADER_NAME", "X-CSRF-Token"),
+            public_api_base_url=_read_optional_env("WEB_API_PUBLIC_BASE_URL"),
             login_success_url=os.getenv(
                 "AUTH_LOGIN_SUCCESS_URL",
                 "http://localhost:3000/dashboard",

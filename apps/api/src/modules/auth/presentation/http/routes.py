@@ -35,6 +35,16 @@ from src.modules.auth.presentation.http.dependencies import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def build_public_callback_url(request: Request) -> str:
+    auth_settings = get_settings().auth
+    callback_path = request.app.url_path_for("auth_callback")
+
+    if auth_settings.public_api_base_url:
+        return f"{auth_settings.public_api_base_url.rstrip('/')}{callback_path}"
+
+    return str(request.url_for("auth_callback"))
+
+
 @router.get("/login", name="auth_login")
 async def login(
     request: Request,
@@ -83,7 +93,7 @@ async def login(
             detail="Auth identity provider is not configured for backend login.",
         )
 
-    redirect_uri = str(request.url_for("auth_callback"))
+    redirect_uri = build_public_callback_url(request)
     session_id, auth_flow_state = begin_auth_flow(request)
 
     try:
@@ -153,7 +163,7 @@ async def callback(
             detail="Auth0 callback state validation failed.",
         )
 
-    redirect_uri = str(request.url_for("auth_callback"))
+    redirect_uri = build_public_callback_url(request)
 
     try:
         current_user = await FinalizeAuthSession(provider=provider).execute(
