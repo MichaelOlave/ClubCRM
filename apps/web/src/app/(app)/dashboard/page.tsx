@@ -7,6 +7,8 @@ import { getDashboardViewModel } from "@/features/dashboard/server";
 
 export default async function DashboardPage() {
   const viewModel = await getDashboardViewModel();
+  const previewJoinHref =
+    viewModel.quickActions.find((action) => action.href.startsWith("/join/"))?.href ?? null;
 
   return (
     <div className="space-y-8">
@@ -16,12 +18,14 @@ export default async function DashboardPage() {
             <Button asChild variant="secondary">
               <Link href="/clubs">Browse clubs</Link>
             </Button>
-            <Button asChild variant="ghost">
-              <Link href="/join/chess-society">Preview join form</Link>
-            </Button>
+            {previewJoinHref ? (
+              <Button asChild variant="ghost">
+                <Link href={previewJoinHref}>Preview join form</Link>
+              </Button>
+            ) : null}
           </>
         }
-        description="This is the new product-facing home for the frontend MVP. It shows how route groups, feature-owned pages, and shared UI primitives fit together before the API CRUD slices are wired in."
+        description="This product-facing overview now keeps the same route and shell structure while rendering live backend data."
         eyebrow="Dashboard"
         title="Admin overview"
       />

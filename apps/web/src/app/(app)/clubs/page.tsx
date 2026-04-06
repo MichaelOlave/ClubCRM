@@ -9,6 +9,7 @@ import { getClubList } from "@/features/clubs/server";
 
 export default async function ClubsPage() {
   const clubs = await getClubList();
+  const previewJoinHref = clubs[0] ? `/join/${clubs[0].id}` : null;
 
   return (
     <div className="space-y-8">
@@ -18,9 +19,11 @@ export default async function ClubsPage() {
             <Button asChild variant="secondary">
               <Link href="/members">View members</Link>
             </Button>
-            <Button asChild variant="ghost">
-              <Link href="/join/chess-society">Preview public form</Link>
-            </Button>
+            {previewJoinHref ? (
+              <Button asChild variant="ghost">
+                <Link href={previewJoinHref}>Preview public form</Link>
+              </Button>
+            ) : null}
           </>
         }
         description="The club directory uses a shared table primitive today, and the plan is to attach create and edit flows through reusable drawers before introducing dedicated management routes."

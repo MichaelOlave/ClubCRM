@@ -45,8 +45,8 @@ export function DashboardOverview({ viewModel }: Props) {
     <div className="space-y-6">
       <Alert variant="info">
         <AlertDescription>
-          This dashboard is using mock-backed server loaders so we can validate the route, shell,
-          and reusable component structure before the CRUD API lands.
+          This dashboard now reads live club, member, event, and announcement data from the backend
+          API.
         </AlertDescription>
       </Alert>
 
@@ -96,7 +96,7 @@ export function DashboardOverview({ viewModel }: Props) {
               </div>
             ) : (
               <EmptyState
-                description="As the backend starts publishing real events, this list can turn into a live activity feed."
+                description="No recent announcements or scheduled events were returned by the API."
                 title="No activity yet"
               />
             )}
@@ -116,7 +116,7 @@ export function DashboardOverview({ viewModel }: Props) {
               {viewModel.quickActions.map((action) => (
                 <div
                   className="rounded-[1.25rem] border border-brand-border bg-card/70 p-4"
-                  key={action.href}
+                  key={action.id}
                 >
                   <div className="space-y-3">
                     <div>

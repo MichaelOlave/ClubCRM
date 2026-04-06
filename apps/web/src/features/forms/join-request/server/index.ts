@@ -1,17 +1,17 @@
-import { getClubDetail } from "@/features/clubs/server";
+import { getClubApi } from "@/lib/api/clubcrm";
 import type { JoinRequestContext } from "@/features/forms/join-request/types";
 
 export async function getJoinRequestContext(clubId: string): Promise<JoinRequestContext | null> {
-  const detail = await getClubDetail(clubId);
+  const club = await getClubApi(clubId);
 
-  if (!detail) {
+  if (!club) {
     return null;
   }
 
   return {
-    clubId: detail.club.id,
-    clubName: detail.club.name,
-    clubDescription: detail.club.description,
+    clubId: club.id,
+    clubName: club.name,
+    clubDescription: club.description,
     organizationName: "Champlain College",
     prompt: "Tell the club what you want to contribute and what drew you to this group.",
     roles: ["General member", "Event volunteer", "Communications support", "Leadership interest"],

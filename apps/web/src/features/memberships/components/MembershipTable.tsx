@@ -36,7 +36,7 @@ const columns: Array<TableColumn<MembershipTableModel["memberships"][number]>> =
   {
     key: "joined-at",
     header: "Joined",
-    render: (membership) => formatDate(membership.joinedAt),
+    render: (membership) => (membership.joinedAt ? formatDate(membership.joinedAt) : "Unavailable"),
     align: "right",
   },
 ];
@@ -57,7 +57,7 @@ export function MembershipTable({
         columns={columns}
         emptyState={
           <EmptyState
-            description="Assignments will appear here once the membership flow is wired to the backend."
+            description="No membership assignments were returned by the connected API."
             title="No memberships yet"
           />
         }
