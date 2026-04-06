@@ -34,13 +34,17 @@ export function MemberProfile({ detail, memberships }: Props) {
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
               Student ID
             </p>
-            <p className="mt-1 font-semibold text-foreground">{detail.member.studentId}</p>
+            <p className="mt-1 font-semibold text-foreground">
+              {detail.member.studentId ?? "Not provided"}
+            </p>
           </div>
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
               Primary club
             </p>
-            <p className="mt-1 font-semibold text-foreground">{detail.member.primaryClub}</p>
+            <p className="mt-1 font-semibold text-foreground">
+              {detail.member.primaryClub ?? "No club assignment"}
+            </p>
           </div>
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
@@ -53,25 +57,28 @@ export function MemberProfile({ detail, memberships }: Props) {
 
       <Card className="space-y-4 rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
         <div>
-          <h3 className="text-xl font-semibold text-foreground">Profile notes</h3>
+          <h3 className="text-xl font-semibold text-foreground">Record details</h3>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Member detail keeps cross-club context in one place, which is why the profile route
-            lives outside any single club.
+            This panel reflects the current backend member record rather than mock-only profile
+            notes.
           </p>
         </div>
 
-        {detail.notes.length ? (
+        {detail.metadata.length ? (
           <div className="space-y-3">
-            {detail.notes.map((note) => (
-              <div className="rounded-[1.25rem] border border-border p-4" key={note}>
-                <p className="text-sm leading-6 text-foreground/80">{note}</p>
+            {detail.metadata.map((item) => (
+              <div className="rounded-[1.25rem] border border-border p-4" key={item.label}>
+                <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                  {item.label}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-foreground/80">{item.value}</p>
               </div>
             ))}
           </div>
         ) : (
           <EmptyState
-            description="Add club-specific notes later without losing the organization-level member record."
-            title="No notes yet"
+            description="The backend did not return any extra member metadata."
+            title="No extra details yet"
           />
         )}
       </Card>

@@ -41,7 +41,7 @@ const columns: Array<TableColumn<ClubRecord>> = [
     header: "Manager",
     render: (club) => (
       <div className="space-y-1">
-        <p>{club.manager}</p>
+        <p>{club.manager ?? "Unassigned"}</p>
         <Badge variant={getStatusVariant(club.status)}>{club.status}</Badge>
       </div>
     ),
@@ -76,7 +76,7 @@ export function ClubDirectory({ clubs }: Props) {
       columns={columns}
       emptyState={
         <EmptyState
-          description="As club creation lands, each record will show up here with a shared table layout and reusable status treatments."
+          description="No club records were returned by the connected API."
           title="No clubs available yet"
         />
       }

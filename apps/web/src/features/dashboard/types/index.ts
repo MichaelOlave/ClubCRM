@@ -10,6 +10,7 @@ export type DashboardMetric = {
 export type QuickAction = {
   description: string;
   href: string;
+  id: string;
   label: string;
 };
 

@@ -57,7 +57,9 @@ export function ClubProfile({ detail, memberships }: Props) {
               <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
                 Manager
               </p>
-              <p className="mt-1 text-sm font-semibold text-foreground">{detail.club.manager}</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {detail.club.manager ?? "Unassigned"}
+              </p>
             </div>
             <div>
               <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">

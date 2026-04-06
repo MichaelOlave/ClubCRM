@@ -38,7 +38,7 @@ export default async function MemberDetailPage({ params }: Props) {
             ) : null}
           </>
         }
-        description="Member detail keeps organization-wide identity, notes, and club assignments together so we can reuse the same record across multiple workflows."
+        description="Member detail keeps organization-wide identity, backend record metadata, and club assignments together so we can reuse the same record across multiple workflows."
         eyebrow="Member detail"
         title={`${detail.member.firstName} ${detail.member.lastName}`}
       />

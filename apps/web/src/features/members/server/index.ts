@@ -1,75 +1,118 @@
+import { getMemberApi, listClubsApi, listMembersApi, listMembershipsApi } from "@/lib/api/clubcrm";
+import { formatDateTime } from "@/lib/utils/formatters";
 import type { MemberDetailViewModel } from "@/features/members/types";
-import type { MemberRecord } from "@/types/api";
+import type { BackendMemberRecord, BackendMembershipRecord, MemberRecord } from "@/types/api";
 
-const members: MemberRecord[] = [
-  {
-    id: "alex-johnson",
-    firstName: "Alex",
-    lastName: "Johnson",
-    email: "alex.johnson@champlain.edu",
-    studentId: "C10432",
-    status: "active",
-    clubCount: 1,
-    primaryClub: "Chess Society",
-  },
-  {
-    id: "maya-patel",
-    firstName: "Maya",
-    lastName: "Patel",
-    email: "maya.patel@champlain.edu",
-    studentId: "C10841",
-    status: "active",
-    clubCount: 2,
-    primaryClub: "Design Guild",
-  },
-  {
-    id: "evan-lee",
-    firstName: "Evan",
-    lastName: "Lee",
-    email: "evan.lee@champlain.edu",
-    studentId: "C10297",
-    status: "prospective",
-    clubCount: 1,
-    primaryClub: "Design Guild",
-  },
-  {
-    id: "jordan-rivera",
-    firstName: "Jordan",
-    lastName: "Rivera",
-    email: "jordan.rivera@champlain.edu",
-    studentId: "C10976",
-    status: "active",
-    clubCount: 1,
-    primaryClub: "Robotics Lab",
-  },
-];
+function getMemberStatus(memberships: BackendMembershipRecord[]): MemberRecord["status"] {
+  return memberships.some((membership) => membership.status !== "pending")
+    ? "active"
+    : "prospective";
+}
 
-const notesByMemberId: Record<string, string[]> = {
-  "alex-johnson": [
-    "Leads weekly ladder sessions and manages tournament pairings.",
-    "Acts as the primary club contact for new-member onboarding.",
-  ],
-  "maya-patel": [
-    "Supports both design critiques and club communications.",
-    "Cross-club participation makes Maya a strong test case for organization-level member records.",
-  ],
-  "evan-lee": ["Recently submitted a portfolio review request for the next design sprint."],
-  "jordan-rivera": ["Pending robotics leadership review before the next build-night cycle."],
-};
+function getPrimaryClubName(
+  memberships: BackendMembershipRecord[],
+  clubNames: Map<string, string>
+): string | null {
+  const sortedMemberships = memberships
+    .slice()
+    .sort((left, right) => (left.joined_at ?? "").localeCompare(right.joined_at ?? ""));
+  const primaryMembership =
+    sortedMemberships.find((membership) => membership.status !== "pending") ?? sortedMemberships[0];
+
+  return primaryMembership ? (clubNames.get(primaryMembership.club_id) ?? null) : null;
+}
+
+function mapMemberRecord(
+  member: BackendMemberRecord,
+  memberships: BackendMembershipRecord[],
+  clubNames: Map<string, string>
+): MemberRecord {
+  return {
+    id: member.id,
+    organizationId: member.organization_id,
+    firstName: member.first_name,
+    lastName: member.last_name,
+    email: member.email,
+    studentId: member.student_id,
+    status: getMemberStatus(memberships),
+    clubCount: memberships.length,
+    primaryClub: getPrimaryClubName(memberships, clubNames),
+    createdAt: member.created_at,
+    updatedAt: member.updated_at,
+  };
+}
+
+function buildMetadata(member: BackendMemberRecord): MemberDetailViewModel["metadata"] {
+  return [
+    {
+      label: "Organization",
+      value: member.organization_id,
+    },
+    ...(member.created_at
+      ? [
+          {
+            label: "Created",
+            value: formatDateTime(member.created_at),
+          },
+        ]
+      : []),
+    ...(member.updated_at
+      ? [
+          {
+            label: "Updated",
+            value: formatDateTime(member.updated_at),
+          },
+        ]
+      : []),
+  ];
+}
 
 export async function getMemberList(): Promise<MemberRecord[]> {
-  return members;
+  const clubs = await listClubsApi();
+
+  if (!clubs.length) {
+    return [];
+  }
+
+  const organizationIds = Array.from(new Set(clubs.map((club) => club.organization_id)));
+
+  const [members, memberships] = await Promise.all([
+    Promise.all(organizationIds.map((organizationId) => listMembersApi(organizationId))).then(
+      (memberLists) => memberLists.flat()
+    ),
+    listMembershipsApi(),
+  ]);
+
+  const clubNames = new Map(clubs.map((club) => [club.id, club.name]));
+  const membershipsByMember = new Map<string, BackendMembershipRecord[]>();
+
+  for (const membership of memberships) {
+    const memberMemberships = membershipsByMember.get(membership.member_id) ?? [];
+    memberMemberships.push(membership);
+    membershipsByMember.set(membership.member_id, memberMemberships);
+  }
+
+  return members.map((member) =>
+    mapMemberRecord(member, membershipsByMember.get(member.id) ?? [], clubNames)
+  );
 }
 
 export async function getMemberDetail(memberId: string): Promise<MemberDetailViewModel | null> {
-  const member = members.find((entry) => entry.id === memberId);
+  const member = await getMemberApi(memberId);
 
   if (!member) {
     return null;
   }
 
+  const [clubs, memberships] = await Promise.all([
+    listClubsApi(),
+    listMembershipsApi({ memberId }),
+  ]);
+
+  const clubNames = new Map(clubs.map((club) => [club.id, club.name]));
+
   return {
-    member,
-    notes: notesByMemberId[memberId] ?? [],
+    member: mapMemberRecord(member, memberships, clubNames),
+    metadata: buildMetadata(member),
   };
 }

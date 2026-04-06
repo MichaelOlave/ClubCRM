@@ -82,8 +82,8 @@ export function JoinRequestForm({ context }: Props) {
 
       <Alert variant="warning">
         <AlertDescription>
-          This page is intentionally a frontend-first shell. The next slice will connect it to the
-          MongoDB-backed form submission workflow.
+          This page now pulls live club data from the API, but form submission is still a UI-only
+          preview until the MongoDB workflow is connected.
         </AlertDescription>
       </Alert>
     </div>

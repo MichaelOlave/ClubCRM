@@ -31,14 +31,14 @@ const columns: Array<TableColumn<MemberRecord>> = [
   {
     key: "student-id",
     header: "Student ID",
-    render: (member) => member.studentId,
+    render: (member) => member.studentId ?? "Not provided",
   },
   {
     key: "primary-club",
     header: "Primary club",
     render: (member) => (
       <div className="space-y-1">
-        <p>{member.primaryClub}</p>
+        <p>{member.primaryClub ?? "No club assignment"}</p>
         <Badge variant={getStatusVariant(member.status)}>{member.status}</Badge>
       </div>
     ),
@@ -67,7 +67,7 @@ export function MemberDirectory({ members }: Props) {
       columns={columns}
       emptyState={
         <EmptyState
-          description="Organization-level member records will appear here when member CRUD is connected."
+          description="No member records were returned by the connected API."
           title="No members available yet"
         />
       }
