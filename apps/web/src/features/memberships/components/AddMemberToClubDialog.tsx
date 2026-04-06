@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/shadcn/dialog";
+import { MembershipRoleSelect } from "@/features/memberships/components/MembershipRoleSelect";
 import type { MembershipAssignmentCandidate } from "@/features/memberships/types";
 import type { ActionNotice as ActionNoticeModel } from "@/lib/forms";
 
@@ -64,14 +65,7 @@ export function AddMemberToClubDialog({ action, clubId, members, notice }: Props
 
             <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
               <span>Role</span>
-              <select className={selectClassName} defaultValue="member" name="role">
-                <option value="member">Member</option>
-                <option value="president">President</option>
-                <option value="vice_president">Vice President</option>
-                <option value="treasurer">Treasurer</option>
-                <option value="secretary">Secretary</option>
-                <option value="coordinator">Coordinator</option>
-              </select>
+              <MembershipRoleSelect />
             </label>
 
             <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">

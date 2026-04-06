@@ -146,6 +146,24 @@ export async function createMembershipApi(payload: {
   ).data;
 }
 
+export async function updateMembershipApi(
+  membershipId: string,
+  payload: {
+    role?: string;
+    status?: string;
+  }
+): Promise<BackendMembershipRecord> {
+  return (
+    await fetchApiJson<BackendMembershipRecord>(`/memberships/${membershipId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+  ).data;
+}
+
 export async function listEventsApi(clubId: string): Promise<BackendEventRecord[]> {
   return (await fetchApiJson<BackendEventRecord[]>(buildPath("/events", { club_id: clubId }))).data;
 }

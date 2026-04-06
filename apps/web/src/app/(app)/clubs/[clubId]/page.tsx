@@ -6,11 +6,12 @@ import { Button } from "@/components/shadcn/button";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ClubProfile, EditClubDialog } from "@/features/clubs";
 import { getClubDetail, updateClubAction } from "@/features/clubs/server";
-import { AddMemberToClubDialog } from "@/features/memberships";
+import { AddMemberToClubDialog, EditMembershipRoleDialog } from "@/features/memberships";
 import {
   createMembershipAction,
   getAssignableMembersForClub,
   getMembershipsForClub,
+  updateMembershipRoleAction,
 } from "@/features/memberships/server";
 import { getActionNotice } from "@/lib/forms";
 
@@ -23,6 +24,9 @@ type Props = {
     clubUpdateError?: string | string[];
     membershipCreated?: string | string[];
     membershipError?: string | string[];
+    membershipUpdated?: string | string[];
+    membershipUpdateError?: string | string[];
+    membershipUpdateTarget?: string | string[];
   }>;
 };
 
@@ -41,10 +45,21 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
 
   const assignmentNotice = getActionNotice(query.membershipCreated, query.membershipError);
   const clubUpdateNotice = getActionNotice(query.clubUpdated, query.clubUpdateError);
+  const membershipUpdateNotice = getActionNotice(
+    query.membershipUpdated,
+    query.membershipUpdateError
+  );
+  const membershipUpdateTarget = Array.isArray(query.membershipUpdateTarget)
+    ? query.membershipUpdateTarget[0]
+    : query.membershipUpdateTarget;
   const assignmentSuccessNotice = assignmentNotice?.kind === "success" ? assignmentNotice : null;
   const assignmentErrorNotice = assignmentNotice?.kind === "error" ? assignmentNotice : null;
   const clubUpdateSuccessNotice = clubUpdateNotice?.kind === "success" ? clubUpdateNotice : null;
   const clubUpdateErrorNotice = clubUpdateNotice?.kind === "error" ? clubUpdateNotice : null;
+  const membershipUpdateSuccessNotice =
+    membershipUpdateNotice?.kind === "success" ? membershipUpdateNotice : null;
+  const membershipUpdateErrorNotice =
+    membershipUpdateNotice?.kind === "error" ? membershipUpdateNotice : null;
 
   return (
     <div className="space-y-8">
@@ -77,8 +92,21 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
 
       <ActionNotice notice={clubUpdateSuccessNotice} />
       <ActionNotice notice={assignmentSuccessNotice} />
+      <ActionNotice notice={membershipUpdateSuccessNotice} />
 
-      <ClubProfile detail={detail} memberships={memberships} />
+      <ClubProfile
+        detail={detail}
+        membershipActions={(membership) => (
+          <EditMembershipRoleDialog
+            action={updateMembershipRoleAction}
+            membership={membership}
+            notice={
+              membershipUpdateTarget === membership.id ? membershipUpdateErrorNotice : null
+            }
+          />
+        )}
+        memberships={memberships}
+      />
     </div>
   );
 }
