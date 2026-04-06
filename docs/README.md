@@ -26,7 +26,7 @@ Use this directory as the main entry point for project documentation.
 
 ## Deployment and Analysis
 
-- [Oracle Docker Deployment](deployment/oracle-docker-deploy.md) for the current VM deployment path
+- [SSH Docker Deployment](deployment/ssh-docker-deploy.md) for the current VM deployment path
 - [Current Project Structure Analysis](analysis/current-project-structure-analysis.md) for a deeper review of the repo layout and tradeoffs
 
 ## Assets

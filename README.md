@@ -145,6 +145,6 @@ Before opening a pull request, run the narrowest relevant checks from the reposi
 - `docs/guides/kafka-implementation-flow.md` for async event publication implementation guidance
 - `docs/plans/team-execution-plan.md` for scope and ownership guidance
 - `docs/plans/networking-team-execution-plan.md` for the companion networking workstream
-- `docs/deployment/oracle-docker-deploy.md` for the current Oracle VM deployment path
+- `docs/deployment/ssh-docker-deploy.md` for the current SSH-based VM deployment path
 - `docs/analysis/current-project-structure-analysis.md` for a detailed review of the repo's current shape
 - `docs/proposals/` for course proposal drafts
