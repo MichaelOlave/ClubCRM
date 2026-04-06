@@ -100,9 +100,7 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
           <EditMembershipRoleDialog
             action={updateMembershipRoleAction}
             membership={membership}
-            notice={
-              membershipUpdateTarget === membership.id ? membershipUpdateErrorNotice : null
-            }
+            notice={membershipUpdateTarget === membership.id ? membershipUpdateErrorNotice : null}
           />
         )}
         memberships={memberships}
