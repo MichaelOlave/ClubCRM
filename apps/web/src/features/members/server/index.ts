@@ -116,3 +116,5 @@ export async function getMemberDetail(memberId: string): Promise<MemberDetailVie
     metadata: buildMetadata(member),
   };
 }
+
+export { createMemberAction, updateMemberAction } from "./actions";

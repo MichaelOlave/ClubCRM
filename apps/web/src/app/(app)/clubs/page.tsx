@@ -1,21 +1,39 @@
 import Link from "next/link";
 
+import { ActionNotice } from "@/components/ui/ActionNotice";
 import { Alert, AlertDescription } from "@/components/shadcn/alert";
 import { Button } from "@/components/shadcn/button";
 import { Card } from "@/components/shadcn/card";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { ClubDirectory } from "@/features/clubs";
-import { getClubList } from "@/features/clubs/server";
+import { ClubDirectory, CreateClubDialog } from "@/features/clubs";
+import { createClubAction, getClubList } from "@/features/clubs/server";
+import { getActionNotice } from "@/lib/forms";
 
-export default async function ClubsPage() {
+type Props = {
+  searchParams: Promise<{
+    clubCreated?: string | string[];
+    clubError?: string | string[];
+  }>;
+};
+
+export default async function ClubsPage({ searchParams }: Props) {
   const clubs = await getClubList();
+  const query = await searchParams;
   const previewJoinHref = clubs[0] ? `/join/${clubs[0].id}` : null;
+  const clubNotice = getActionNotice(query.clubCreated, query.clubError);
+  const clubSuccessNotice = clubNotice?.kind === "success" ? clubNotice : null;
+  const clubErrorNotice = clubNotice?.kind === "error" ? clubNotice : null;
 
   return (
     <div className="space-y-8">
       <PageHeader
         actions={
           <>
+            <CreateClubDialog
+              action={createClubAction}
+              defaultOrganizationId={clubs[0]?.organizationId ?? ""}
+              notice={clubErrorNotice}
+            />
             <Button asChild variant="secondary">
               <Link href="/members">View members</Link>
             </Button>
@@ -26,24 +44,26 @@ export default async function ClubsPage() {
             ) : null}
           </>
         }
-        description="The club directory uses a shared table primitive today, and the plan is to attach create and edit flows through reusable drawers before introducing dedicated management routes."
+        description="Create clubs from this directory, then open each club to manage the roster, events, and announcements in one shared admin surface."
         eyebrow="Clubs"
         title="Club directory"
       />
 
       <Alert variant="info">
         <AlertDescription>
-          Club-specific events and announcements stay inside each club detail page for the MVP to
-          keep the route map compact.
+          Club-specific events, announcements, and roster management still stay inside each club
+          detail page so the admin route map remains compact.
         </AlertDescription>
       </Alert>
+
+      <ActionNotice notice={clubSuccessNotice} />
 
       <Card className="space-y-5 rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
         <div className="space-y-2">
           <h2 className="text-2xl font-semibold text-foreground">All clubs</h2>
           <p className="text-sm leading-6 text-muted-foreground">
-            This list is intentionally read-only for now so we can validate the shared shell and
-            feature boundaries first.
+            Use this directory to jump into each club after creation and manage the roster from its
+            detail view.
           </p>
         </div>
         <ClubDirectory clubs={clubs} />

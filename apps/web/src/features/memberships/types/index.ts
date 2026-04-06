@@ -5,3 +5,9 @@ export type MembershipTableModel = {
   memberships: MembershipRecord[];
   title?: string;
 };
+
+export type MembershipAssignmentCandidate = {
+  email: string;
+  id: string;
+  name: string;
+};
