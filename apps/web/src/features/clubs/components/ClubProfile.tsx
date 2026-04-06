@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { ClubDetailViewModel } from "@/features/clubs/types";
 import { MembershipTable } from "@/features/memberships";
 import type { MembershipRecord } from "@/types/api";
@@ -9,6 +11,7 @@ import { formatDateTime } from "@/lib/utils/formatters";
 
 type Props = {
   detail: ClubDetailViewModel;
+  membershipActions?: (membership: MembershipRecord) => ReactNode;
   memberships: MembershipRecord[];
 };
 
@@ -33,7 +36,7 @@ function getEventVariant(status: ClubDetailViewModel["events"][number]["status"]
   return status === "upcoming" ? "success" : "warning";
 }
 
-export function ClubProfile({ detail, memberships }: Props) {
+export function ClubProfile({ detail, membershipActions, memberships }: Props) {
   const overview = (
     <div className="space-y-6">
       <Card className="space-y-5 rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
@@ -84,8 +87,10 @@ export function ClubProfile({ detail, memberships }: Props) {
       </Card>
 
       <MembershipTable
+        actionsHeader="Roster actions"
         description="This shared membership table can be reused by club detail, member detail, and future review workflows."
         memberships={memberships}
+        renderActions={membershipActions}
         title="Club roster"
       />
     </div>

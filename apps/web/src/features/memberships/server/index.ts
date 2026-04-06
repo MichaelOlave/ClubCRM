@@ -125,4 +125,4 @@ export async function getAssignableMembersForClub(
     .map(mapMembershipCandidate);
 }
 
-export { createMembershipAction } from "./actions";
+export { createMembershipAction, updateMembershipRoleAction } from "./actions";
