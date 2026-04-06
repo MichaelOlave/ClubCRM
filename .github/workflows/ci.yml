@@ -75,14 +75,20 @@ jobs:
           : "${OCI_DEPLOY_SSH_KEY:?Missing secret OCI_DEPLOY_SSH_KEY}"
           : "${OCI_HOST:?Missing secret OCI_HOST}"
           : "${OCI_USER:?Missing secret OCI_USER}"
+          OCI_HOST="$(printf '%s' "$OCI_HOST" | tr -d '\r\n')"
+          OCI_USER="$(printf '%s' "$OCI_USER" | tr -d '\r\n')"
           case "$OCI_HOST" in
             *://*)
               echo "OCI_HOST must be a hostname or IP address without a URL scheme." >&2
               exit 1
               ;;
           esac
+          if ! getent ahosts "$OCI_HOST" >/dev/null; then
+            echo "OCI_HOST did not resolve from the GitHub Actions runner. Check the secret value and DNS." >&2
+            exit 1
+          fi
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$OCI_DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$OCI_DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           {
             printf 'Host oci-host\n'
@@ -94,7 +100,19 @@ jobs:
             printf '  StrictHostKeyChecking yes\n'
           } > ~/.ssh/config
           chmod 600 ~/.ssh/config
-          ssh-keyscan -T 10 -H "$OCI_HOST" >> ~/.ssh/known_hosts
+          keyscan_output="$(mktemp)"
+          keyscan_error="$(mktemp)"
+          if ! ssh-keyscan -T 10 -H "$OCI_HOST" >"$keyscan_output" 2>"$keyscan_error"; then
+            echo "ssh-keyscan failed. Ensure the Oracle host is publicly reachable on port 22 from GitHub Actions." >&2
+            cat "$keyscan_error" >&2
+            exit 1
+          fi
+          if [ ! -s "$keyscan_output" ]; then
+            echo "ssh-keyscan returned no host keys. Ensure the Oracle host is reachable on port 22 and serving SSH." >&2
+            cat "$keyscan_error" >&2
+            exit 1
+          fi
+          cat "$keyscan_output" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
       - name: Verify SSH connectivity
