@@ -68,22 +68,69 @@ jobs:
       - name: Configure SSH
         env:
           OCI_DEPLOY_SSH_KEY: ${{ secrets.OCI_DEPLOY_SSH_KEY }}
+          OCI_HOST: ${{ secrets.OCI_HOST }}
+          OCI_USER: ${{ secrets.OCI_USER }}
         run: |
+          set -euo pipefail
           install -m 700 -d ~/.ssh
           printf '%s\n' "$OCI_DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "${{ secrets.OCI_HOST }}" >> ~/.ssh/known_hosts
+          {
+            printf 'Host oci-host\n'
+            printf '  HostName %s\n' "$OCI_HOST"
+            printf '  User %s\n' "$OCI_USER"
+            printf '  IdentityFile ~/.ssh/id_ed25519\n'
+            printf '  IdentitiesOnly yes\n'
+            printf '  BatchMode yes\n'
+            printf '  StrictHostKeyChecking yes\n'
+          } > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+          ssh-keyscan -H "$OCI_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Verify SSH connectivity
+        run: |
+          set -euxo pipefail
+          ssh oci-host 'echo "SSH connection established"'
 
       - name: Upload images to Oracle host
         run: |
-          docker save clubcrm-api:deploy | gzip -1 | ssh "${{ secrets.OCI_USER }}@${{ secrets.OCI_HOST }}" "gunzip | docker load"
-          docker save clubcrm-web:deploy | gzip -1 | ssh "${{ secrets.OCI_USER }}@${{ secrets.OCI_HOST }}" "gunzip | docker load"
+          set -euxo pipefail
+          docker save clubcrm-api:deploy | gzip -1 | ssh oci-host '
+            set -euo pipefail
+            if docker info >/dev/null 2>&1; then
+              gunzip | docker load
+            elif sudo -n docker info >/dev/null 2>&1; then
+              gunzip | sudo -n docker load
+            else
+              echo "Remote deploy user needs Docker access or passwordless sudo for Docker." >&2
+              exit 1
+            fi
+          '
+          docker save clubcrm-web:deploy | gzip -1 | ssh oci-host '
+            set -euo pipefail
+            if docker info >/dev/null 2>&1; then
+              gunzip | docker load
+            elif sudo -n docker info >/dev/null 2>&1; then
+              gunzip | sudo -n docker load
+            else
+              echo "Remote deploy user needs Docker access or passwordless sudo for Docker." >&2
+              exit 1
+            fi
+          '
 
       - name: Pull latest repo state and restart services
         run: |
-          ssh "${{ secrets.OCI_USER }}@${{ secrets.OCI_HOST }}" '
-            set -euo pipefail
+          ssh oci-host '
+            set -euxo pipefail
             cd /opt/clubcrm
             GIT_SSH_COMMAND="ssh -i ~/.ssh/clubcrm-repo -o IdentitiesOnly=yes" git pull --ff-only
-            docker compose -f infra/docker-compose.production.yml up -d --remove-orphans
+            if docker info >/dev/null 2>&1; then
+              docker compose -f infra/docker-compose.production.yml up -d --remove-orphans
+            elif sudo -n docker info >/dev/null 2>&1; then
+              sudo -n docker compose -f infra/docker-compose.production.yml up -d --remove-orphans
+            else
+              echo "Remote deploy user needs Docker access or passwordless sudo for Docker Compose." >&2
+              exit 1
+            fi
           '
