@@ -1,6 +1,6 @@
 # Oracle Docker Deployment
 
-This document describes the live lightweight production deployment currently running on the Oracle Cloud VM for ClubCRM.
+This document describes the live Docker-based production deployment currently running on the Oracle Cloud VM for ClubCRM.
 
 ## Current Status
 
@@ -18,21 +18,25 @@ Current externally visible behavior:
 - `/api/*` is proxied to the FastAPI container
 - all other traffic is proxied to the Next.js web container
 
-## Why This Shape
+## Runtime Shape
 
-The current Oracle host is a small Ubuntu VM, so the production deployment keeps the runtime footprint focused on:
+The current production stack now brings up the same backing services the app expects on the internal Docker network:
 
 - `web`
 - `api`
+- `postgres`
+- `mongodb`
+- `redis`
+- `kafka`
 - `caddy`
 
-The local development-only backing services in [`infra/docker-compose.yml`](../../infra/docker-compose.yml) are intentionally excluded from this production stack because the currently deployed backend still only exposes `/health`, and the frontend only needs `API_BASE_URL` for the diagnostics surface on `/system/health`.
+The data services stay internal to the Compose network and persist their data in named Docker volumes on the Oracle host. Only `caddy` exposes public ports.
 
 ## Files
 
 - [`apps/web/Dockerfile`](../../apps/web/Dockerfile) builds the Next.js app as a standalone production image.
 - [`apps/api/Dockerfile`](../../apps/api/Dockerfile) builds the FastAPI app image.
-- [`infra/docker-compose.production.yml`](../../infra/docker-compose.production.yml) runs `web`, `api`, and `caddy`.
+- [`infra/docker-compose.production.yml`](../../infra/docker-compose.production.yml) runs the full production stack, including the backing data services.
 - [`infra/Caddyfile`](../../infra/Caddyfile) fronts the app and proxies `/api/*` to the backend.
 - [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) verifies the repo on GitHub Actions and, after `main` passes verification, builds the production images, streams them to the Oracle host over SSH, then asks the server to pull the latest repo state and restart the stack.
 
@@ -56,6 +60,13 @@ SERVER_IP=150.136.162.122
 API_BASE_URL=http://api:8000
 WEB_IMAGE=clubcrm-web:deploy
 API_IMAGE=clubcrm-api:deploy
+POSTGRES_DB=clubcrm
+POSTGRES_USER=clubcrm
+POSTGRES_PASSWORD=change-me
+DATABASE_URL=postgresql://clubcrm:change-me@postgres:5432/clubcrm
+MONGODB_URL=mongodb://mongodb:27017/clubcrm
+REDIS_URL=redis://redis:6379/0
+KAFKA_BOOTSTRAP_SERVERS=kafka:9092
 ```
 
 ## Deployment Flow
@@ -67,7 +78,7 @@ Production deploys are handled by the `deploy-production` job in [`.github/workf
 - the deploy job builds the `web` and `api` images
 - the workflow streams those images to the Oracle host over SSH
 - the host pulls the latest repo state in `/opt/clubcrm`
-- `docker compose -f infra/docker-compose.production.yml up -d --remove-orphans` refreshes the stack
+- `docker compose -f infra/docker-compose.production.yml up -d --remove-orphans` refreshes the stack, including the backing database and messaging services
 
 This keeps the production artifact centered on Docker images, which makes the future move to
 Kubernetes mainly a deployment-target change. The verification step and image-build boundary can stay
