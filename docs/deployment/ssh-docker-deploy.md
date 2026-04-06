@@ -1,10 +1,10 @@
-# Oracle Docker Deployment
+# SSH Docker Deployment
 
-This document describes the live Docker-based production deployment currently running on the Oracle Cloud VM for ClubCRM.
+This document describes the live Docker-based production deployment currently running on the production host for ClubCRM.
 
 ## Current Status
 
-The Oracle deployment is now live and DNS is already cut over.
+The current deployment is live and DNS is already cut over.
 
 - `https://clubcrm.org` is serving the production web app behind Caddy
 - `https://www.clubcrm.org` is also serving the production web app
@@ -30,7 +30,7 @@ The current production stack now brings up the same backing services the app exp
 - `kafka`
 - `caddy`
 
-The data services stay internal to the Compose network and persist their data in named Docker volumes on the Oracle host. Only `caddy` exposes public ports.
+The data services stay internal to the Compose network and persist their data in named Docker volumes on the deploy host. Only `caddy` exposes public ports.
 
 ## Files
 
@@ -38,11 +38,11 @@ The data services stay internal to the Compose network and persist their data in
 - [`apps/api/Dockerfile`](../../apps/api/Dockerfile) builds the FastAPI app image.
 - [`infra/docker-compose.production.yml`](../../infra/docker-compose.production.yml) runs the full production stack, including the backing data services.
 - [`infra/Caddyfile`](../../infra/Caddyfile) fronts the app and proxies `/api/*` to the backend.
-- [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) verifies the repo on GitHub Actions and, after `main` passes verification, builds the production images, streams them to the Oracle host over SSH, then asks the server to pull the latest repo state and restart the stack.
+- [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) verifies the repo on GitHub Actions and, after `main` passes verification, builds the production images, streams them to the deploy host over SSH, then asks the server to pull the latest repo state and restart the stack.
 
 ## Server Expectations
 
-The Oracle host should have:
+The deploy host should have:
 
 - Docker Engine
 - Docker Compose plugin
@@ -55,12 +55,12 @@ The Oracle host should have:
 
 The `deploy-production` workflow expects these repository-level GitHub Actions secrets:
 
-- `OCI_DEPLOY_SSH_KEY`: the private SSH key GitHub Actions uses to connect to the Oracle host
-- `OCI_HOST`: the Oracle host public IP address or DNS name, without `https://` or any other URL scheme
-- `OCI_USER`: the Linux user GitHub Actions should connect as
+- `DEPLOY_SSH_KEY`: the private SSH key GitHub Actions uses to connect to the deploy host
+- `DEPLOY_HOST`: the deploy host public IP address or DNS name, without `https://` or any other URL scheme
+- `DEPLOY_USER`: the Linux user GitHub Actions should connect as
 
 If any of those secrets are missing or blank, the workflow now fails during `Configure SSH` with a targeted error message before it tries to open the connection.
-If `Configure SSH` still fails after the secrets are present, verify that `OCI_HOST` resolves publicly and that the Oracle host accepts SSH connections on port `22` from GitHub Actions runners.
+If `Configure SSH` still fails after the secrets are present, verify that `DEPLOY_HOST` resolves publicly and that the deploy host accepts SSH connections on port `22` from GitHub Actions runners.
 
 ## Production Environment
 
@@ -88,7 +88,7 @@ Production deploys are handled by the `deploy-production` job in [`.github/workf
 - GitHub Actions first runs `pnpm verify`
 - only successful pushes to `main` continue to deployment
 - the deploy job builds the `web` and `api` images
-- the workflow verifies SSH access, then streams those images to the Oracle host over SSH and loads them with Docker, falling back to `sudo -n` when the deploy user is not in the `docker` group
+- the workflow verifies SSH access, then streams those images to the deploy host over SSH and loads them with Docker, falling back to `sudo -n` when the deploy user is not in the `docker` group
 - the host pulls the latest repo state in `/opt/clubcrm`
 - `docker compose -f infra/docker-compose.production.yml up -d --remove-orphans` refreshes the stack, with a `sudo -n` fallback when direct Docker access is unavailable
 
@@ -99,7 +99,7 @@ manifests or Helm.
 
 ## DNS and TLS
 
-DNS is already pointed at the Oracle host, so Caddy can serve live certificates for:
+DNS is already pointed at the deploy host, so Caddy can serve live certificates for:
 
 - `clubcrm.org`
 - `www.clubcrm.org`

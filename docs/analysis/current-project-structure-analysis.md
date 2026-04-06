@@ -19,7 +19,7 @@ ClubCRM is a devcontainer-first monorepo with:
 - a FastAPI backend in `apps/api`
 - root-level workflow scripts for setup, build, lint, and verification
 - a Compose-managed local stack for PostgreSQL, MongoDB, Redis, and Kafka
-- CI checks and a production deployment path for Oracle-hosted Docker Compose
+- CI checks and a production deployment path for SSH-managed Docker Compose
 
 The repo is still structurally ahead of its runtime behavior, but the gap is narrower than it used
 to be. The frontend remains a UI-first MVP and only the health-check flow performs live web-to-api
@@ -211,7 +211,7 @@ flows.
 The repo now includes more than local development infrastructure. It also has:
 
 - CI in `.github/workflows/ci.yml`
-- Oracle-targeted deployment automation in the `deploy-production` job inside `.github/workflows/ci.yml`
+- SSH-based deployment automation in the `deploy-production` job inside `.github/workflows/ci.yml`
 - a production Compose file in `infra/docker-compose.production.yml`
 - a Caddy reverse proxy in `infra/Caddyfile`
 - app-specific Dockerfiles in `apps/web/Dockerfile` and `apps/api/Dockerfile`
@@ -222,7 +222,7 @@ scripted deployment story, not just a local dev story.
 ### Why this is valuable
 
 - The project can demonstrate not only code structure but also delivery structure.
-- The Oracle deployment workflow keeps build and restart steps explicit.
+- The SSH deployment workflow keeps build and restart steps explicit.
 - Production routing is already separated so `/api/*` can proxy to the backend while the web app
   serves the rest of the product shell.
 
