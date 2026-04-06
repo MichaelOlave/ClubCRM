@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from helpers import add_api_root_to_path
 
@@ -19,8 +20,17 @@ class PostgresAdapterContractTests(unittest.TestCase):
 
         self.assertIsInstance(repository, ClubRepository)
 
-        with self.assertRaises(NotImplementedError):
-            repository.list_clubs("org-1")
+    @patch("src.infrastructure.postgres.client.create_engine")
+    def test_postgres_client_normalizes_dsn_for_sqlalchemy(self, mock_create_engine) -> None:
+        mock_create_engine.return_value = object()
+
+        client = PostgresClient(dsn="postgresql://example")
+        client.get_engine()
+
+        mock_create_engine.assert_called_once_with(
+            "postgresql+psycopg://example",
+            future=True,
+        )
 
     def test_unit_of_work_exposes_relational_contract(self) -> None:
         unit_of_work = DefaultPostgresUnitOfWork(

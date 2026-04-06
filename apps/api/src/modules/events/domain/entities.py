@@ -11,3 +11,4 @@ class Event:
     starts_at: datetime
     location: str | None = None
     ends_at: datetime | None = None
+    created_at: datetime | None = None

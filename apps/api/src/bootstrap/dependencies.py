@@ -8,22 +8,38 @@ from src.infrastructure.kafka.publishers.forms import KafkaFormSubmissionPublish
 from src.infrastructure.mongodb.client import MongoDBClient
 from src.infrastructure.mongodb.stores.forms import MongoDBJoinRequestStore
 from src.infrastructure.postgres.client import PostgresClient
+from src.infrastructure.postgres.repositories.announcements import (
+    PostgresAnnouncementRepository,
+)
 from src.infrastructure.postgres.repositories.clubs import PostgresClubRepository
 from src.infrastructure.postgres.repositories.dashboard import PostgresDashboardRepository
+from src.infrastructure.postgres.repositories.events import PostgresEventRepository
+from src.infrastructure.postgres.repositories.members import PostgresMemberRepository
+from src.infrastructure.postgres.repositories.memberships import (
+    PostgresMembershipRepository,
+)
 from src.infrastructure.postgres.unit_of_work import DefaultPostgresUnitOfWork
 from src.infrastructure.redis.caches.clubs import RedisClubSummaryCache
 from src.infrastructure.redis.client import RedisClient
 from src.infrastructure.redis.sessions.session_store import RedisAuthSessionStore
+from src.modules.announcements.application.ports.announcement_repository import (
+    AnnouncementRepository,
+)
 from src.modules.auth.application.ports.auth_session_store import AuthSessionStore
 from src.modules.auth.application.ports.identity_provider import AuthIdentityProvider
 from src.modules.clubs.application.ports.club_event_publisher import ClubEventPublisher
 from src.modules.clubs.application.ports.club_repository import ClubRepository
 from src.modules.clubs.application.ports.club_summary_cache import ClubSummaryCache
 from src.modules.dashboard.application.ports.dashboard_repository import DashboardRepository
+from src.modules.events.application.ports.event_repository import EventRepository
 from src.modules.forms.application.ports.form_submission_publisher import (
     FormSubmissionPublisher,
 )
 from src.modules.forms.application.ports.join_request_store import JoinRequestStore
+from src.modules.members.application.ports.member_repository import MemberRepository
+from src.modules.memberships.application.ports.membership_repository import (
+    MembershipRepository,
+)
 
 
 @lru_cache
@@ -99,6 +115,22 @@ def get_club_summary_cache() -> ClubSummaryCache:
 
 def get_club_event_publisher() -> ClubEventPublisher:
     return KafkaClubEventPublisher(client=get_kafka_client())
+
+
+def get_member_repository() -> MemberRepository:
+    return PostgresMemberRepository(client=get_postgres_client())
+
+
+def get_event_repository() -> EventRepository:
+    return PostgresEventRepository(client=get_postgres_client())
+
+
+def get_announcement_repository() -> AnnouncementRepository:
+    return PostgresAnnouncementRepository(client=get_postgres_client())
+
+
+def get_membership_repository() -> MembershipRepository:
+    return PostgresMembershipRepository(client=get_postgres_client())
 
 
 def get_postgres_unit_of_work() -> DefaultPostgresUnitOfWork:

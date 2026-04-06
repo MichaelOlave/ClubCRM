@@ -101,6 +101,11 @@ port if `8000` is already in use. The resolved binding is written to
 - `GET /auth/callback` completes the Auth0 callback and creates the backend session cookie
 - `GET /auth/session` returns the current backend session plus a CSRF token for same-origin requests
 - `POST /auth/logout` clears the backend auth session and redirects through logout
+- CRUD routes under `/clubs`
+- CRUD routes under `/members`
+- CRUD routes under `/memberships`
+- CRUD routes under `/events`
+- CRUD routes under `/announcements`
 
 FastAPI's default docs remain enabled as well:
 
