@@ -24,16 +24,16 @@ function formatRoleLabel(role: string): string {
 }
 
 function normalizeRoleValue(role: string): string {
-  return role.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return role
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
 }
 
 function getRoleOptions(currentRole?: string) {
   const normalizedRole = currentRole ? normalizeRoleValue(currentRole) : undefined;
 
-  if (
-    !normalizedRole ||
-    defaultRoleOptions.some((option) => option.value === normalizedRole)
-  ) {
+  if (!normalizedRole || defaultRoleOptions.some((option) => option.value === normalizedRole)) {
     return defaultRoleOptions;
   }
 
