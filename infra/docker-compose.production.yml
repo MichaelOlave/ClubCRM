@@ -5,6 +5,15 @@ services:
     env_file:
       - ../.env.example
       - ../.env.production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -39,6 +48,65 @@ services:
       retries: 5
       start_period: 20s
 
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    env_file:
+      - ../.env.example
+      - ../.env.production
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-clubcrm} -d $${POSTGRES_DB:-clubcrm}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  mongodb:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'mongosh --quiet --eval "db.adminCommand({ ping: 1 }).ok" mongodb://localhost:27017/admin | grep 1 >/dev/null',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+  kafka:
+    image: confluentinc/cp-kafka:7.8.0
+    restart: unless-stopped
+    env_file:
+      - ../.env.example
+      - ../.env.production
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test:
+        ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 20s
+
   caddy:
     image: caddy:2.10-alpine
     restart: unless-stopped
@@ -58,3 +126,7 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  postgres_data:
+  mongodb_data:
+  redis_data:
+  kafka_data:
