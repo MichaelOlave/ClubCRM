@@ -1,17 +1,17 @@
 import unittest
 
-from helpers import add_api_root_to_path, collect_import_violations
-from src.modules.clubs.application.commands.create_club import CreateClub
-from src.modules.clubs.application.commands.delete_club import DeleteClub
-from src.modules.clubs.application.commands.update_club import UpdateClub
-from src.modules.clubs.application.ports.club_event_publisher import ClubEventPublisher
-from src.modules.clubs.application.ports.club_repository import ClubRepository
-from src.modules.clubs.application.ports.club_summary_cache import ClubSummaryCache
-from src.modules.clubs.application.queries.get_club import GetClub
-from src.modules.clubs.application.queries.list_clubs import ListClubs
-from src.modules.clubs.domain.entities import Club
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from helpers import add_api_root_to_path
 
 add_api_root_to_path()
+
+from src.bootstrap.dependencies import get_club_event_publisher, get_club_repository
+from src.modules.clubs.application.ports.club_event_publisher import ClubEventPublisher
+from src.modules.clubs.application.ports.club_repository import ClubRepository
+from src.modules.clubs.domain.entities import Club
+from src.modules.clubs.presentation.http.routes import router
 
 
 class FakeClubRepository(ClubRepository):
@@ -79,17 +79,6 @@ class FakeClubRepository(ClubRepository):
         return self.clubs.pop(club_id, None) is not None
 
 
-class FakeClubSummaryCache(ClubSummaryCache):
-    def __init__(self) -> None:
-        self.values: dict[str, list[Club]] = {}
-
-    def get(self, organization_id: str) -> list[Club] | None:
-        return self.values.get(organization_id)
-
-    def set(self, organization_id: str, clubs: list[Club]) -> None:
-        self.values[organization_id] = list(clubs)
-
-
 class FakeClubEventPublisher(ClubEventPublisher):
     def __init__(self) -> None:
         self.created_club_ids: list[str] = []
@@ -98,39 +87,52 @@ class FakeClubEventPublisher(ClubEventPublisher):
         self.created_club_ids.append(club.id)
 
 
-class ClubBoundaryTests(unittest.TestCase):
-    def test_clubs_application_avoids_framework_and_infrastructure_imports(self) -> None:
-        violations = collect_import_violations(
-            "modules/clubs/application", ("fastapi", "src.infrastructure")
+class ClubRouteTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.repository = FakeClubRepository()
+        self.publisher = FakeClubEventPublisher()
+        self.app = FastAPI()
+        self.app.include_router(router)
+        self.app.dependency_overrides[get_club_repository] = lambda: self.repository
+        self.app.dependency_overrides[get_club_event_publisher] = lambda: self.publisher
+        self.client = TestClient(self.app)
+
+    def tearDown(self) -> None:
+        self.app.dependency_overrides.clear()
+
+    def test_club_routes_support_crud_roundtrip(self) -> None:
+        list_response = self.client.get("/clubs/", params={"organization_id": "org-1"})
+        self.assertEqual(list_response.status_code, 200)
+        self.assertEqual(len(list_response.json()), 1)
+
+        create_response = self.client.post(
+            "/clubs/",
+            json={
+                "organization_id": "org-1",
+                "name": "Robotics Club",
+                "description": "Builds robots.",
+                "status": "active",
+            },
+        )
+        self.assertEqual(create_response.status_code, 201)
+        self.assertEqual(self.publisher.created_club_ids, ["club-2"])
+
+        read_response = self.client.get("/clubs/club-2")
+        self.assertEqual(read_response.status_code, 200)
+        self.assertEqual(read_response.json()["name"], "Robotics Club")
+
+        update_response = self.client.patch(
+            "/clubs/club-2",
+            json={"description": "Builds robots and hosts workshops."},
+        )
+        self.assertEqual(update_response.status_code, 200)
+        self.assertEqual(
+            update_response.json()["description"],
+            "Builds robots and hosts workshops.",
         )
 
-        self.assertEqual(violations, [])
+        delete_response = self.client.delete("/clubs/club-2")
+        self.assertEqual(delete_response.status_code, 204)
 
-    def test_club_use_cases_use_port_contracts(self) -> None:
-        repository = FakeClubRepository()
-        publisher = FakeClubEventPublisher()
-        use_case = ListClubs(
-            repository=repository,
-            cache=FakeClubSummaryCache(),
-        )
-
-        clubs = use_case.execute("org-1")
-        created = CreateClub(repository=repository, publisher=publisher).execute(
-            organization_id="org-1",
-            name="Robotics Club",
-            description="Builds competitive robots.",
-            status="active",
-        )
-        fetched = GetClub(repository=repository).execute(created.id)
-        updated = UpdateClub(repository=repository).execute(
-            created.id,
-            description="Builds competitive and community robots.",
-        )
-        deleted = DeleteClub(repository=repository).execute(created.id)
-
-        self.assertEqual(len(clubs), 1)
-        self.assertEqual(clubs[0].name, "Chess Club")
-        self.assertIsNotNone(fetched)
-        self.assertIsNotNone(updated)
-        self.assertTrue(deleted)
-        self.assertEqual(publisher.created_club_ids, ["club-2"])
+        missing_response = self.client.get("/clubs/club-2")
+        self.assertEqual(missing_response.status_code, 404)

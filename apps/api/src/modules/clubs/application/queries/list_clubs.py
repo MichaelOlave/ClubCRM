@@ -10,15 +10,15 @@ class ListClubs:
     repository: ClubRepository
     cache: ClubSummaryCache | None = None
 
-    def execute(self, organization_id: str) -> list[Club]:
-        if self.cache is not None:
+    def execute(self, organization_id: str | None = None) -> list[Club]:
+        if self.cache is not None and organization_id is not None:
             cached_clubs = self.cache.get(organization_id)
             if cached_clubs is not None:
                 return cached_clubs
 
         clubs = self.repository.list_clubs(organization_id)
 
-        if self.cache is not None:
+        if self.cache is not None and organization_id is not None:
             self.cache.set(organization_id, clubs)
 
         return clubs

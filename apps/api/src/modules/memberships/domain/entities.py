@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 
 
 @dataclass(frozen=True)
@@ -8,3 +9,4 @@ class Membership:
     member_id: str
     role: str
     status: str
+    joined_at: datetime | None = None
