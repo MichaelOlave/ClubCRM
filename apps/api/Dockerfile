@@ -20,8 +20,10 @@ COPY apps/api/requirements.txt ./requirements.txt
 
 RUN uv pip install --system -r requirements.txt
 
+COPY apps/api/alembic.ini ./alembic.ini
+COPY apps/api/migrations ./migrations
 COPY apps/api/src ./src
 
 EXPOSE 8000
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "alembic -c /app/alembic.ini upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000"]

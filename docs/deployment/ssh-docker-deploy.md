@@ -88,6 +88,8 @@ Production deploys are handled by the `deploy-production` job in [`.github/workf
 - GitHub Actions first runs `pnpm verify`
 - only successful pushes to `main` continue to deployment
 - the deploy job builds the `web` and `api` images
+- the API image includes the checked-in Alembic config and applies `alembic upgrade head` before
+  Uvicorn starts, so a fresh production PostgreSQL volume gets the current schema during rollout
 - the workflow verifies SSH access, then streams those images to the deploy host over SSH and loads them with Docker, falling back to `sudo -n` when the deploy user is not in the `docker` group
 - the host pulls the latest repo state in `/opt/clubcrm`
 - `docker compose -f infra/docker-compose.production.yml up -d --remove-orphans` refreshes the stack, with a `sudo -n` fallback when direct Docker access is unavailable
