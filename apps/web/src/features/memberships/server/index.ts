@@ -11,6 +11,7 @@ import type {
   MembershipRecord,
   MembershipStatus,
 } from "@/types/api";
+import type { MembershipAssignmentCandidate } from "@/features/memberships/types";
 
 function buildMemberNameLookup(members: BackendMemberRecord[]): Map<string, string> {
   return new Map(
@@ -88,3 +89,40 @@ export async function getMembershipsForMember(memberId: string): Promise<Members
     )
   );
 }
+
+function mapMembershipCandidate(member: BackendMemberRecord): MembershipAssignmentCandidate {
+  return {
+    id: member.id,
+    name: `${member.first_name} ${member.last_name}`.trim(),
+    email: member.email,
+  };
+}
+
+export async function getAssignableMembersForClub(
+  clubId: string
+): Promise<MembershipAssignmentCandidate[]> {
+  const club = await getClubApi(clubId);
+
+  if (!club) {
+    return [];
+  }
+
+  const [members, memberships] = await Promise.all([
+    listMembersApi(club.organization_id),
+    listMembershipsApi({ clubId }),
+  ]);
+
+  const assignedMemberIds = new Set(memberships.map((membership) => membership.member_id));
+
+  return members
+    .filter((member) => !assignedMemberIds.has(member.id))
+    .sort((left, right) => {
+      const leftName = `${left.first_name} ${left.last_name}`.trim();
+      const rightName = `${right.first_name} ${right.last_name}`.trim();
+
+      return leftName.localeCompare(rightName);
+    })
+    .map(mapMembershipCandidate);
+}
+
+export { createMembershipAction } from "./actions";

@@ -7,15 +7,47 @@ type ApiJsonResponse<T> = {
 };
 
 export class ApiResponseError extends Error {
+  detail: string | null;
   endpoint: string;
   status: number;
 
-  constructor(endpoint: string, status: number) {
-    super(`API request to ${endpoint} returned HTTP ${status}.`);
+  constructor(endpoint: string, status: number, detail: string | null = null) {
+    super(
+      detail
+        ? `API request to ${endpoint} returned HTTP ${status}: ${detail}`
+        : `API request to ${endpoint} returned HTTP ${status}.`
+    );
     this.name = "ApiResponseError";
+    this.detail = detail;
     this.endpoint = endpoint;
     this.status = status;
   }
+}
+
+async function getErrorDetail(response: Response): Promise<string | null> {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  try {
+    if (contentType.includes("application/json")) {
+      const body = (await response.json()) as { detail?: unknown };
+
+      return typeof body.detail === "string" ? body.detail : null;
+    }
+
+    const body = (await response.text()).trim();
+
+    return body || null;
+  } catch {
+    return null;
+  }
+}
+
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiResponseError) {
+    return error.detail ?? fallback;
+  }
+
+  return fallback;
 }
 
 export async function fetchApiJson<T>(
@@ -32,7 +64,7 @@ export async function fetchApiJson<T>(
       });
 
       if (!response.ok) {
-        throw new ApiResponseError(endpoint, response.status);
+        throw new ApiResponseError(endpoint, response.status, await getErrorDetail(response));
       }
 
       return {

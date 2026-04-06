@@ -1,2 +1,3 @@
+export { AddMemberToClubDialog } from "./components/AddMemberToClubDialog";
 export { MembershipTable } from "./components/MembershipTable";
-export type { MembershipTableModel } from "./types";
+export type { MembershipAssignmentCandidate, MembershipTableModel } from "./types";

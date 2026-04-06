@@ -29,6 +29,42 @@ export async function getClubApi(clubId: string): Promise<BackendClubRecord | nu
   return fetchApiJsonOrNull<BackendClubRecord>(`/clubs/${clubId}`);
 }
 
+export async function createClubApi(payload: {
+  organization_id: string;
+  name: string;
+  description: string;
+  status: string;
+}): Promise<BackendClubRecord> {
+  return (
+    await fetchApiJson<BackendClubRecord>("/clubs/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+  ).data;
+}
+
+export async function updateClubApi(
+  clubId: string,
+  payload: {
+    description: string;
+    name: string;
+    status: string;
+  }
+): Promise<BackendClubRecord> {
+  return (
+    await fetchApiJson<BackendClubRecord>(`/clubs/${clubId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+  ).data;
+}
+
 export async function listMembersApi(organizationId: string): Promise<BackendMemberRecord[]> {
   return (
     await fetchApiJson<BackendMemberRecord[]>(
@@ -39,6 +75,44 @@ export async function listMembersApi(organizationId: string): Promise<BackendMem
 
 export async function getMemberApi(memberId: string): Promise<BackendMemberRecord | null> {
   return fetchApiJsonOrNull<BackendMemberRecord>(`/members/${memberId}`);
+}
+
+export async function createMemberApi(payload: {
+  organization_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  student_id: string | null;
+}): Promise<BackendMemberRecord> {
+  return (
+    await fetchApiJson<BackendMemberRecord>("/members/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+  ).data;
+}
+
+export async function updateMemberApi(
+  memberId: string,
+  payload: {
+    email: string;
+    first_name: string;
+    last_name: string;
+    student_id: string | null;
+  }
+): Promise<BackendMemberRecord> {
+  return (
+    await fetchApiJson<BackendMemberRecord>(`/members/${memberId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+  ).data;
 }
 
 export async function listMembershipsApi(filters?: {
@@ -52,6 +126,23 @@ export async function listMembershipsApi(filters?: {
         member_id: filters?.memberId,
       })
     )
+  ).data;
+}
+
+export async function createMembershipApi(payload: {
+  club_id: string;
+  member_id: string;
+  role: string;
+  status: string;
+}): Promise<BackendMembershipRecord> {
+  return (
+    await fetchApiJson<BackendMembershipRecord>("/memberships/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
   ).data;
 }
 

@@ -194,7 +194,7 @@ Today the frontend is ahead of the backend contract. The implemented web app use
     /memberships
 ```
 
-Most current web data is provided by server-side view-model modules under `apps/web/src/features/*/server`. The live cross-app integrations today are the diagnostics flow on `/system/health`, which calls the backend `GET /health` endpoint, the protected `/profile` route, which reads `/auth/session` plus request cookies to surface stored identity and auth diagnostics, and the public login route, which reads `/auth/session` and hands off to the backend-owned `/auth/login` flow.
+Most current web data is provided by server-side view-model modules under `apps/web/src/features/*/server`. The live cross-app integrations today are the diagnostics flow on `/system/health`, which calls the backend `GET /health` endpoint, the protected `/profile` route, which reads `/auth/session` plus request cookies to surface stored identity and auth diagnostics, the admin club and member management flows, which create and update clubs, create and update members, and assign members to clubs through the backend CRUD endpoints, and the public login route, which reads `/auth/session` and hands off to the backend-owned `/auth/login` flow.
 
 ## Current Backend Implementation
 
