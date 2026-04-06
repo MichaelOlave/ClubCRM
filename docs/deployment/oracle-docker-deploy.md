@@ -60,6 +60,7 @@ The `deploy-production` workflow expects these repository-level GitHub Actions s
 - `OCI_USER`: the Linux user GitHub Actions should connect as
 
 If any of those secrets are missing or blank, the workflow now fails during `Configure SSH` with a targeted error message before it tries to open the connection.
+If `Configure SSH` still fails after the secrets are present, verify that `OCI_HOST` resolves publicly and that the Oracle host accepts SSH connections on port `22` from GitHub Actions runners.
 
 ## Production Environment
 
