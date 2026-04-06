@@ -48,6 +48,7 @@ The Oracle host should have:
 - Docker Compose plugin
 - a checkout at `/opt/clubcrm`
 - a read-only GitHub deploy key at `~/.ssh/clubcrm-repo`
+- a deploy user that either has direct Docker access or can run `sudo -n docker` and `sudo -n docker compose` without an interactive password prompt
 - a production environment file at `/opt/clubcrm/.env.production`
 
 ## Production Environment
@@ -76,9 +77,9 @@ Production deploys are handled by the `deploy-production` job in [`.github/workf
 - GitHub Actions first runs `pnpm verify`
 - only successful pushes to `main` continue to deployment
 - the deploy job builds the `web` and `api` images
-- the workflow streams those images to the Oracle host over SSH
+- the workflow verifies SSH access, then streams those images to the Oracle host over SSH and loads them with Docker, falling back to `sudo -n` when the deploy user is not in the `docker` group
 - the host pulls the latest repo state in `/opt/clubcrm`
-- `docker compose -f infra/docker-compose.production.yml up -d --remove-orphans` refreshes the stack, including the backing database and messaging services
+- `docker compose -f infra/docker-compose.production.yml up -d --remove-orphans` refreshes the stack, with a `sudo -n` fallback when direct Docker access is unavailable
 
 This keeps the production artifact centered on Docker images, which makes the future move to
 Kubernetes mainly a deployment-target change. The verification step and image-build boundary can stay
