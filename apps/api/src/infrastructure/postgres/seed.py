@@ -1,9 +1,11 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import create_engine
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from src.config import get_settings
+from src.infrastructure.postgres.client import PostgresClient
 from src.infrastructure.postgres.models.tables import (
     AnnouncementModel,
     ClubModel,
@@ -13,13 +15,23 @@ from src.infrastructure.postgres.models.tables import (
     OrganizationModel,
 )
 
-DATABASE_URL = "postgresql+psycopg://clubcrm:clubcrm@postgres:5432/clubcrm"
+
+def _create_postgres_client() -> PostgresClient:
+    return PostgresClient(dsn=get_settings().postgres.url)
 
 
-def seed() -> None:
-    engine = create_engine(DATABASE_URL)
+def _database_has_seed_data(session: Session) -> bool:
+    return session.scalar(select(OrganizationModel.id).limit(1)) is not None
 
-    with Session(engine) as session:
+
+def seed(client: PostgresClient | None = None) -> bool:
+    postgres_client = client or _create_postgres_client()
+
+    with postgres_client.create_session() as session:
+        if _database_has_seed_data(session):
+            print("Seed data skipped because the database already contains organizations.")
+            return False
+
         org = OrganizationModel(
             id=str(uuid.uuid4()),
             name="Champlain College",
@@ -97,6 +109,7 @@ def seed() -> None:
 
         session.commit()
         print("Seed data inserted successfully.")
+        return True
 
 
 if __name__ == "__main__":
