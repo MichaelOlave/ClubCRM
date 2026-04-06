@@ -72,6 +72,15 @@ jobs:
           OCI_USER: ${{ secrets.OCI_USER }}
         run: |
           set -euo pipefail
+          : "${OCI_DEPLOY_SSH_KEY:?Missing secret OCI_DEPLOY_SSH_KEY}"
+          : "${OCI_HOST:?Missing secret OCI_HOST}"
+          : "${OCI_USER:?Missing secret OCI_USER}"
+          case "$OCI_HOST" in
+            *://*)
+              echo "OCI_HOST must be a hostname or IP address without a URL scheme." >&2
+              exit 1
+              ;;
+          esac
           install -m 700 -d ~/.ssh
           printf '%s\n' "$OCI_DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
@@ -85,7 +94,7 @@ jobs:
             printf '  StrictHostKeyChecking yes\n'
           } > ~/.ssh/config
           chmod 600 ~/.ssh/config
-          ssh-keyscan -H "$OCI_HOST" >> ~/.ssh/known_hosts
+          ssh-keyscan -T 10 -H "$OCI_HOST" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
       - name: Verify SSH connectivity

@@ -51,6 +51,16 @@ The Oracle host should have:
 - a deploy user that either has direct Docker access or can run `sudo -n docker` and `sudo -n docker compose` without an interactive password prompt
 - a production environment file at `/opt/clubcrm/.env.production`
 
+## GitHub Actions Secrets
+
+The `deploy-production` workflow expects these repository-level GitHub Actions secrets:
+
+- `OCI_DEPLOY_SSH_KEY`: the private SSH key GitHub Actions uses to connect to the Oracle host
+- `OCI_HOST`: the Oracle host public IP address or DNS name, without `https://` or any other URL scheme
+- `OCI_USER`: the Linux user GitHub Actions should connect as
+
+If any of those secrets are missing or blank, the workflow now fails during `Configure SSH` with a targeted error message before it tries to open the connection.
+
 ## Production Environment
 
 Create `/opt/clubcrm/.env.production` from [`.env.production.example`](../../.env.production.example) and keep at least these values set:
