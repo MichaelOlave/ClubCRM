@@ -56,10 +56,11 @@ The deploy host should have:
 The `deploy-production` workflow expects these repository-level GitHub Actions secrets:
 
 - `DEPLOY_SSH_KEY`: the private SSH key GitHub Actions uses to connect to the deploy host
-- `DEPLOY_HOST`: the deploy host public IP address or DNS name, without `https://` or any other URL scheme
+- `DEPLOY_HOST`: the deploy host public IP address or DNS name, without `https://` or any other URL scheme. Prefer the stable production hostname (`clubcrm.org`) over a raw IP so host rotations do not strand deployments on an old address.
 - `DEPLOY_USER`: the Linux user GitHub Actions should connect as
 
 If any of those secrets are missing or blank, the workflow now fails during `Configure SSH` with a targeted error message before it tries to open the connection.
+If `DEPLOY_HOST` is omitted or stops responding on port `22`, the workflow now falls back to `clubcrm.org` before it gives up.
 If `Configure SSH` still fails after the secrets are present, verify that `DEPLOY_HOST` resolves publicly and that the deploy host accepts SSH connections on port `22` from GitHub Actions runners.
 
 ## Production Environment
@@ -68,7 +69,7 @@ Create `/opt/clubcrm/.env.production` from [`.env.production.example`](../../.en
 
 ```dotenv
 DOMAIN=clubcrm.org
-SERVER_IP=150.136.162.122
+SERVER_IP=31.97.142.155
 API_BASE_URL=http://api:8000
 WEB_IMAGE=clubcrm-web:deploy
 API_IMAGE=clubcrm-api:deploy
@@ -91,6 +92,7 @@ Production deploys are handled by the `deploy-production` job in [`.github/workf
 - the API image includes the checked-in Alembic config and applies `alembic upgrade head` before
   Uvicorn starts, so a fresh production PostgreSQL volume gets the current schema during rollout
 - the workflow verifies SSH access, then streams those images to the deploy host over SSH and loads them with Docker, falling back to `sudo -n` when the deploy user is not in the `docker` group
+- the workflow now tries the configured `DEPLOY_HOST` first and falls back to `clubcrm.org` when the configured host no longer answers SSH host-key discovery on port `22`
 - the host pulls the latest repo state in `/opt/clubcrm`
 - `docker compose -f infra/docker-compose.production.yml up -d --remove-orphans` refreshes the stack, with a `sudo -n` fallback when direct Docker access is unavailable
 

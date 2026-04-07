@@ -73,26 +73,77 @@ jobs:
         run: |
           set -euo pipefail
           : "${DEPLOY_SSH_KEY:?Missing secret DEPLOY_SSH_KEY}"
-          : "${DEPLOY_HOST:?Missing secret DEPLOY_HOST}"
           : "${DEPLOY_USER:?Missing secret DEPLOY_USER}"
-          DEPLOY_HOST="$(printf '%s' "$DEPLOY_HOST" | tr -d '\r\n')"
+          DEFAULT_DEPLOY_HOST="clubcrm.org"
+          DEPLOY_HOST="$(printf '%s' "${DEPLOY_HOST:-}" | tr -d '\r\n')"
           DEPLOY_USER="$(printf '%s' "$DEPLOY_USER" | tr -d '\r\n')"
-          case "$DEPLOY_HOST" in
-            *://*)
-              echo "DEPLOY_HOST must be a hostname or IP address without a URL scheme." >&2
-              exit 1
-              ;;
-          esac
-          if ! getent ahosts "$DEPLOY_HOST" >/dev/null; then
-            echo "DEPLOY_HOST did not resolve from the GitHub Actions runner. Check the secret value and DNS." >&2
+          if [ -z "$DEPLOY_USER" ]; then
+            echo "DEPLOY_USER cannot be blank after trimming line endings." >&2
+            exit 1
+          fi
+          candidate_hosts=()
+          if [ -n "$DEPLOY_HOST" ]; then
+            candidate_hosts+=("$DEPLOY_HOST")
+          fi
+          if [ "$DEFAULT_DEPLOY_HOST" != "$DEPLOY_HOST" ]; then
+            candidate_hosts+=("$DEFAULT_DEPLOY_HOST")
+          fi
+          if [ "${#candidate_hosts[@]}" -eq 0 ]; then
+            echo "No deploy host candidates were configured." >&2
             exit 1
           fi
           install -m 700 -d ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+          touch ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          SELECTED_DEPLOY_HOST=""
+          failure_output=""
+          for candidate_host in "${candidate_hosts[@]}"; do
+            candidate_label="configured DEPLOY_HOST"
+            include_candidate_in_logs="false"
+            if [ "$candidate_host" = "$DEFAULT_DEPLOY_HOST" ] && [ "$candidate_host" != "$DEPLOY_HOST" ]; then
+              candidate_label="production domain fallback ($DEFAULT_DEPLOY_HOST)"
+              include_candidate_in_logs="true"
+            fi
+            case "$candidate_host" in
+              *://*)
+                failure_output="${failure_output}\n- ${candidate_label} used a URL scheme; provide only a hostname or IP address."
+                continue
+                ;;
+            esac
+            if ! getent ahosts "$candidate_host" >/dev/null; then
+              failure_output="${failure_output}\n- ${candidate_label} did not resolve from the GitHub Actions runner."
+              continue
+            fi
+            keyscan_output="$(mktemp)"
+            keyscan_error="$(mktemp)"
+            if ssh-keyscan -T 10 -H "$candidate_host" >"$keyscan_output" 2>"$keyscan_error" && [ -s "$keyscan_output" ]; then
+              cat "$keyscan_output" >> ~/.ssh/known_hosts
+              rm -f "$keyscan_output" "$keyscan_error"
+              SELECTED_DEPLOY_HOST="$candidate_host"
+              if [ "$candidate_host" = "$DEPLOY_HOST" ] && [ -n "$DEPLOY_HOST" ]; then
+                echo "Using DEPLOY_HOST from secrets for SSH."
+              else
+                echo "Configured DEPLOY_HOST did not return SSH host keys; falling back to $DEFAULT_DEPLOY_HOST."
+              fi
+              break
+            fi
+            failure_output="${failure_output}\n- ${candidate_label} resolved but did not return SSH host keys on port 22."
+            if [ "$include_candidate_in_logs" = "true" ] && [ -s "$keyscan_error" ]; then
+              keyscan_summary="$(tr '\n' ' ' <"$keyscan_error" | sed 's/[[:space:]]\+/ /g')"
+              failure_output="${failure_output}\n  ssh-keyscan: ${keyscan_summary}"
+            fi
+            rm -f "$keyscan_output" "$keyscan_error"
+          done
+          if [ -z "$SELECTED_DEPLOY_HOST" ]; then
+            echo "Unable to determine a reachable deploy host." >&2
+            printf '%b\n' "$failure_output" >&2
+            exit 1
+          fi
           {
             printf 'Host deploy-host\n'
-            printf '  HostName %s\n' "$DEPLOY_HOST"
+            printf '  HostName %s\n' "$SELECTED_DEPLOY_HOST"
             printf '  User %s\n' "$DEPLOY_USER"
             printf '  IdentityFile ~/.ssh/id_ed25519\n'
             printf '  IdentitiesOnly yes\n'
@@ -100,20 +151,6 @@ jobs:
             printf '  StrictHostKeyChecking yes\n'
           } > ~/.ssh/config
           chmod 600 ~/.ssh/config
-          keyscan_output="$(mktemp)"
-          keyscan_error="$(mktemp)"
-          if ! ssh-keyscan -T 10 -H "$DEPLOY_HOST" >"$keyscan_output" 2>"$keyscan_error"; then
-            echo "ssh-keyscan failed. Ensure the deploy host is publicly reachable on port 22 from GitHub Actions." >&2
-            cat "$keyscan_error" >&2
-            exit 1
-          fi
-          if [ ! -s "$keyscan_output" ]; then
-            echo "ssh-keyscan returned no host keys. Ensure the deploy host is reachable on port 22 and serving SSH." >&2
-            cat "$keyscan_error" >&2
-            exit 1
-          fi
-          cat "$keyscan_output" >> ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
 
       - name: Verify SSH connectivity
         run: |
