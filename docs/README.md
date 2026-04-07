@@ -27,6 +27,9 @@ Use this directory as the main entry point for project documentation.
 ## Deployment and Analysis
 
 - [SSH Docker Deployment](deployment/ssh-docker-deploy.md) for the current VM deployment path
+- [Current Longhorn Implementation Status](deployment/current-longhorn-implementation.md) for the
+  repo-backed and live-cluster view of Longhorn, including current breakage and drift
+- [k3s + Kubero + Longhorn Runbook](deployment/k3s-kubero-longhorn.md) for the networking-final cluster rollout
 - [Current Project Structure Analysis](analysis/current-project-structure-analysis.md) for a deeper review of the repo layout and tradeoffs
 
 ## Assets
