@@ -28,6 +28,8 @@ Primary deliverables:
 - `Longhorn`-backed persistence for required stateful services
 - ingress and internal service communication
 - a repeatable deployment demo
+- an optional dedicated monitoring and control stack for failover demonstrations, kept outside the
+  main ClubCRM application pair
 
 ## What This Team Does Not Own
 

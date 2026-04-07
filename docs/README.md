@@ -27,6 +27,10 @@ Use this directory as the main entry point for project documentation.
 ## Deployment and Analysis
 
 - [SSH Docker Deployment](deployment/ssh-docker-deploy.md) for the current VM deployment path
+- [Companion Monitoring Stack Guide](deployment/companion-monitoring-stack.md) for the companion
+  monitoring app architecture, data flow, and operating model
+- [Monitoring Stack Deployment](deployment/monitoring-stack.md) for the companion networking-demo
+  control plane deployment steps
 - [Current Project Structure Analysis](analysis/current-project-structure-analysis.md) for a deeper review of the repo layout and tradeoffs
 
 ## Assets
