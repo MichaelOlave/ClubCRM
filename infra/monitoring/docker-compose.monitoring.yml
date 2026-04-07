@@ -1,0 +1,32 @@
+services:
+  monitor-api:
+    image: ${MONITOR_API_IMAGE:-clubcrm-monitor-api:deploy}
+    build:
+      context: ../..
+      dockerfile: apps/monitor-api/Dockerfile
+    env_file:
+      - ../../.env.example
+      - ../../.env
+    ports:
+      - "${MONITOR_API_PORT:-8010}:8010"
+    restart: unless-stopped
+
+  monitor-web:
+    image: ${MONITOR_WEB_IMAGE:-clubcrm-monitor-web:deploy}
+    build:
+      context: ../..
+      dockerfile: apps/monitor-web/Dockerfile
+    env_file:
+      - ../../.env.example
+      - ../../.env
+    environment:
+      MONITOR_API_BASE_URL: http://monitor-api:8010
+      NEXT_PUBLIC_MONITOR_API_BASE_URL: ${NEXT_PUBLIC_MONITOR_API_BASE_URL:-http://localhost:8010}
+      NEXT_PUBLIC_MONITOR_WS_URL: ${NEXT_PUBLIC_MONITOR_WS_URL:-ws://localhost:8010/ws/stream}
+      NEXT_PUBLIC_CLUBCRM_DEMO_URL: ${NEXT_PUBLIC_CLUBCRM_DEMO_URL:-http://clubcrm.local/demo/failover}
+      PORT: 3001
+    depends_on:
+      - monitor-api
+    ports:
+      - "${MONITOR_WEB_PORT:-3001}:3001"
+    restart: unless-stopped
