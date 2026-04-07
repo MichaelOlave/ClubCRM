@@ -4,10 +4,12 @@
   "packageManager": "pnpm@10.32.1",
   "scripts": {
     "bootstrap": "node ./scripts/run-python.js ./scripts/bootstrap.py",
+    "bootstrap:monitoring": "node ./scripts/run-python.js ./scripts/bootstrap_monitoring.py",
     "verify": "pnpm format:check && pnpm lint && pnpm build",
     "dev": "node ./scripts/dev.js",
     "dev:web": "node ./scripts/run-python.js ./scripts/dev_web.py",
     "dev:api": "node ./scripts/run-python.js ./scripts/dev_api.py",
+    "dev:monitor-api": "node ./scripts/run-python.js ./scripts/dev_monitor_api.py",
     "build": "pnpm build:web && pnpm check:api",
     "build:web": "node ./scripts/run-python.js ./scripts/build_web.py",
     "format": "pnpm format:prettier && pnpm format:api",
@@ -20,7 +22,10 @@
     "lint:prettier": "prettier --check .",
     "lint:web": "pnpm --filter web exec eslint . --max-warnings=0",
     "lint:api": "node ./scripts/run-python.js ./scripts/lint_api.py",
+    "lint:monitor-api": "node ./scripts/run-python.js ./scripts/lint_monitor_api.py",
     "check:api": "node ./scripts/run-python.js ./scripts/check_api.py",
+    "check:monitor-api": "node ./scripts/run-python.js ./scripts/check_monitor_api.py",
+    "test:monitor-api": "node ./scripts/run-python.js ./scripts/test_monitor_api.py",
     "precommit:all": "node ./scripts/run-python.js ./scripts/pre_commit_all.py"
   },
   "devDependencies": {
