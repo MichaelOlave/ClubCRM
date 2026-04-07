@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: clubcrm-web
+  namespace: clubcrm
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: clubcrm.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: clubcrm-web
+                port:
+                  number: 3000
