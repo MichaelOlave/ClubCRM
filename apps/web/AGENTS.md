@@ -103,9 +103,9 @@ Current app behavior to keep in mind:
 
 - `src/app/page.tsx` currently redirects `/` to `/dashboard`.
 - Admin routes live under `src/app/(app)`, and public entry points live under `src/app/(public)`.
-- The current admin MVP includes dashboard, profile, clubs, members, and `/system/health`; public routes currently cover `/login` and `/join/[clubId]`.
+- The current admin MVP includes dashboard, profile, clubs, and members; public routes currently cover `/login`, `/join/[clubId]`, and `/system/health`.
 - Most feature data currently comes from server-side view-model modules in `src/features/*/server`, so the frontend is ahead of the backend contract.
-- `src/app/(app)/system/health/page.tsx` preserves the API diagnostics flow.
+- `src/app/system/health/page.tsx` preserves the API diagnostics flow.
 - The diagnostics flow probes the API using `API_BASE_URL`, then `http://api:8000`, then `http://localhost:8000`.
 - The expected backend response comes from `apps/api/src/modules/system/presentation/http/routes.py` and returns `{"status": "ok"}`.
 - The diagnostics page exports `dynamic = "force-dynamic"` and uses `fetch(..., { cache: "no-store" })`.
