@@ -19,6 +19,7 @@
 #         self.assertEqual(health_check(), {"status": "ok"})
 
 import unittest
+from os import environ
 from unittest.mock import patch
 
 from helpers import add_api_root_to_path
@@ -48,6 +49,8 @@ class HealthRouteTests(unittest.TestCase):
         self.assertIn("redis", result["checks"])
         self.assertEqual(result["checks"]["redis"]["status"], "ok")
         self.assertEqual(result["checks"]["redis"]["details"]["version"], "7.0.0")
+        self.assertEqual(result["runtime"]["service"], "clubcrm-api")
+        self.assertIn("instance_id", result["runtime"])
 
     @patch("src.modules.system.presentation.http.routes.get_redis_client")
     def test_health_handler_reports_redis_down_without_crashing(self, mock_get_redis_client) -> None:
@@ -61,3 +64,31 @@ class HealthRouteTests(unittest.TestCase):
             result["checks"]["redis"]["details"]["error"],
             "redis unavailable",
         )
+        self.assertEqual(result["runtime"]["service"], "clubcrm-api")
+
+    @patch.dict(
+        environ,
+        {
+            "POD_NAME": "clubcrm-api-demo-pod",
+            "HOSTNAME": "0.0.0.0",
+            "KUBERNETES_SERVICE_HOST": "10.43.0.1",
+            "POD_NAMESPACE": "clubcrm",
+            "NODE_NAME": "server2",
+        },
+        clear=False,
+    )
+    @patch("src.modules.system.presentation.http.routes.get_redis_client")
+    def test_health_handler_prefers_pod_name_for_runtime_metadata(
+        self,
+        mock_get_redis_client,
+    ) -> None:
+        mock_client = mock_get_redis_client.return_value
+        mock_client.ping.return_value = True
+        mock_client.info.return_value = {"redis_version": "7.0.0"}
+
+        result = health_check()
+
+        self.assertEqual(result["runtime"]["instance_id"], "clubcrm-api-demo-pod")
+        self.assertEqual(result["runtime"]["pod_name"], "clubcrm-api-demo-pod")
+        self.assertEqual(result["runtime"]["namespace"], "clubcrm")
+        self.assertEqual(result["runtime"]["node_name"], "server2")

@@ -35,7 +35,7 @@ The homepage currently redirects authenticated users to `/dashboard` and everyon
 - [`src/app/page.tsx`](src/app/page.tsx) for the root redirect
 - [`src/app/(app)/dashboard/page.tsx`](<src/app/(app)/dashboard/page.tsx>) for the admin landing page
 - [`src/app/(app)/profile/page.tsx`](<src/app/(app)/profile/page.tsx>) for the signed-in auth profile and session diagnostics surface
-- [`src/app/(app)/system/health/page.tsx`](<src/app/(app)/system/health/page.tsx>) for the API diagnostics surface
+- [`src/app/system/health/page.tsx`](<src/app/system/health/page.tsx>) for the API diagnostics surface
 - [`src/app/(public)/login/page.tsx`](<src/app/(public)/login/page.tsx>) or [`src/app/(public)/join/[clubId]/page.tsx`](<src/app/(public)/join/[clubId]/page.tsx>) for public entry points
 
 ## Notes
@@ -44,7 +44,7 @@ The homepage currently redirects authenticated users to `/dashboard` and everyon
 - The PNPM store, workspace `node_modules`, web `node_modules`, web `.next`, and the API virtualenv are persisted in Docker volumes.
 - File watching is configured with polling for reliable live reload in containers.
 - The web service waits for the API health check before it starts.
-- Most frontend data is currently provided by server-side view-model modules under `src/features/*/server`; `/system/health`, `/login`, and the protected admin route group now call into the FastAPI backend.
+- Most frontend data is currently provided by server-side view-model modules under `src/features/*/server`; the public `/system/health` and `/login` routes plus the protected admin route group now call into the FastAPI backend.
 - `API_BASE_URL` is the web server's preferred internal API target.
 - `WEB_API_PUBLIC_BASE_URL` should stay pointed at the browser-reachable API origin for auth redirects, and it also acts as a server-side fallback when the web app cannot reach the Docker hostname directly.
 - The admin shell now redirects unauthenticated requests to `/login` after checking the backend-owned session.
