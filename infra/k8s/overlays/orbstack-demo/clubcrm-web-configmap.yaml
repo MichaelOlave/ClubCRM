@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clubcrm-web-env
+  namespace: clubcrm
+data:
+  API_BASE_URL: http://clubcrm-api.clubcrm.svc.cluster.local:8000
+  WEB_API_PUBLIC_BASE_URL: http://clubcrm.local/api
