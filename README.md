@@ -15,6 +15,7 @@ Current implementation status:
 - the frontend currently includes dashboard, profile, club and member directory/detail pages, club and member creation and update flows, roster assignment from club detail, a `/login` route that hands off to backend-owned auth, join-form previews, and a dedicated `/system/health` diagnostics route
 - `apps/api` now includes bootstrap, config, infrastructure, module, and test layers, plus live `GET /health` and backend-owned auth session routes under `/auth`; the rest of the frontend still stays ahead of the broader backend contract
 - the admin route group now checks the backend session before rendering and redirects unauthenticated requests to `/login`
+- the repo also includes a separate companion monitoring stack under `apps/monitor-api` and `apps/monitor-web` for the networking demo, kept intentionally outside the main ClubCRM app pair
 - the local data and app stack is wired up through the repository devcontainer
 
 ## Development Environment
@@ -145,6 +146,8 @@ Before opening a pull request, run the narrowest relevant checks from the reposi
 - `docs/guides/kafka-implementation-flow.md` for async event publication implementation guidance
 - `docs/plans/team-execution-plan.md` for scope and ownership guidance
 - `docs/plans/networking-team-execution-plan.md` for the companion networking workstream
+- `docs/deployment/companion-monitoring-stack.md` for the companion monitoring app architecture and data flow
 - `docs/deployment/ssh-docker-deploy.md` for the current SSH-based VM deployment path
+- `docs/deployment/monitoring-stack.md` for the separate networking-demo monitoring stack
 - `docs/analysis/current-project-structure-analysis.md` for a detailed review of the repo's current shape
 - `docs/proposals/` for course proposal drafts
