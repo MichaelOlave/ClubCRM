@@ -1,5 +1,5 @@
 from dataclasses import replace
-from uuid import uuid4
+from datetime import UTC, datetime
 
 from src.infrastructure.mongodb.client import MongoDBClient
 from src.modules.forms.application.ports.join_request_store import JoinRequestStore
@@ -11,9 +11,17 @@ class MongoDBJoinRequestStore(JoinRequestStore):
         self.client = client
 
     def save(self, join_request: JoinRequest) -> JoinRequest:
-        _ = self.client
-
-        if join_request.id is not None:
-            return join_request
-
-        return replace(join_request, id=str(uuid4()))
+        doc = {
+            "organizationId": join_request.organization_id,
+            "clubId": join_request.club_id,
+            "formType": "join_request",
+            "submittedAt": datetime.now(UTC),
+            "submitter": {
+                "name": join_request.submitter_name,
+                "email": join_request.submitter_email,
+            },
+            "payload": join_request.payload,
+            "status": join_request.status,
+        }
+        result = self.client.get_database()["join_requests"].insert_one(doc)
+        return replace(join_request, id=str(result.inserted_id))
