@@ -22,6 +22,12 @@ src/
       presentation/
         http/
           routes.py
+    dashboard/
+      domain/
+      application/
+        ports/
+      presentation/
+        http/
     clubs/
       domain/
       application/
@@ -98,16 +104,18 @@ port if `8000` is already in use. The resolved binding is written to
 
 ## Application Routes
 
-- `GET /health` used by the web diagnostics page at `/system/health`
+- `GET /health` used by the web diagnostics page at `/system/health`; it returns top-level status plus Redis check details
 - `GET /auth/login` starts the backend-owned Auth0 login flow or local bypass flow
 - `GET /auth/callback` completes the Auth0 callback and creates the backend session cookie
 - `GET /auth/session` returns the current backend session plus a CSRF token for same-origin requests
 - `POST /auth/logout` clears the backend auth session and redirects through logout
+- `GET /dashboard/summary/{club_id}` returns the current placeholder dashboard summary shape for a club
 - CRUD routes under `/clubs`
 - CRUD routes under `/members`
 - CRUD routes under `/memberships`
 - CRUD routes under `/events`
 - CRUD routes under `/announcements`
+- the `/forms` router is registered, but it does not expose HTTP handlers yet
 
 FastAPI's default docs remain enabled as well:
 

@@ -101,13 +101,13 @@ Treat the root scripts as the CI-facing contract unless there is a strong reason
 
 Current app behavior to keep in mind:
 
-- `src/app/page.tsx` currently redirects `/` to `/dashboard`.
-- Admin routes live under `src/app/(app)`, and public entry points live under `src/app/(public)`.
+- `src/app/page.tsx` checks `/auth/session` and redirects authenticated requests to `/dashboard` or `/login`.
+- Admin routes live under `src/app/(app)`, public entry points live under `src/app/(public)`, and `src/app/api/auth/login/route.ts` proxies the backend login handoff.
 - The current admin MVP includes dashboard, profile, clubs, members, and `/system/health`; public routes currently cover `/login` and `/join/[clubId]`.
-- Most feature data currently comes from server-side view-model modules in `src/features/*/server`, so the frontend is ahead of the backend contract.
+- Most feature data currently comes from server-side view-model modules in `src/features/*/server`, but dashboard, profile, health, login, and club/member/membership admin flows now call live backend endpoints.
 - `src/app/(app)/system/health/page.tsx` preserves the API diagnostics flow.
-- The diagnostics flow probes the API using `API_BASE_URL`, then `http://api:8000`, then `http://localhost:8000`.
-- The expected backend response comes from `apps/api/src/modules/system/presentation/http/routes.py` and returns `{"status": "ok"}`.
+- The diagnostics flow probes the API using `API_BASE_URL`, then `WEB_API_PUBLIC_BASE_URL`, then `http://api:8000`, then `http://localhost:8000`.
+- The expected backend response comes from `apps/api/src/modules/system/presentation/http/routes.py` and returns top-level `status: "ok"` plus nested health-check details such as `checks.redis`.
 - The diagnostics page exports `dynamic = "force-dynamic"` and uses `fetch(..., { cache: "no-store" })`.
 
 Do not remove or change this behavior casually unless the task explicitly calls for it.
@@ -119,8 +119,10 @@ The web app uses a **feature-first** layout under `src/`:
 ```
 src/
   app/                    # Routes, layouts, and metadata — composition only
+    api/auth/login/       # Server route handler for backend-owned login handoff
     (app)/                # Admin shell route group
       dashboard/
+      profile/
       clubs/
         [clubId]/
       members/
@@ -137,6 +139,7 @@ src/
     health/
     members/
     memberships/
+    profile/
     <feature>/
       components/         # Feature-specific presentational components
       server/             # Server-only loaders/actions for App Router server components

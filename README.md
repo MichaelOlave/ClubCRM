@@ -11,10 +11,11 @@ ClubCRM is a devcontainer-first monorepo for a club management platform with:
 
 Current implementation status:
 
-- `apps/web` now provides a UI-first MVP: `/` sends authenticated users to `/dashboard` and everyone else to `/login`, admin pages live under `src/app/(app)`, and public entry points live under `src/app/(public)`
-- the frontend currently includes dashboard, profile, club and member directory/detail pages, club and member creation and update flows, roster assignment from club detail, a `/login` route that hands off to backend-owned auth, join-form previews, and a dedicated `/system/health` diagnostics route
-- `apps/api` now includes bootstrap, config, infrastructure, module, and test layers, plus live `GET /health` and backend-owned auth session routes under `/auth`; the rest of the frontend still stays ahead of the broader backend contract
+- `apps/web` now provides a UI-first MVP: `/` sends authenticated users to `/dashboard` and everyone else to `/login`, admin pages live under `src/app/(app)`, public entry points live under `src/app/(public)`, and `src/app/api/auth/login/route.ts` proxies the backend-owned login handoff
+- the frontend currently includes dashboard, profile, club and member directory/detail pages, club and member creation and update flows, roster assignment and membership role updates from club detail, a `/login` route backed by the backend auth flow, join-form previews, and a dedicated `/system/health` diagnostics route; the dashboard aggregates live club, member, event, and announcement data from the API
+- `apps/api` now includes bootstrap, config, infrastructure, module, and test layers, plus live route groups under `/health`, `/auth`, `/clubs`, `/members`, `/memberships`, `/events`, `/announcements`, and `/dashboard`; the public forms workflow is still ahead of the broader backend contract because `/forms` is registered but not yet implemented
 - the admin route group now checks the backend session before rendering and redirects unauthenticated requests to `/login`
+- the club, member, and membership admin flows now read and write through the FastAPI backend, while the public join preview and `/forms` submission flow still stay ahead of the broader backend contract
 - the local data and app stack is wired up through the repository devcontainer
 
 ## Development Environment
@@ -133,7 +134,10 @@ Before opening a pull request, run the narrowest relevant checks from the reposi
 
 ## Docs
 
+- `AGENTS.md` for repo-wide agent and contributor guardrails
 - `docs/README.md` for a categorized map of the project documentation
+- `apps/web/README.md` for frontend-specific runtime and environment notes
+- `apps/api/README.md` for backend structure and route notes
 - `docs/contributing.md` for contribution workflow and code standards
 - `docs/architecture.md` for system structure and local environment rules
 - `docs/schema.md` for data modeling notes

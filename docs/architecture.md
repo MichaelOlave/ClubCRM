@@ -172,6 +172,7 @@ Today the frontend is ahead of the backend contract. The implemented web app use
     /(app)
       layout.tsx
       /dashboard
+      /profile
       /clubs
         /[clubId]
       /members
@@ -194,7 +195,7 @@ Today the frontend is ahead of the backend contract. The implemented web app use
     /memberships
 ```
 
-Most current web data is provided by server-side view-model modules under `apps/web/src/features/*/server`. The live cross-app integrations today are the diagnostics flow on `/system/health`, which calls the backend `GET /health` endpoint, the protected `/profile` route, which reads `/auth/session` plus request cookies to surface stored identity and auth diagnostics, the admin club and member management flows, which create and update clubs, create and update members, and assign members to clubs through the backend CRUD endpoints, and the public login route, which reads `/auth/session` and hands off to the backend-owned `/auth/login` flow.
+Most current web data is provided by server-side view-model modules under `apps/web/src/features/*/server`. The live cross-app integrations today include the diagnostics flow on `/system/health`, which calls the backend `GET /health` endpoint, the protected `/profile` route, which reads `/auth/session` plus request cookies to surface stored identity and auth diagnostics, the admin club and member management flows, which create and update clubs, create and update members, assign members to clubs, and read club activity through the backend CRUD endpoints, and the public login route, which reads `/auth/session` and hands off to the backend-owned `/auth/login` flow. The public join preview still stays web-side while the forms HTTP surface catches up.
 
 ## Current Backend Implementation
 
@@ -224,6 +225,7 @@ composition, feature modules, infrastructure adapters, and unit tests.
       /presentation
         /http
           routes.py
+    /dashboard
     /clubs
     /forms
     /members
@@ -237,9 +239,12 @@ composition, feature modules, infrastructure adapters, and unit tests.
     /infrastructure
 ```
 
-`GET /health` remains the baseline diagnostics handler, and the auth module now exposes a
-backend-owned session flow under `/auth`. The sections below describe how that module-first
-structure should keep growing as more endpoints and real persistence behavior are added.
+`GET /health` remains the baseline diagnostics handler, but it is no longer the only live route.
+The backend now also exposes a backend-owned session flow under `/auth`, CRUD or read endpoints
+for clubs, members, memberships, events, and announcements, and a placeholder dashboard summary
+route under `/dashboard`. The `/forms` router is still reserved without live HTTP handlers. The
+sections below describe how that module-first structure should keep growing as more endpoints and
+real persistence behavior are added.
 
 ## Target Backend Architectural Style
 
