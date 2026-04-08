@@ -12,6 +12,7 @@ export async function getJoinRequestContext(clubId: string): Promise<JoinRequest
     clubId: club.id,
     clubName: club.name,
     clubDescription: club.description,
+    organizationId: club.organization_id,
     organizationName: "Champlain College",
     prompt: "Tell the club what you want to contribute and what drew you to this group.",
     roles: ["General member", "Event volunteer", "Communications support", "Leadership interest"],
