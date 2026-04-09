@@ -6,11 +6,9 @@ export type SubmissionState =
   | { status: "success"; id: string }
   | { status: "error"; message: string };
 
-const API_ORIGINS = [
-  process.env.API_BASE_URL,
-  "http://api:8000",
-  "http://localhost:8000",
-].filter((v): v is string => Boolean(v));
+const API_ORIGINS = [process.env.API_BASE_URL, "http://api:8000", "http://localhost:8000"].filter(
+  (v): v is string => Boolean(v)
+);
 
 export async function submitJoinRequest(
   context: JoinRequestContext,
