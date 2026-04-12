@@ -1,7 +1,7 @@
 # Current Longhorn Implementation Status
 
 This document explains how Longhorn is currently represented in the ClubCRM repository, what is
-actually running on the live cluster right now, and what is broken or drifted as of April 7, 2026.
+actually running on the live cluster right now, and what is broken or drifted as of April 12, 2026.
 
 It is intended to complement, not replace:
 
@@ -14,30 +14,36 @@ It is intended to complement, not replace:
 This status doc covers three things:
 
 1. the intended repo-backed Longhorn implementation
-2. the current live cluster state that was validated over SSH on April 7, 2026
+2. the current live cluster state that was validated on April 7 and April 12, 2026
 3. the broken, misleading, or incomplete parts of the current implementation
 
-The live validation in this document came from non-interactive SSH checks against `vm1`, which is
-currently the `k3s` server node for the networking environment.
+The live validation in this document came from non-interactive SSH checks against `vm1` on April 7,
+plus direct `kubectl` and node-debug validation against the real `k3s` cluster on April 12.
 
 ## Executive Summary
 
-The repository still treats Longhorn as the intended persistence layer for the networking-final
-cluster path, but the live cluster is not currently using Longhorn for ClubCRM's PostgreSQL or
-Redis data.
+The repository now includes the main Longhorn integration work needed for the networking-final path:
+
+- a dedicated `clubcrm-longhorn` StorageClass for the ClubCRM data plane
+- repo-managed PostgreSQL and Redis PVCs pointed at that storage class
+- a dedicated smoke-test bundle under `infra/k8s/longhorn-smoke/`
+- deployment docs that explain how to validate Longhorn before moving real workloads
+
+What is still missing is not repository integration. It is a healthy enough cluster environment to
+finish the attach and mount path.
 
 What is live today is the OrbStack fallback shape:
 
 - Longhorn is installed and its control-plane pods are running
 - ClubCRM stateful PVCs are bound to `local-path`, not Longhorn
 - the app is running successfully in the fallback cluster shape
-- the visible Longhorn smoke-test volume is `faulted` and cannot attach to its pod
+- the visible Longhorn smoke-test path still faults during attach on the provided VM environment
 
 The most important conclusion is simple:
 
 - Longhorn is present in the environment
 - Longhorn is observable in the monitoring story
-- Longhorn is not currently the storage backend that keeps ClubCRM alive
+- Longhorn is integrated in the repo, but not currently the storage backend that keeps ClubCRM alive
 
 ## Repo-Backed Design
 
@@ -48,12 +54,18 @@ demo path.
 
 In that base path:
 
-- `infra/k8s/postgres-pvc.yaml` creates a `10Gi` `ReadWriteOnce` PVC on storage class `longhorn`
-- `infra/k8s/redis-pvc.yaml` creates a `2Gi` `ReadWriteOnce` PVC on storage class `longhorn`
+- `infra/k8s/clubcrm-longhorn-storageclass.yaml` creates a dedicated `clubcrm-longhorn`
+  StorageClass with `numberOfReplicas: "2"`
+- `infra/k8s/postgres-pvc.yaml` creates a `10Gi` `ReadWriteOnce` PVC on storage class
+  `clubcrm-longhorn`
+- `infra/k8s/redis-pvc.yaml` creates a `2Gi` `ReadWriteOnce` PVC on storage class
+  `clubcrm-longhorn`
 - `infra/k8s/postgres-statefulset.yaml` mounts the standalone `postgres-data` claim
 - `infra/k8s/redis-statefulset.yaml` mounts the standalone `redis-data` claim
 - the base `kustomization.yaml` wires those resources together with namespaces, services, ingress,
   and the Traefik `/api` strip middleware
+- `infra/k8s/longhorn-smoke/` provides a repo-managed PVC plus pod for validating Longhorn volume
+  attach behavior before moving real stateful workloads onto that storage path
 
 Important constraint:
 
@@ -83,7 +95,7 @@ story like this:
 
 - install Longhorn into `longhorn-system`
 - set Longhorn's effective replica behavior to `2`
-- keep ClubCRM PVCs explicitly pointed at the `longhorn` storage class
+- keep ClubCRM PVCs explicitly pointed at the repo-managed `clubcrm-longhorn` storage class
 - use the OrbStack overlay only when the classroom platform cannot reliably demonstrate Longhorn
 
 So the repo intent is still clear: Longhorn is supposed to be the primary storage path for the
@@ -122,7 +134,8 @@ observability story.
 
 ## Current Live Cluster State
 
-The following reflects what was observed over SSH on April 7, 2026.
+The following combines the April 7, 2026 SSH validation and the April 12, 2026 smoke-test rerun on
+the real `server1`/`server2`/`server3` cluster.
 
 ### Cluster shape
 
@@ -185,28 +198,39 @@ Longhorn-backed data" model.
 
 ### Longhorn smoke-test state
 
-The only live Longhorn-backed PVC observed during validation was:
+The repository now includes a dedicated smoke bundle under `infra/k8s/longhorn-smoke/`:
 
-- `lh-test/smoke-pvc`
+- namespace `clubcrm-longhorn-smoke`
+- storage class `clubcrm-longhorn-smoke`
+- PVC `smoke-data`
+- pod `smoke-writer`
 
-That PVC is backed by a Longhorn volume on storage class `longhorn-two`, but the current state is
-not healthy:
+The April 12 validation on the real cluster showed:
 
-- the Longhorn volume is `detached`
-- its robustness is `faulted`
-- the related `smoke-pod` is stuck `Pending`
-- the pod repeatedly reports `FailedAttachVolume`
+- the smoke PVC provisions successfully and becomes `Bound`
+- the smoke pod schedules onto `server3` when `server2` is cordoned
+- the Longhorn volume is created successfully
+- the attach path still fails before the pod can reach `Running`
+- the volume repeatedly falls into `attaching` / `faulted` / `detached` cycles
 
-The attach failure currently says:
+Kubernetes reports repeated attach timeout events for the smoke pod, and Longhorn reports
+`DetachedUnexpectedly` because the engine dies during attach.
 
-- the volume "is not ready for workloads"
+The decisive host-side failure on `server3` is in iSCSI session creation, not in the repo manifests
+or in Kubernetes PVC provisioning. During April 12 validation, `iscsid` on `server3` reached target
+discovery successfully, then crashed during login/session setup with output equivalent to:
 
-The backing PV for that smoke volume also carries this annotation:
-
-- `longhorn.io/volume-scheduling-error: replica scheduling failed`
+```text
+connected local port ... to 10.42.2.67:3260
+in kcreate_session
+in __kipc_call
+in kwritev
+sendmsg: bug? ctrl_fd 4
+```
 
 So the current live problem is not just cosmetic monitoring noise. The smoke workload cannot mount
-the Longhorn volume.
+the Longhorn volume because the provided VM environment crashes in host-side iSCSI session
+creation.
 
 ### Replica configuration drift
 
@@ -217,10 +241,10 @@ The live environment currently has conflicting replica expectations:
 - the `longhorn-demo` storage class explicitly requests `2` replicas
 - the `longhorn` storage class still explicitly requests `3` replicas
 
-That matters because the repo's base ClubCRM PVC manifests point to `storageClassName: longhorn`.
-So even though the runbook says the cluster should behave like a two-replica Longhorn setup, the
-actual storage class named `longhorn` in the live environment still encodes a three-replica
-request.
+That mattered because the repo's older base ClubCRM PVC manifests pointed to
+`storageClassName: longhorn`. The repository now defines a dedicated `clubcrm-longhorn`
+StorageClass with an explicit two-replica policy, but the live cluster still needs to apply and use
+that resource before the storage story is truly aligned end to end.
 
 ### `iscsid` status
 
@@ -263,21 +287,25 @@ Impact:
 
 ### 2. The current Longhorn smoke path is failing
 
-The live Longhorn test claim exists, but the workload using it cannot start.
+The repo-backed smoke validation path is implemented and was re-run on the real cluster, but the
+workload still cannot start.
 
 Evidence:
 
+- the repo smoke PVC becomes `Bound`
+- the smoke pod schedules onto `server3`
 - Longhorn volume robustness is `faulted`
-- volume state is `detached`
-- `smoke-pod` is `Pending`
+- volume state cycles through `attaching` and `detached`
+- `smoke-writer` stays `Pending`
 - Kubernetes reports repeated `FailedAttachVolume`
-- the PV annotation explicitly says `replica scheduling failed`
+- `server3` host-side `iscsid` crashes during session creation
 
 Impact:
 
-- the environment does not currently have a known-good proof that Longhorn can back a real
-  workload successfully
-- even a small test workload is not mounting cleanly
+- the environment still does not have a known-good proof that Longhorn can back a real workload
+  successfully
+- even a small repo-managed validation workload is not mounting cleanly
+- PostgreSQL and Redis should not be switched to Longhorn yet
 
 ### 3. The repo runbook and live storage-class behavior have drifted
 
@@ -363,6 +391,7 @@ Even with the gaps above, several parts of the implementation are working and sh
 clearly.
 
 - Longhorn is installed and running in `longhorn-system`
+- the repo now has a dedicated ClubCRM Longhorn storage class and a dedicated smoke-test bundle
 - the repo has a clear base/fallback split instead of pretending the risky path is always stable
 - the companion monitoring stack already has first-class Longhorn visibility in its data model and
   UI
@@ -371,13 +400,14 @@ clearly.
 
 ## Current Verdict
 
-As of April 7, 2026, the Longhorn implementation should be described as:
+As of April 12, 2026, the Longhorn implementation should be described as:
 
-- partially implemented in the repo
+- implemented in the repo strongly enough to validate
 - operational as an installed cluster subsystem
 - integrated into monitoring
 - not currently the live storage backend for ClubCRM
-- not currently proven healthy by the live Longhorn smoke workload
+- not currently proven healthy by the live Longhorn smoke workload because the provided VM
+  environment fails during host-side iSCSI session creation
 
 That is a much more accurate description than saying "Longhorn is done" or "ClubCRM is currently
 running on Longhorn."
@@ -392,10 +422,11 @@ If the goal is to keep the current fallback shape and simply document reality be
 
 If the goal is to restore Longhorn as the real ClubCRM storage backend:
 
-- choose one Longhorn storage class and make its replica policy the single source of truth
+- apply the repo-managed `clubcrm-longhorn` storage class and use it as the single source of truth
 - remove the extra default storage classes so default behavior is unambiguous
 - decide whether `server1` should remain unschedulable for Longhorn placement
-- validate a clean Longhorn smoke workload before moving PostgreSQL and Redis back to Longhorn
+- fix the host-side iSCSI/session-creation failure on the provided cluster first
+- validate `infra/k8s/longhorn-smoke/` cleanly before moving PostgreSQL and Redis back to Longhorn
 - only after the smoke path is healthy, switch the ClubCRM PVCs off the fallback overlay path
 
 If the goal is to improve observability regardless of storage choice:
@@ -417,6 +448,11 @@ ssh vm1 'sudo k3s kubectl get pvc -A -o wide'
 ssh vm1 'sudo k3s kubectl -n longhorn-system get volumes.longhorn.io'
 ssh vm1 'sudo k3s kubectl -n lh-test describe pod smoke-pod'
 ssh vm1 'sudo k3s kubectl -n longhorn-system get settings.longhorn.io default-replica-count -o yaml'
+KUBECONFIG=~/.kube/k3s.yaml kubectl get nodes -o wide
+KUBECONFIG=~/.kube/k3s.yaml kubectl apply -k infra/k8s/longhorn-smoke
+KUBECONFIG=~/.kube/k3s.yaml kubectl describe pod smoke-writer -n clubcrm-longhorn-smoke
+KUBECONFIG=~/.kube/k3s.yaml kubectl describe volumes.longhorn.io <smoke-volume> -n longhorn-system
+KUBECONFIG=~/.kube/k3s.yaml kubectl debug node/server3 --profile=sysadmin
 ```
 
 Those checks should be re-run before any final presentation or production-facing claim, because the

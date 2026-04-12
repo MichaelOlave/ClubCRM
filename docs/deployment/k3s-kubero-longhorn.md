@@ -45,8 +45,9 @@ Important routing and storage details:
 - `clubcrm.local/api` routes to `clubcrm-api:8000` through a Traefik middleware that strips
   `/api`
 - `kubero.local/` routes to the Kubero service on port `2000`
-- PostgreSQL uses a `10Gi` `ReadWriteOnce` PVC on `longhorn`
-- Redis uses a `2Gi` `ReadWriteOnce` PVC on `longhorn`
+- PostgreSQL uses a `10Gi` `ReadWriteOnce` PVC on `clubcrm-longhorn`
+- Redis uses a `2Gi` `ReadWriteOnce` PVC on `clubcrm-longhorn`
+- `infra/k8s/clubcrm-longhorn-storageclass.yaml` pins ClubCRM's Longhorn replica policy to `2`
 
 ## Repo Assets
 
@@ -141,13 +142,34 @@ vary by Longhorn version, so use the current Longhorn settings surface for `defa
 after install.
 
 Keep `local-path` available for bootstrap tasks, but leave the ClubCRM resources explicitly wired
-to the Longhorn storage class in `infra/k8s/`.
+to the `clubcrm-longhorn` storage class in `infra/k8s/`.
 
 Expected result before moving on:
 
 - Longhorn pods are healthy in `longhorn-system`
-- the `longhorn` storage class exists
+- the base `longhorn` storage class exists
+- the repo-managed `clubcrm-longhorn` storage class has been applied
 - ClubCRM PVCs are still unapplied or still pending until the repo manifests are applied later
+
+Before trusting PostgreSQL or Redis to that storage path, apply the repo smoke test:
+
+```bash
+kubectl apply -k infra/k8s/longhorn-smoke
+kubectl get pvc,pod -n clubcrm-longhorn-smoke
+kubectl -n longhorn-system get volumes.longhorn.io
+```
+
+Continue only after the smoke pod reaches `Running` and the smoke PVC is `Bound`.
+
+Current validation status as of April 12, 2026:
+
+- the repo-managed smoke PVC provisions successfully on the real `k3s` cluster
+- the smoke pod schedules onto the intended healthy node path when `server2` is cordoned
+- the current classroom cluster still fails at Longhorn volume attach, not at Kubernetes PVC
+  provisioning
+- the observed blocker is host-side iSCSI session creation on the provided VM environment
+- PostgreSQL and Redis should stay on the fallback path until the smoke workload reaches `Running`
+  and survives recreation cleanly
 
 On the OrbStack classroom machines used for this repo, Longhorn installs cleanly but PVC-backed
 workloads can still fail to attach because the node `iscsid` daemon crashes under load. If that
@@ -220,6 +242,7 @@ kubectl apply -k infra/k8s/overlays/orbstack-demo
 This creates:
 
 - `clubcrm`, `clubcrm-data`, and `kubero` namespaces
+- the repo-managed `clubcrm-longhorn` storage class with a two-replica policy
 - Longhorn-backed PostgreSQL and Redis PVCs in `clubcrm-data`
 - Postgres and Redis StatefulSets and Services
 - Traefik middleware for stripping `/api`
@@ -313,6 +336,7 @@ kubectl get nodes
 kubectl get pods -A
 kubectl get pvc -A
 kubectl -n longhorn-system get volumes.longhorn.io
+kubectl get storageclass clubcrm-longhorn
 curl http://clubcrm.local/api/health
 curl http://clubcrm.local/system/health
 ```
@@ -339,6 +363,13 @@ Demo goals:
 - PVCs stay `Pending` or pods cannot attach volumes on OrbStack:
   Keep Longhorn installed for visibility, but switch to the `orbstack-demo` overlay and `local-path`
   for the classroom environment.
+
+- Smoke PVCs bind but Longhorn volumes still fail to attach on the real cluster:
+  Treat that as a node-environment problem first. The April 12, 2026 validation on the provided
+  `server1`/`server2`/`server3` environment showed successful PVC provisioning but repeated attach
+  failure on `server3` because host-side iSCSI session creation crashed during login. Do not move
+  PostgreSQL or Redis onto Longhorn until that host issue is fixed and the smoke workload reaches
+  `Running`.
 
 - Kubero is up but not reachable on `kubero.local`:
   Confirm the installed Kubero service name and service port still match `infra/k8s/kubero-ingress.yaml`.
