@@ -24,6 +24,15 @@ class FakeJoinRequestStore(JoinRequestStore):
             status=join_request.status,
         )
 
+    def list_pending(self, club_id: str) -> list[JoinRequest]:
+        return []
+
+    def get(self, join_request_id: str) -> JoinRequest | None:
+        return None
+
+    def update_status(self, join_request_id: str, status: str) -> JoinRequest:
+        raise NotImplementedError
+
 
 class FakeFormSubmissionPublisher(FormSubmissionPublisher):
     def __init__(self) -> None:
