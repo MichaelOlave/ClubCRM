@@ -7,7 +7,10 @@ from src.bootstrap.dependencies import (
     get_member_repository,
     get_membership_repository,
 )
+from src.modules.auth.domain.entities import CurrentUser
+from src.modules.auth.presentation.http.dependencies import require_authenticated_user, require_csrf
 from src.modules.forms.application.commands.approve_join_request import ApproveJoinRequest
+from src.modules.forms.application.commands.deny_join_request import DenyJoinRequest
 from src.modules.forms.application.commands.submit_join_request import SubmitJoinRequest
 from src.modules.forms.application.ports.form_submission_publisher import FormSubmissionPublisher
 from src.modules.forms.application.ports.join_request_store import JoinRequestStore
@@ -52,6 +55,11 @@ class ApprovalResponse(BaseModel):
     membership_id: str
     member_created: bool
     membership_created: bool
+
+
+class ReviewResponse(BaseModel):
+    join_request_id: str
+    status: str
 
 
 def _normalize_optional_text(value: str | None) -> str | None:
@@ -113,16 +121,22 @@ def create_join_request(
 @router.get("/join-requests/{club_id}/pending", response_model=list[JoinRequestResponse])
 def list_pending_join_requests(
     club_id: str,
+    _current_user: CurrentUser = Depends(require_authenticated_user),  # noqa: B008
     store: JoinRequestStore = Depends(get_join_request_store),  # noqa: B008
 ) -> list[JoinRequestResponse]:
     results = ListPendingJoinRequests(store=store).execute(club_id)
     return [_to_response(r) for r in results]
 
 
-@router.post("/join-requests/{join_request_id}/approve", response_model=ApprovalResponse)
+@router.post(
+    "/join-requests/{join_request_id}/approve",
+    response_model=ApprovalResponse,
+    dependencies=[Depends(require_csrf)],
+)
 def approve_join_request(
     join_request_id: str,
     body: ApproveBody,
+    _current_user: CurrentUser = Depends(require_authenticated_user),  # noqa: B008
     store: JoinRequestStore = Depends(get_join_request_store),  # noqa: B008
     member_repository: MemberRepository = Depends(get_member_repository),  # noqa: B008
     membership_repository: MembershipRepository = Depends(get_membership_repository),  # noqa: B008
@@ -144,4 +158,26 @@ def approve_join_request(
         membership_id=result.membership.id,
         member_created=result.member_created,
         membership_created=result.membership_created,
+    )
+
+
+@router.post(
+    "/join-requests/{join_request_id}/deny",
+    response_model=ReviewResponse,
+    dependencies=[Depends(require_csrf)],
+)
+def deny_join_request(
+    join_request_id: str,
+    _current_user: CurrentUser = Depends(require_authenticated_user),  # noqa: B008
+    store: JoinRequestStore = Depends(get_join_request_store),  # noqa: B008
+) -> ReviewResponse:
+    try:
+        result = DenyJoinRequest(join_request_store=store).execute(join_request_id)
+    except ValueError as exc:
+        status_code = 404 if "not found" in str(exc) else 409
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+
+    return ReviewResponse(
+        join_request_id=result.id or "",
+        status=result.status,
     )

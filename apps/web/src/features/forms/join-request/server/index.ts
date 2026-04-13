@@ -4,9 +4,17 @@ import type {
   JoinRequestReviewViewModel,
 } from "@/features/forms/join-request/types";
 import type { BackendJoinRequestRecord, JoinRequestStatus } from "@/types/api";
+import { getJoinRequestApiAuthHeaders } from "./authHeaders";
 
 function getJoinRequestStatus(status: string): JoinRequestStatus {
-  return status === "approved" ? "approved" : "pending";
+  switch (status) {
+    case "approved":
+      return "approved";
+    case "denied":
+      return "denied";
+    default:
+      return "pending";
+  }
 }
 
 function mapJoinRequestRecord(joinRequest: BackendJoinRequestRecord) {
@@ -49,7 +57,9 @@ export async function getJoinRequestReview(
     return null;
   }
 
-  const requests = await listPendingJoinRequestsApi(clubId);
+  const requests = await listPendingJoinRequestsApi(clubId, {
+    headers: await getJoinRequestApiAuthHeaders(),
+  });
 
   return {
     clubDescription: club.description,

@@ -9,7 +9,7 @@ add_api_root_to_path()
 from src.modules.forms.application.commands.approve_join_request import ApproveJoinRequest
 from src.modules.forms.application.ports.join_request_store import JoinRequestStore
 from src.modules.forms.domain.entities import JoinRequest
-from src.modules.members.application.models import CreateMemberInput
+from src.modules.members.application.models import CreateMemberInput, UpdateMemberInput
 from src.modules.members.application.ports.member_repository import MemberRepository
 from src.modules.members.domain.entities import Member
 from src.modules.memberships.application.ports.membership_repository import (
@@ -107,12 +107,25 @@ class FakeMemberRepository(MemberRepository):
             first_name=member.first_name,
             last_name=member.last_name,
             email=member.email,
+            student_id=member.student_id,
         )
         self._members[new.id] = new
         return new
 
-    def update_member(self, member_id, member):
-        return self._members.get(member_id)
+    def update_member(self, member_id: str, member: UpdateMemberInput) -> Member | None:
+        existing = self._members.get(member_id)
+        if existing is None:
+            return None
+
+        updated = replace(
+            existing,
+            first_name=member.first_name if member.first_name is not None else existing.first_name,
+            last_name=member.last_name if member.last_name is not None else existing.last_name,
+            email=member.email if member.email is not None else existing.email,
+            student_id=member.student_id if member.student_id is not None else existing.student_id,
+        )
+        self._members[member_id] = updated
+        return updated
 
     def delete_member(self, member_id: str) -> bool:
         return self._members.pop(member_id, None) is not None
@@ -181,6 +194,21 @@ class ApproveJoinRequestTests(unittest.TestCase):
         result = self._command(member=existing).execute("jr-1")
 
         self.assertEqual(result.member.id, "existing-member")
+        self.assertFalse(result.member_created)
+
+    def test_creates_member_with_student_id_from_join_request(self):
+        jr = _make_join_request(payload={"student_id": "S12345"})
+        result = self._command(jr=jr).execute("jr-1")
+
+        self.assertEqual(result.member.student_id, "S12345")
+
+    def test_backfills_missing_student_id_for_existing_member(self):
+        jr = _make_join_request(payload={"student_id": "S12345"})
+        existing = _make_member(id="existing-member", student_id=None)
+        result = self._command(jr=jr, member=existing).execute("jr-1")
+
+        self.assertEqual(result.member.id, "existing-member")
+        self.assertEqual(result.member.student_id, "S12345")
         self.assertFalse(result.member_created)
 
     def test_reuses_existing_membership(self):

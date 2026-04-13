@@ -4,22 +4,34 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/shadcn/button";
 import { Card } from "@/components/shadcn/card";
+import { ActionNotice } from "@/components/ui/ActionNotice";
 import { JoinRequestReviewList } from "@/features/forms/join-request";
 import { getJoinRequestReview } from "@/features/forms/join-request/server";
+import {
+  approveJoinRequestAction,
+  denyJoinRequestAction,
+} from "@/features/forms/join-request/server/actions";
+import { getActionNotice } from "@/lib/forms";
 
 type Props = {
   params: Promise<{
     clubId: string;
   }>;
+  searchParams: Promise<{
+    joinRequestUpdated?: string | string[];
+    joinRequestError?: string | string[];
+  }>;
 };
 
-export default async function ClubJoinRequestsPage({ params }: Props) {
+export default async function ClubJoinRequestsPage({ params, searchParams }: Props) {
   const { clubId } = await params;
-  const review = await getJoinRequestReview(clubId);
+  const [review, query] = await Promise.all([getJoinRequestReview(clubId), searchParams]);
 
   if (!review) {
     notFound();
   }
+
+  const reviewNotice = getActionNotice(query.joinRequestUpdated, query.joinRequestError);
 
   return (
     <div className="space-y-8">
@@ -39,6 +51,8 @@ export default async function ClubJoinRequestsPage({ params }: Props) {
         title={`${review.clubName} join requests`}
       />
 
+      <ActionNotice notice={reviewNotice} />
+
       <Card className="grid gap-5 rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8 lg:grid-cols-[minmax(0,14rem)_1fr]">
         <div className="rounded-[1.25rem] border border-border bg-muted/40 p-4">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
@@ -57,7 +71,11 @@ export default async function ClubJoinRequestsPage({ params }: Props) {
         </div>
       </Card>
 
-      <JoinRequestReviewList requests={review.requests} />
+      <JoinRequestReviewList
+        approveAction={approveJoinRequestAction}
+        denyAction={denyJoinRequestAction}
+        requests={review.requests}
+      />
     </div>
   );
 }
