@@ -24,6 +24,12 @@ class RedisClient:
             return None
         return json.loads(raw)
 
+    def get_int(self, key: str) -> int:
+        raw = self._connection().get(key)
+        if raw is None:
+            return 0
+        return int(raw)
+
     def set_json(self, key: str, value: Any, ttl_seconds: int | None = None) -> None:
         payload = json.dumps(value)
         if ttl_seconds is None:
@@ -41,3 +47,6 @@ class RedisClient:
 
     def ttl(self, key: str) -> int:
         return int(self._connection().ttl(key))
+
+    def increment(self, key: str, amount: int = 1) -> int:
+        return int(self._connection().incrby(key, amount))

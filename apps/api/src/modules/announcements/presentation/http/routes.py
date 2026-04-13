@@ -5,7 +5,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 
-from src.bootstrap.dependencies import get_announcement_repository
+from src.bootstrap.dependencies import (
+    get_announcement_repository,
+    get_dashboard_summary_cache,
+)
+from src.modules.dashboard.application.ports.dashboard_summary_cache import (
+    DashboardSummaryCache,
+)
+from src.modules.dashboard.presentation.http.cache import invalidate_dashboard_cache
 from src.modules.announcements.application.commands.create_announcement import (
     CreateAnnouncement,
 )
@@ -83,6 +90,7 @@ def get_announcement(
 def create_announcement(
     payload: AnnouncementCreateRequest,
     repository: Annotated[AnnouncementRepository, Depends(get_announcement_repository)],
+    dashboard_cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
 ) -> AnnouncementRead:
     try:
         announcement = CreateAnnouncement(repository=repository).execute(
@@ -95,6 +103,7 @@ def create_announcement(
     except AnnouncementConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
+    invalidate_dashboard_cache(dashboard_cache, announcement.club_id)
     return _to_announcement_read(announcement)
 
 
@@ -103,7 +112,13 @@ def update_announcement(
     announcement_id: str,
     payload: AnnouncementUpdateRequest,
     repository: Annotated[AnnouncementRepository, Depends(get_announcement_repository)],
+    dashboard_cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
 ) -> AnnouncementRead:
+    try:
+        existing_announcement = GetAnnouncement(repository=repository).execute(announcement_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
     try:
         announcement = UpdateAnnouncement(repository=repository).execute(
             announcement_id,
@@ -117,6 +132,11 @@ def update_announcement(
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
+    invalidate_dashboard_cache(
+        dashboard_cache,
+        existing_announcement.club_id,
+        announcement.club_id,
+    )
     return _to_announcement_read(announcement)
 
 
@@ -124,10 +144,13 @@ def update_announcement(
 def delete_announcement(
     announcement_id: str,
     repository: Annotated[AnnouncementRepository, Depends(get_announcement_repository)],
+    dashboard_cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
 ) -> Response:
     try:
+        announcement = GetAnnouncement(repository=repository).execute(announcement_id)
         DeleteAnnouncement(repository=repository).execute(announcement_id)
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
+    invalidate_dashboard_cache(dashboard_cache, announcement.club_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

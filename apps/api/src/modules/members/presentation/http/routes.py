@@ -2,7 +2,15 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
-from src.bootstrap.dependencies import get_member_repository
+from src.bootstrap.dependencies import (
+    get_dashboard_summary_cache,
+    get_member_repository,
+    get_membership_repository,
+)
+from src.modules.dashboard.application.ports.dashboard_summary_cache import (
+    DashboardSummaryCache,
+)
+from src.modules.dashboard.presentation.http.cache import invalidate_dashboard_cache
 from src.modules.members.application.commands.create_member import CreateMember
 from src.modules.members.application.commands.delete_member import DeleteMember
 from src.modules.members.application.commands.update_member import UpdateMember
@@ -14,6 +22,9 @@ from src.modules.members.presentation.http.schemas import (
     MemberCreateRequest,
     MemberReadModel,
     MemberUpdateRequest,
+)
+from src.modules.memberships.application.ports.membership_repository import (
+    MembershipRepository,
 )
 
 router = APIRouter(prefix="/members", tags=["members"])
@@ -94,9 +105,17 @@ def update_member(
 def delete_member(
     member_id: str,
     repository: Annotated[MemberRepository, Depends(get_member_repository)],
+    membership_repository: Annotated[MembershipRepository, Depends(get_membership_repository)],
+    dashboard_cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
 ) -> Response:
+    affected_club_ids = [
+        membership.club_id
+        for membership in membership_repository.list_memberships(member_id=member_id)
+    ]
+
     deleted = DeleteMember(repository=repository).execute(member_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found.")
 
+    invalidate_dashboard_cache(dashboard_cache, *affected_club_ids)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

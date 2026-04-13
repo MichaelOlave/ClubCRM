@@ -2,11 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr
 
 from src.bootstrap.dependencies import (
+    get_dashboard_summary_cache,
     get_form_submission_publisher,
     get_join_request_store,
     get_member_repository,
     get_membership_repository,
 )
+from src.modules.dashboard.application.ports.dashboard_summary_cache import (
+    DashboardSummaryCache,
+)
+from src.modules.dashboard.presentation.http.cache import invalidate_dashboard_cache
 from src.modules.auth.domain.entities import CurrentUser
 from src.modules.auth.presentation.http.dependencies import require_authenticated_user, require_csrf
 from src.modules.forms.application.commands.approve_join_request import ApproveJoinRequest
@@ -140,6 +145,7 @@ def approve_join_request(
     store: JoinRequestStore = Depends(get_join_request_store),  # noqa: B008
     member_repository: MemberRepository = Depends(get_member_repository),  # noqa: B008
     membership_repository: MembershipRepository = Depends(get_membership_repository),  # noqa: B008
+    dashboard_cache: DashboardSummaryCache = Depends(get_dashboard_summary_cache),  # noqa: B008
 ) -> ApprovalResponse:
     try:
         result = ApproveJoinRequest(
@@ -151,6 +157,7 @@ def approve_join_request(
         status_code = 404 if "not found" in str(exc) else 409
         raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
+    invalidate_dashboard_cache(dashboard_cache, result.join_request.club_id)
     return ApprovalResponse(
         join_request_id=result.join_request.id or "",
         status=result.join_request.status,

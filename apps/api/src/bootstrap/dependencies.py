@@ -20,6 +20,7 @@ from src.infrastructure.postgres.repositories.memberships import (
 )
 from src.infrastructure.postgres.unit_of_work import DefaultPostgresUnitOfWork
 from src.infrastructure.redis.caches.clubs import RedisClubSummaryCache
+from src.infrastructure.redis.caches.dashboard import RedisDashboardSummaryCache
 from src.infrastructure.redis.client import RedisClient
 from src.infrastructure.redis.sessions.session_store import RedisAuthSessionStore
 from src.modules.announcements.application.ports.announcement_repository import (
@@ -31,6 +32,9 @@ from src.modules.clubs.application.ports.club_event_publisher import ClubEventPu
 from src.modules.clubs.application.ports.club_repository import ClubRepository
 from src.modules.clubs.application.ports.club_summary_cache import ClubSummaryCache
 from src.modules.dashboard.application.ports.dashboard_repository import DashboardRepository
+from src.modules.dashboard.application.ports.dashboard_summary_cache import (
+    DashboardSummaryCache,
+)
 from src.modules.events.application.ports.event_repository import EventRepository
 from src.modules.forms.application.ports.form_submission_publisher import (
     FormSubmissionPublisher,
@@ -147,3 +151,7 @@ def get_form_submission_publisher() -> FormSubmissionPublisher:
 
 def get_dashboard_repository() -> DashboardRepository:
     return PostgresDashboardRepository(client=get_postgres_client())
+
+
+def get_dashboard_summary_cache() -> DashboardSummaryCache:
+    return RedisDashboardSummaryCache(client=get_redis_client())

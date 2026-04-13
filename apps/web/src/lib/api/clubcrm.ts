@@ -2,6 +2,8 @@ import { fetchApiJson, fetchApiJsonOrNull } from "@/lib/api/server-data";
 import type {
   BackendAnnouncementRecord,
   BackendClubRecord,
+  BackendDashboardRedisAnalyticsRecord,
+  BackendDashboardSummaryRecord,
   BackendEventRecord,
   BackendJoinRequestApprovalRecord,
   BackendJoinRequestModerationRecord,
@@ -223,6 +225,22 @@ export async function listAnnouncementsApi(clubId: string): Promise<BackendAnnou
   return (
     await fetchApiJson<BackendAnnouncementRecord[]>(
       buildPath("/announcements", { club_id: clubId })
+    )
+  ).data;
+}
+
+export async function getDashboardSummaryApi(
+  clubId: string
+): Promise<BackendDashboardSummaryRecord> {
+  return (await fetchApiJson<BackendDashboardSummaryRecord>(`/dashboard/summary/${clubId}`)).data;
+}
+
+export async function getDashboardRedisAnalyticsApi(
+  clubId: string
+): Promise<BackendDashboardRedisAnalyticsRecord> {
+  return (
+    await fetchApiJson<BackendDashboardRedisAnalyticsRecord>(
+      `/dashboard/redis-analytics/${clubId}`
     )
   ).data;
 }

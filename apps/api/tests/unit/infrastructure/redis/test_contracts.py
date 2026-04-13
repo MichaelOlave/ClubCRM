@@ -8,6 +8,7 @@ from helpers import add_api_root_to_path
 add_api_root_to_path()
 
 from src.infrastructure.redis.caches.clubs import RedisClubSummaryCache
+from src.infrastructure.redis.caches.dashboard import RedisDashboardSummaryCache
 from src.infrastructure.redis.client import RedisClient
 from src.infrastructure.redis.sessions.session_store import RedisAuthSessionStore
 from src.modules.auth.application.ports.auth_session_store import (
@@ -16,6 +17,10 @@ from src.modules.auth.application.ports.auth_session_store import (
 )
 from src.modules.clubs.application.ports.club_summary_cache import ClubSummaryCache
 from src.modules.clubs.domain.entities import Club
+from src.modules.dashboard.application.ports.dashboard_summary_cache import (
+    DashboardSummaryCache,
+)
+from src.modules.dashboard.domain.models import DashboardSummary
 
 
 class RedisAdapterContractTests(unittest.TestCase):
@@ -46,6 +51,31 @@ class RedisAdapterContractTests(unittest.TestCase):
 
         cache.set("org-1", [club])
         mock_client.set_json.assert_called_once()
+
+    def test_dashboard_summary_cache_matches_port(self) -> None:
+        mock_client = Mock(spec=RedisClient)
+        summary = DashboardSummary(
+            club_id="club-1",
+            total_members=9,
+            total_events=2,
+            total_announcements=4,
+        )
+        mock_client.get_json.return_value = asdict(summary)
+        mock_client.ttl.return_value = 42
+        mock_client.get_int.side_effect = [5, 4, 1, 2, 0]
+
+        cache = RedisDashboardSummaryCache(mock_client)
+
+        self.assertIsInstance(cache, DashboardSummaryCache)
+        self.assertEqual(cache.get("club-1"), summary)
+
+        cache.set("club-1", summary)
+        cache.delete("club-1")
+        analytics = cache.get_analytics("club-1")
+
+        self.assertEqual(analytics.status, "warm")
+        self.assertTrue(analytics.cache_present)
+        self.assertEqual(analytics.request_count, 5)
 
     @patch(
         "src.infrastructure.redis.sessions.session_store.uuid4",

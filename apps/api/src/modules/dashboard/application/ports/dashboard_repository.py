@@ -1,15 +1,9 @@
 from abc import ABC, abstractmethod
 
+from src.modules.dashboard.domain.models import DashboardSummary
+
 
 class DashboardRepository(ABC):
     @abstractmethod
-    def count_members(self, club_id: str) -> int:
-        """Return total members for a club."""
-
-    @abstractmethod
-    def count_events(self, club_id: str) -> int:
-        """Return total events for a club."""
-
-    @abstractmethod
-    def count_announcements(self, club_id: str) -> int:
-        """Return total announcements for a club."""
+    def get_summary(self, club_id: str) -> DashboardSummary | None:
+        """Return the canonical dashboard summary for a club."""

@@ -25,7 +25,7 @@ export default async function DashboardPage() {
             ) : null}
           </>
         }
-        description="This product-facing overview now keeps the same route and shell structure while rendering live backend data."
+        description="This product-facing overview now renders live backend data and includes Redis-backed dashboard cache analytics for both admin operations and the member-facing experience."
         eyebrow="Dashboard"
         title="Admin overview"
       />

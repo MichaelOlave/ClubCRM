@@ -3,7 +3,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 
-from src.bootstrap.dependencies import get_membership_repository
+from src.bootstrap.dependencies import (
+    get_dashboard_summary_cache,
+    get_membership_repository,
+)
+from src.modules.dashboard.application.ports.dashboard_summary_cache import (
+    DashboardSummaryCache,
+)
+from src.modules.dashboard.presentation.http.cache import invalidate_dashboard_cache
 from src.modules.memberships.application.commands.create_membership import (
     CreateMembership,
 )
@@ -88,6 +95,7 @@ def get_membership(
 def create_membership(
     request: CreateMembershipRequest,
     repository: Annotated[MembershipRepository, Depends(get_membership_repository)],
+    dashboard_cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
 ) -> MembershipResponse:
     try:
         membership = CreateMembership(repository=repository).execute(
@@ -99,6 +107,7 @@ def create_membership(
     except MembershipConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
+    invalidate_dashboard_cache(dashboard_cache, membership.club_id)
     return MembershipResponse.from_domain(membership)
 
 
@@ -107,7 +116,15 @@ def update_membership(
     membership_id: str,
     request: UpdateMembershipRequest,
     repository: Annotated[MembershipRepository, Depends(get_membership_repository)],
+    dashboard_cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
 ) -> MembershipResponse:
+    existing_membership = GetMembership(repository=repository).execute(membership_id)
+    if existing_membership is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Membership not found.",
+        )
+
     try:
         membership = UpdateMembership(repository=repository).execute(
             membership_id,
@@ -122,6 +139,7 @@ def update_membership(
             detail="Membership not found.",
         )
 
+    invalidate_dashboard_cache(dashboard_cache, existing_membership.club_id, membership.club_id)
     return MembershipResponse.from_domain(membership)
 
 
@@ -129,7 +147,15 @@ def update_membership(
 def delete_membership(
     membership_id: str,
     repository: Annotated[MembershipRepository, Depends(get_membership_repository)],
+    dashboard_cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
 ) -> Response:
+    membership = GetMembership(repository=repository).execute(membership_id)
+    if membership is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Membership not found.",
+        )
+
     deleted = DeleteMembership(repository=repository).execute(membership_id)
     if not deleted:
         raise HTTPException(
@@ -137,4 +163,5 @@ def delete_membership(
             detail="Membership not found.",
         )
 
+    invalidate_dashboard_cache(dashboard_cache, membership.club_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

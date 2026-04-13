@@ -148,3 +148,26 @@ export type BackendAnnouncementRecord = {
   published_at: string;
   created_by: string | null;
 };
+
+export type BackendDashboardSummaryRecord = {
+  club_id: string;
+  total_members: number;
+  total_events: number;
+  total_announcements: number;
+};
+
+export type BackendDashboardRedisAnalyticsRecord = {
+  club_id: string;
+  cache_key: string;
+  available: boolean;
+  cache_present: boolean;
+  ttl_seconds: number | null;
+  request_count: number;
+  hit_count: number;
+  miss_count: number;
+  refresh_count: number;
+  invalidation_count: number;
+  hit_rate: number;
+  status: string;
+  error: string | null;
+};

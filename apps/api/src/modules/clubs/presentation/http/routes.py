@@ -3,7 +3,15 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 
-from src.bootstrap.dependencies import get_club_event_publisher, get_club_repository
+from src.bootstrap.dependencies import (
+    get_club_event_publisher,
+    get_club_repository,
+    get_dashboard_summary_cache,
+)
+from src.modules.dashboard.application.ports.dashboard_summary_cache import (
+    DashboardSummaryCache,
+)
+from src.modules.dashboard.presentation.http.cache import invalidate_dashboard_cache
 from src.modules.clubs.application.commands.create_club import CreateClub
 from src.modules.clubs.application.commands.delete_club import DeleteClub
 from src.modules.clubs.application.commands.update_club import UpdateClub
@@ -76,6 +84,7 @@ def create_club(
     request: CreateClubRequest,
     repository: Annotated[ClubRepository, Depends(get_club_repository)],
     publisher: Annotated[ClubEventPublisher, Depends(get_club_event_publisher)],
+    dashboard_cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
 ) -> ClubResponse:
     try:
         club = CreateClub(repository=repository, publisher=publisher).execute(
@@ -87,6 +96,7 @@ def create_club(
     except ClubConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
+    invalidate_dashboard_cache(dashboard_cache, club.id)
     return ClubResponse.from_domain(club)
 
 
@@ -95,6 +105,7 @@ def update_club(
     club_id: str,
     request: UpdateClubRequest,
     repository: Annotated[ClubRepository, Depends(get_club_repository)],
+    dashboard_cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
 ) -> ClubResponse:
     try:
         club = UpdateClub(repository=repository).execute(
@@ -107,6 +118,7 @@ def update_club(
     if club is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Club not found.")
 
+    invalidate_dashboard_cache(dashboard_cache, club.id)
     return ClubResponse.from_domain(club)
 
 
@@ -114,9 +126,11 @@ def update_club(
 def delete_club(
     club_id: str,
     repository: Annotated[ClubRepository, Depends(get_club_repository)],
+    dashboard_cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
 ) -> Response:
     deleted = DeleteClub(repository=repository).execute(club_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Club not found.")
 
+    invalidate_dashboard_cache(dashboard_cache, club_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

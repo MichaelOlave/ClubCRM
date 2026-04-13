@@ -5,7 +5,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 
-from src.bootstrap.dependencies import get_event_repository
+from src.bootstrap.dependencies import get_dashboard_summary_cache, get_event_repository
+from src.modules.dashboard.application.ports.dashboard_summary_cache import (
+    DashboardSummaryCache,
+)
+from src.modules.dashboard.presentation.http.cache import invalidate_dashboard_cache
 from src.modules.events.application.commands.create_event import CreateEvent
 from src.modules.events.application.commands.delete_event import DeleteEvent
 from src.modules.events.application.commands.update_event import UpdateEvent
@@ -77,6 +81,7 @@ def get_event(
 def create_event(
     payload: EventCreateRequest,
     repository: Annotated[EventRepository, Depends(get_event_repository)],
+    dashboard_cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
 ) -> EventRead:
     try:
         event = CreateEvent(repository=repository).execute(
@@ -90,6 +95,7 @@ def create_event(
     except EventConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
+    invalidate_dashboard_cache(dashboard_cache, event.club_id)
     return _to_event_read(event)
 
 
@@ -98,7 +104,13 @@ def update_event(
     event_id: str,
     payload: EventUpdateRequest,
     repository: Annotated[EventRepository, Depends(get_event_repository)],
+    dashboard_cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
 ) -> EventRead:
+    try:
+        existing_event = GetEvent(repository=repository).execute(event_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
     try:
         event = UpdateEvent(repository=repository).execute(
             event_id,
@@ -113,6 +125,7 @@ def update_event(
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
+    invalidate_dashboard_cache(dashboard_cache, existing_event.club_id, event.club_id)
     return _to_event_read(event)
 
 
@@ -120,10 +133,13 @@ def update_event(
 def delete_event(
     event_id: str,
     repository: Annotated[EventRepository, Depends(get_event_repository)],
+    dashboard_cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
 ) -> Response:
     try:
+        event = GetEvent(repository=repository).execute(event_id)
         DeleteEvent(repository=repository).execute(event_id)
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
+    invalidate_dashboard_cache(dashboard_cache, event.club_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
