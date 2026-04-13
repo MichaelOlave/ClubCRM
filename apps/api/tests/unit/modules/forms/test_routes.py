@@ -6,11 +6,11 @@ from helpers import add_api_root_to_path
 
 add_api_root_to_path()
 
-from src.bootstrap.dependencies import get_form_submission_publisher, get_join_request_store  # noqa: E402
-from src.modules.forms.application.ports.form_submission_publisher import FormSubmissionPublisher  # noqa: E402
-from src.modules.forms.application.ports.join_request_store import JoinRequestStore  # noqa: E402
-from src.modules.forms.domain.entities import JoinRequest  # noqa: E402
-from src.modules.forms.presentation.http.routes import router  # noqa: E402
+from src.bootstrap.dependencies import get_form_submission_publisher, get_join_request_store
+from src.modules.forms.application.ports.form_submission_publisher import FormSubmissionPublisher
+from src.modules.forms.application.ports.join_request_store import JoinRequestStore
+from src.modules.forms.domain.entities import JoinRequest
+from src.modules.forms.presentation.http.routes import router
 
 
 class FakeJoinRequestStore(JoinRequestStore):
@@ -18,6 +18,15 @@ class FakeJoinRequestStore(JoinRequestStore):
         from dataclasses import replace
 
         return replace(join_request, id="persisted-id-1")
+
+    def list_pending(self, club_id: str) -> list[JoinRequest]:
+        return []
+
+    def get(self, join_request_id: str) -> JoinRequest | None:
+        return None
+
+    def update_status(self, join_request_id: str, status: str) -> JoinRequest:
+        raise NotImplementedError
 
 
 class FakeFormSubmissionPublisher(FormSubmissionPublisher):
@@ -114,6 +123,15 @@ class JoinRequestRouteTests(unittest.TestCase):
 
                 captured.append(join_request)
                 return replace(join_request, id="captured-id")
+
+            def list_pending(self, club_id: str) -> list[JoinRequest]:
+                return []
+
+            def get(self, join_request_id: str) -> JoinRequest | None:
+                return None
+
+            def update_status(self, join_request_id: str, status: str) -> JoinRequest:
+                raise NotImplementedError
 
         self.app.dependency_overrides[get_join_request_store] = lambda: CapturingStore()
         self.client.post(
