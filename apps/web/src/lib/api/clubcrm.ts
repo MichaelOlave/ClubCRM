@@ -3,6 +3,8 @@ import type {
   BackendAnnouncementRecord,
   BackendClubRecord,
   BackendEventRecord,
+  BackendJoinRequestApprovalRecord,
+  BackendJoinRequestModerationRecord,
   BackendJoinRequestRecord,
   BackendMemberRecord,
   BackendMembershipRecord,
@@ -131,10 +133,51 @@ export async function listMembershipsApi(filters?: {
 }
 
 export async function listPendingJoinRequestsApi(
-  clubId: string
+  clubId: string,
+  init?: RequestInit
 ): Promise<BackendJoinRequestRecord[]> {
-  return (await fetchApiJson<BackendJoinRequestRecord[]>(`/forms/join-requests/${clubId}/pending`))
-    .data;
+  return (
+    await fetchApiJson<BackendJoinRequestRecord[]>(`/forms/join-requests/${clubId}/pending`, init)
+  ).data;
+}
+
+export async function approveJoinRequestApi(
+  joinRequestId: string,
+  payload: {
+    role: string;
+  },
+  init?: RequestInit
+): Promise<BackendJoinRequestApprovalRecord> {
+  const headers = new Headers(init?.headers);
+
+  headers.set("Content-Type", "application/json");
+
+  return (
+    await fetchApiJson<BackendJoinRequestApprovalRecord>(
+      `/forms/join-requests/${joinRequestId}/approve`,
+      {
+        ...init,
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      }
+    )
+  ).data;
+}
+
+export async function denyJoinRequestApi(
+  joinRequestId: string,
+  init?: RequestInit
+): Promise<BackendJoinRequestModerationRecord> {
+  return (
+    await fetchApiJson<BackendJoinRequestModerationRecord>(
+      `/forms/join-requests/${joinRequestId}/deny`,
+      {
+        ...init,
+        method: "POST",
+      }
+    )
+  ).data;
 }
 
 export async function createMembershipApi(payload: {

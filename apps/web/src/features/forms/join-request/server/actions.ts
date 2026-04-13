@@ -1,5 +1,12 @@
 "use server";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+import { approveJoinRequestApi, denyJoinRequestApi } from "@/lib/api/clubcrm";
+import { getApiErrorMessage } from "@/lib/api/server-data";
+import { buildPathWithSearchParams, getRequiredString } from "@/lib/forms";
 import type { JoinRequestContext } from "@/features/forms/join-request/types";
+import { getJoinRequestApiAuthHeaders } from "./authHeaders";
 
 export type SubmissionState =
   | { status: "idle" }
@@ -53,4 +60,87 @@ export async function submitJoinRequest(
   }
 
   return { status: "error", message: "Could not reach the API." };
+}
+
+function buildJoinRequestSuccessMessage(result: {
+  member_created: boolean;
+  membership_created: boolean;
+}): string {
+  if (result.member_created) {
+    return "Join request approved. A new member was created and added to the club.";
+  }
+
+  if (result.membership_created) {
+    return "Join request approved. The existing member was added to the club.";
+  }
+
+  return "Join request approved. The member was already on this club roster.";
+}
+
+export async function approveJoinRequestAction(formData: FormData) {
+  const clubId = getRequiredString(formData, "clubId", "Club");
+  const joinRequestId = getRequiredString(formData, "joinRequestId", "Join request");
+  const role = getRequiredString(formData, "role", "Role");
+  const redirectPath = `/clubs/${clubId}/join-requests`;
+  let successRedirectPath = redirectPath;
+
+  try {
+    const result = await approveJoinRequestApi(
+      joinRequestId,
+      { role },
+      {
+        headers: await getJoinRequestApiAuthHeaders({ includeCsrf: true }),
+      }
+    );
+
+    revalidatePath("/clubs");
+    revalidatePath(`/clubs/${clubId}`);
+    revalidatePath(redirectPath);
+    revalidatePath("/members");
+    revalidatePath(`/members/${result.member_id}`);
+
+    successRedirectPath = buildPathWithSearchParams(redirectPath, {
+      joinRequestUpdated: buildJoinRequestSuccessMessage(result),
+    });
+  } catch (error) {
+    redirect(
+      buildPathWithSearchParams(redirectPath, {
+        joinRequestError: getApiErrorMessage(
+          error,
+          "The join request could not be approved right now."
+        ),
+      })
+    );
+  }
+
+  redirect(successRedirectPath);
+}
+
+export async function denyJoinRequestAction(formData: FormData) {
+  const clubId = getRequiredString(formData, "clubId", "Club");
+  const joinRequestId = getRequiredString(formData, "joinRequestId", "Join request");
+  const redirectPath = `/clubs/${clubId}/join-requests`;
+  let successRedirectPath = redirectPath;
+
+  try {
+    await denyJoinRequestApi(joinRequestId, {
+      headers: await getJoinRequestApiAuthHeaders({ includeCsrf: true }),
+    });
+
+    revalidatePath(redirectPath);
+    successRedirectPath = buildPathWithSearchParams(redirectPath, {
+      joinRequestUpdated: "Join request denied.",
+    });
+  } catch (error) {
+    redirect(
+      buildPathWithSearchParams(redirectPath, {
+        joinRequestError: getApiErrorMessage(
+          error,
+          "The join request could not be denied right now."
+        ),
+      })
+    );
+  }
+
+  redirect(successRedirectPath);
 }

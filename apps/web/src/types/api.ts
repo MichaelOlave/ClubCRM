@@ -3,7 +3,7 @@ export type MemberStatus = "active" | "prospective";
 export type MembershipStatus = "active" | "pending";
 export type EventStatus = "upcoming" | "draft";
 export type AnnouncementStatus = "published" | "scheduled";
-export type JoinRequestStatus = "pending" | "approved";
+export type JoinRequestStatus = "pending" | "approved" | "denied";
 export type ActivityType = "club" | "member" | "form" | "event" | "announcement";
 
 export type ClubRecord = {
@@ -115,6 +115,18 @@ export type BackendJoinRequestRecord = {
   role: string | null;
   message: string | null;
   status: string;
+};
+
+export type BackendJoinRequestModerationRecord = {
+  join_request_id: string;
+  status: string;
+};
+
+export type BackendJoinRequestApprovalRecord = BackendJoinRequestModerationRecord & {
+  member_id: string;
+  membership_id: string;
+  member_created: boolean;
+  membership_created: boolean;
 };
 
 export type BackendEventRecord = {

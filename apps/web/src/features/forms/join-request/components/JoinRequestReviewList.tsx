@@ -1,17 +1,28 @@
+import { Button } from "@/components/shadcn/button";
 import { Badge } from "@/components/shadcn/badge";
 import { Card } from "@/components/shadcn/card";
 import { EmptyState } from "@/components/shadcn/empty-state";
+import { MembershipRoleSelect } from "@/features/memberships/components/MembershipRoleSelect";
 import type { JoinRequestRecord } from "@/types/api";
 
 type Props = {
+  approveAction: (formData: FormData) => Promise<void>;
+  denyAction: (formData: FormData) => Promise<void>;
   requests: JoinRequestRecord[];
 };
 
 function getStatusVariant(status: JoinRequestRecord["status"]) {
-  return status === "approved" ? "success" : "warning";
+  switch (status) {
+    case "approved":
+      return "success";
+    case "denied":
+      return "destructive";
+    default:
+      return "warning";
+  }
 }
 
-export function JoinRequestReviewList({ requests }: Props) {
+export function JoinRequestReviewList({ approveAction, denyAction, requests }: Props) {
   if (!requests.length) {
     return (
       <EmptyState
@@ -66,6 +77,42 @@ export function JoinRequestReviewList({ requests }: Props) {
             <p className="mt-2 text-sm leading-7 text-foreground/80">
               {request.message ?? "No personal note was provided with this request."}
             </p>
+          </div>
+
+          <div className="space-y-4 rounded-[1.25rem] border border-dashed border-border bg-muted/30 p-4">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                Review action
+              </p>
+              <p className="mt-2 text-sm leading-6 text-foreground/80">
+                Approving reuses the member record by email when it already exists, otherwise it
+                creates a new member from the submitted form details and adds them to this club.
+              </p>
+            </div>
+
+            <form action={approveAction} className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+              <input name="clubId" type="hidden" value={request.clubId} />
+              <input name="joinRequestId" type="hidden" value={request.id} />
+
+              <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
+                <span>Club role on approval</span>
+                <MembershipRoleSelect defaultValue="member" />
+              </label>
+
+              <div className="flex items-end">
+                <Button className="w-full sm:w-auto" size="sm" type="submit">
+                  Approve and add
+                </Button>
+              </div>
+            </form>
+
+            <form action={denyAction} className="flex justify-end">
+              <input name="clubId" type="hidden" value={request.clubId} />
+              <input name="joinRequestId" type="hidden" value={request.id} />
+              <Button size="sm" type="submit" variant="destructive">
+                Deny request
+              </Button>
+            </form>
           </div>
         </Card>
       ))}

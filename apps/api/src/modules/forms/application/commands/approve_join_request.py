@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from src.modules.forms.application.ports.join_request_store import JoinRequestStore
 from src.modules.forms.domain.entities import JoinRequest
-from src.modules.members.application.models import CreateMemberInput
+from src.modules.members.application.models import CreateMemberInput, UpdateMemberInput
 from src.modules.members.application.ports.member_repository import MemberRepository
 from src.modules.members.domain.entities import Member
 from src.modules.memberships.application.ports.membership_repository import (
@@ -56,11 +56,20 @@ class ApproveJoinRequest:
             join_request.organization_id, join_request.submitter_email
         )
         if member is not None:
+            student_id = join_request.payload.get("student_id")
+            if isinstance(student_id, str) and student_id and member.student_id is None:
+                updated_member = self.member_repository.update_member(
+                    member.id,
+                    UpdateMemberInput(student_id=student_id),
+                )
+                if updated_member is not None:
+                    return updated_member, False
             return member, False
 
         name_parts = join_request.submitter_name.split(" ", 1)
         first_name = name_parts[0]
         last_name = name_parts[1] if len(name_parts) > 1 else ""
+        student_id = join_request.payload.get("student_id")
 
         member = self.member_repository.create_member(
             CreateMemberInput(
@@ -68,6 +77,7 @@ class ApproveJoinRequest:
                 first_name=first_name,
                 last_name=last_name,
                 email=join_request.submitter_email,
+                student_id=student_id if isinstance(student_id, str) and student_id else None,
             )
         )
         return member, True
