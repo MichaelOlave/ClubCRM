@@ -17,6 +17,8 @@ export async function submitJoinRequest(
 ): Promise<SubmissionState> {
   const submitterName = formData.get("submitter_name")?.toString().trim();
   const submitterEmail = formData.get("submitter_email")?.toString().trim();
+  const studentId = formData.get("student_id")?.toString().trim() || undefined;
+  const role = formData.get("role")?.toString().trim() || undefined;
   const message = formData.get("message")?.toString().trim() || undefined;
 
   if (!submitterName || !submitterEmail) {
@@ -32,6 +34,8 @@ export async function submitJoinRequest(
           organization_id: context.organizationId,
           submitter_name: submitterName,
           submitter_email: submitterEmail,
+          student_id: studentId,
+          role,
           message,
         }),
       });

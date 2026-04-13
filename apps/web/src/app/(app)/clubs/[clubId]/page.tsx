@@ -78,6 +78,9 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
               notice={assignmentErrorNotice}
             />
             <Button asChild variant="secondary">
+              <Link href={`/clubs/${clubId}/join-requests`}>View join requests</Link>
+            </Button>
+            <Button asChild variant="secondary">
               <Link href={`/join/${clubId}`}>Open public form</Link>
             </Button>
             <Button asChild variant="ghost">

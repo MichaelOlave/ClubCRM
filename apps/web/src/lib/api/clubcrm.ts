@@ -3,6 +3,7 @@ import type {
   BackendAnnouncementRecord,
   BackendClubRecord,
   BackendEventRecord,
+  BackendJoinRequestRecord,
   BackendMemberRecord,
   BackendMembershipRecord,
 } from "@/types/api";
@@ -127,6 +128,13 @@ export async function listMembershipsApi(filters?: {
       })
     )
   ).data;
+}
+
+export async function listPendingJoinRequestsApi(
+  clubId: string
+): Promise<BackendJoinRequestRecord[]> {
+  return (await fetchApiJson<BackendJoinRequestRecord[]>(`/forms/join-requests/${clubId}/pending`))
+    .data;
 }
 
 export async function createMembershipApi(payload: {

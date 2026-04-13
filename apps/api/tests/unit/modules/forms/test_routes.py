@@ -91,6 +91,25 @@ class JoinRequestRouteTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 201)
 
+    def test_optional_form_fields_round_trip_through_response(self) -> None:
+        response = self.client.post(
+            "/forms/join-request/club-1",
+            json={
+                "organization_id": "org-1",
+                "submitter_name": "Taylor Student",
+                "submitter_email": "taylor@example.edu",
+                "student_id": "S12345",
+                "role": "Leadership interest",
+                "message": "I love chess.",
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        body = response.json()
+        self.assertEqual(body["student_id"], "S12345")
+        self.assertEqual(body["role"], "Leadership interest")
+        self.assertEqual(body["message"], "I love chess.")
+
     def test_invalid_email_returns_422(self) -> None:
         response = self.client.post(
             "/forms/join-request/club-1",
@@ -145,3 +164,44 @@ class JoinRequestRouteTests(unittest.TestCase):
 
         self.assertEqual(len(captured), 1)
         self.assertEqual(captured[0].club_id, "club-99")
+
+    def test_list_pending_join_requests_returns_form_fields(self) -> None:
+        class PendingStore(JoinRequestStore):
+            def save(self, join_request: JoinRequest) -> JoinRequest:
+                from dataclasses import replace
+
+                return replace(join_request, id="persisted-id-1")
+
+            def list_pending(self, club_id: str) -> list[JoinRequest]:
+                self._requested_club_id = club_id
+                return [
+                    JoinRequest(
+                        id="join-1",
+                        organization_id="org-1",
+                        club_id=club_id,
+                        submitter_name="Taylor Student",
+                        submitter_email="taylor@example.edu",
+                        payload={
+                            "student_id": "S12345",
+                            "role": "Leadership interest",
+                            "message": "I love chess.",
+                        },
+                    )
+                ]
+
+            def get(self, join_request_id: str) -> JoinRequest | None:
+                return None
+
+            def update_status(self, join_request_id: str, status: str) -> JoinRequest:
+                raise NotImplementedError
+
+        self.app.dependency_overrides[get_join_request_store] = lambda: PendingStore()
+
+        response = self.client.get("/forms/join-requests/club-1/pending")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(len(body), 1)
+        self.assertEqual(body[0]["student_id"], "S12345")
+        self.assertEqual(body[0]["role"], "Leadership interest")
+        self.assertEqual(body[0]["message"], "I love chess.")

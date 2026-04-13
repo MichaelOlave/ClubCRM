@@ -25,6 +25,8 @@ class JoinRequestBody(BaseModel):
     organization_id: str
     submitter_name: str
     submitter_email: EmailStr
+    student_id: str | None = None
+    role: str | None = None
     message: str | None = None
 
 
@@ -33,6 +35,9 @@ class JoinRequestResponse(BaseModel):
     club_id: str
     submitter_name: str
     submitter_email: str
+    student_id: str | None = None
+    role: str | None = None
+    message: str | None = None
     status: str
 
 
@@ -49,12 +54,27 @@ class ApprovalResponse(BaseModel):
     membership_created: bool
 
 
+def _normalize_optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+
+    normalized = value.strip()
+    return normalized or None
+
+
 def _to_response(join_request: JoinRequest) -> JoinRequestResponse:
+    student_id = join_request.payload.get("student_id")
+    role = join_request.payload.get("role")
+    message = join_request.payload.get("message")
+
     return JoinRequestResponse(
         id=join_request.id or "",
         club_id=join_request.club_id,
         submitter_name=join_request.submitter_name,
         submitter_email=join_request.submitter_email,
+        student_id=student_id if isinstance(student_id, str) else None,
+        role=role if isinstance(role, str) else None,
+        message=message if isinstance(message, str) else None,
         status=join_request.status,
     )
 
@@ -66,12 +86,23 @@ def create_join_request(
     store: JoinRequestStore = Depends(get_join_request_store),  # noqa: B008
     publisher: FormSubmissionPublisher = Depends(get_form_submission_publisher),  # noqa: B008
 ) -> JoinRequestResponse:
+    payload: dict[str, str] = {}
+
+    for key, value in (
+        ("student_id", body.student_id),
+        ("role", body.role),
+        ("message", body.message),
+    ):
+        normalized = _normalize_optional_text(value)
+        if normalized is not None:
+            payload[key] = normalized
+
     join_request = JoinRequest(
         organization_id=body.organization_id,
         club_id=club_id,
         submitter_name=body.submitter_name,
         submitter_email=str(body.submitter_email),
-        payload={"message": body.message} if body.message else {},
+        payload=payload,
     )
     result = SubmitJoinRequest(store=store, publisher=publisher).execute(join_request)
     if result.id is None:
