@@ -75,9 +75,7 @@ class ApproveJoinRequest:
     def _find_or_create_membership(
         self, club_id: str, member_id: str, role: str
     ) -> tuple[Membership, bool]:
-        existing = self.membership_repository.list_memberships(
-            club_id=club_id, member_id=member_id
-        )
+        existing = self.membership_repository.list_memberships(club_id=club_id, member_id=member_id)
         if existing:
             return existing[0], False
 

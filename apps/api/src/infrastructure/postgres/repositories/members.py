@@ -95,15 +95,12 @@ class PostgresMemberRepository(MemberRepository):
 
     def find_by_email(self, organization_id: str, email: str) -> Member | None:
         with self.client.create_session() as session:
-            row = (
-                session.execute(
-                    select(MemberModel).where(
-                        MemberModel.organization_id == organization_id,
-                        MemberModel.email == email,
-                    )
+            row = session.execute(
+                select(MemberModel).where(
+                    MemberModel.organization_id == organization_id,
+                    MemberModel.email == email,
                 )
-                .scalar_one_or_none()
-            )
+            ).scalar_one_or_none()
             if row is None:
                 return None
             return self._to_member(row)
