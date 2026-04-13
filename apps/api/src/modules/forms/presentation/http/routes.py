@@ -1,11 +1,22 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr
 
-from src.bootstrap.dependencies import get_form_submission_publisher, get_join_request_store
+from src.bootstrap.dependencies import (
+    get_form_submission_publisher,
+    get_join_request_store,
+    get_member_repository,
+    get_membership_repository,
+)
+from src.modules.forms.application.commands.approve_join_request import ApproveJoinRequest
 from src.modules.forms.application.commands.submit_join_request import SubmitJoinRequest
 from src.modules.forms.application.ports.form_submission_publisher import FormSubmissionPublisher
 from src.modules.forms.application.ports.join_request_store import JoinRequestStore
+from src.modules.forms.application.queries.list_pending_join_requests import (
+    ListPendingJoinRequests,
+)
 from src.modules.forms.domain.entities import JoinRequest
+from src.modules.members.application.ports.member_repository import MemberRepository
+from src.modules.memberships.application.ports.membership_repository import MembershipRepository
 
 router = APIRouter(prefix="/forms", tags=["forms"])
 
@@ -19,7 +30,33 @@ class JoinRequestBody(BaseModel):
 
 class JoinRequestResponse(BaseModel):
     id: str
+    club_id: str
+    submitter_name: str
+    submitter_email: str
     status: str
+
+
+class ApproveBody(BaseModel):
+    role: str = "General member"
+
+
+class ApprovalResponse(BaseModel):
+    join_request_id: str
+    status: str
+    member_id: str
+    membership_id: str
+    member_created: bool
+    membership_created: bool
+
+
+def _to_response(join_request: JoinRequest) -> JoinRequestResponse:
+    return JoinRequestResponse(
+        id=join_request.id or "",
+        club_id=join_request.club_id,
+        submitter_name=join_request.submitter_name,
+        submitter_email=join_request.submitter_email,
+        status=join_request.status,
+    )
 
 
 @router.post("/join-request/{club_id}", response_model=JoinRequestResponse, status_code=201)
@@ -39,4 +76,41 @@ def create_join_request(
     result = SubmitJoinRequest(store=store, publisher=publisher).execute(join_request)
     if result.id is None:
         raise RuntimeError("Join request was not persisted.")
-    return JoinRequestResponse(id=result.id, status=result.status)
+    return _to_response(result)
+
+
+@router.get("/join-requests/{club_id}/pending", response_model=list[JoinRequestResponse])
+def list_pending_join_requests(
+    club_id: str,
+    store: JoinRequestStore = Depends(get_join_request_store),  # noqa: B008
+) -> list[JoinRequestResponse]:
+    results = ListPendingJoinRequests(store=store).execute(club_id)
+    return [_to_response(r) for r in results]
+
+
+@router.post("/join-requests/{join_request_id}/approve", response_model=ApprovalResponse)
+def approve_join_request(
+    join_request_id: str,
+    body: ApproveBody,
+    store: JoinRequestStore = Depends(get_join_request_store),  # noqa: B008
+    member_repository: MemberRepository = Depends(get_member_repository),  # noqa: B008
+    membership_repository: MembershipRepository = Depends(get_membership_repository),  # noqa: B008
+) -> ApprovalResponse:
+    try:
+        result = ApproveJoinRequest(
+            join_request_store=store,
+            member_repository=member_repository,
+            membership_repository=membership_repository,
+        ).execute(join_request_id, role=body.role)
+    except ValueError as exc:
+        status_code = 404 if "not found" in str(exc) else 409
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+
+    return ApprovalResponse(
+        join_request_id=result.join_request.id or "",
+        status=result.join_request.status,
+        member_id=result.member.id,
+        membership_id=result.membership.id,
+        member_created=result.member_created,
+        membership_created=result.membership_created,
+    )

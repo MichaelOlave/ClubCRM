@@ -93,6 +93,21 @@ class PostgresMemberRepository(MemberRepository):
             session.refresh(row)
             return self._to_member(row)
 
+    def find_by_email(self, organization_id: str, email: str) -> Member | None:
+        with self.client.create_session() as session:
+            row = (
+                session.execute(
+                    select(MemberModel).where(
+                        MemberModel.organization_id == organization_id,
+                        MemberModel.email == email,
+                    )
+                )
+                .scalar_one_or_none()
+            )
+            if row is None:
+                return None
+            return self._to_member(row)
+
     def delete_member(self, member_id: str) -> bool:
         with self.client.create_session() as session:
             row = session.get(MemberModel, member_id)

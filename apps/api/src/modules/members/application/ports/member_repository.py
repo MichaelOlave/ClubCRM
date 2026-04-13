@@ -22,5 +22,9 @@ class MemberRepository(ABC):
         """Update an existing member."""
 
     @abstractmethod
+    def find_by_email(self, organization_id: str, email: str) -> Member | None:
+        """Return the member with this email in the given organization, or None."""
+
+    @abstractmethod
     def delete_member(self, member_id: str) -> bool:
         """Delete a member and report whether a row was removed."""
