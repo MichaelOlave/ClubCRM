@@ -11,10 +11,10 @@ ClubCRM is a devcontainer-first monorepo for a club management platform with:
 
 Current implementation status:
 
-- `apps/web` now provides a UI-first MVP: `/` sends authenticated users to `/dashboard` and everyone else to `/login`, admin pages live under `src/app/(app)`, and public entry points live under `src/app/(public)`
-- the frontend currently includes dashboard, profile, club and member directory/detail pages, club and member creation and update flows, roster assignment from club detail, a `/login` route that hands off to backend-owned auth, join-form previews, and a dedicated `/system/health` diagnostics route
-- `apps/api` now includes bootstrap, config, infrastructure, module, and test layers, plus live `GET /health` and backend-owned auth session routes under `/auth`; the rest of the frontend still stays ahead of the broader backend contract
-- the admin route group now checks the backend session before rendering and redirects unauthenticated requests to `/login`
+- `apps/web` now provides a UI-first MVP: `/` sends authorized users to `/dashboard`, authenticated-but-unprovisioned users to `/not-provisioned`, and everyone else to `/login`; admin pages live under `src/app/(app)`, public entry points live under `src/app/(public)`, and auth proxy handlers live at `/api/auth/login` and `/auth/callback`
+- the frontend currently includes dashboard, profile, audit, club and member directory/detail pages, club and member creation and update flows, roster assignment from club detail, public join-request submission plus club-level join-request review, a `/login` route that hands off to backend-owned auth, and a dedicated `/system/health` diagnostics route
+- `apps/api` now includes bootstrap, config, infrastructure, module, and test layers, with live routes for system health, backend-owned auth, audit logs, dashboard summaries, clubs, members, memberships, announcements, events, and join-request flows
+- the admin route group now checks the backend session before rendering and serves a role-aware shell for organization admins and club managers
 - the local data and app stack is wired up through the repository devcontainer
 
 ## Development Environment
@@ -139,12 +139,11 @@ Before opening a pull request, run the narrowest relevant checks from the reposi
 - `docs/schema.md` for data modeling notes
 - `docs/decisions.md` for architecture decisions
 - `docs/guides/module-implementation-flow.md` for step-by-step guidance on growing a module or feature slice
+- `docs/guides/live-site-testing.md` for manual smoke testing on the live production site
 - `docs/guides/postgresql-implementation-flow.md` for relational system-of-record implementation guidance
 - `docs/guides/mongodb-implementation-flow.md` for document-store implementation guidance
 - `docs/guides/redis-implementation-flow.md` for caching and short-lived data implementation guidance
 - `docs/guides/kafka-implementation-flow.md` for async event publication implementation guidance
-- `docs/plans/team-execution-plan.md` for scope and ownership guidance
-- `docs/plans/networking-team-execution-plan.md` for the companion networking workstream
 - `docs/deployment/ssh-docker-deploy.md` for the current SSH-based VM deployment path
-- `docs/analysis/current-project-structure-analysis.md` for a detailed review of the repo's current shape
-- `docs/proposals/` for course proposal drafts
+- `docs/plans/` and `docs/proposals/` for historical course-planning context
+- `apps/web/README.md` and `apps/api/README.md` for app-local runtime notes

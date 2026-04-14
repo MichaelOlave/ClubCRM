@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { getAdminApiHeaders } from "@/lib/api/adminAuthHeaders";
 import { createMembershipApi, updateMembershipApi } from "@/lib/api/clubcrm";
 import { getApiErrorMessage } from "@/lib/api/server-data";
 import { buildPathWithSearchParams, getRequiredString } from "@/lib/forms";
@@ -16,12 +17,17 @@ export async function createMembershipAction(formData: FormData) {
   let successRedirectPath = redirectPath;
 
   try {
-    await createMembershipApi({
-      club_id: clubId,
-      member_id: memberId,
-      role,
-      status,
-    });
+    await createMembershipApi(
+      {
+        club_id: clubId,
+        member_id: memberId,
+        role,
+        status,
+      },
+      {
+        headers: await getAdminApiHeaders({ includeCsrf: true, originPath: redirectPath }),
+      }
+    );
 
     revalidatePath("/clubs");
     revalidatePath(redirectPath);
@@ -55,7 +61,13 @@ export async function updateMembershipRoleAction(formData: FormData) {
   let successRedirectPath = redirectPath;
 
   try {
-    await updateMembershipApi(membershipId, { role });
+    await updateMembershipApi(
+      membershipId,
+      { role },
+      {
+        headers: await getAdminApiHeaders({ includeCsrf: true, originPath: redirectPath }),
+      }
+    );
 
     revalidatePath("/clubs");
     revalidatePath(redirectPath);

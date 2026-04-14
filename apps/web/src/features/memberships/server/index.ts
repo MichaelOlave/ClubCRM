@@ -1,10 +1,6 @@
-import {
-  getClubApi,
-  getMemberApi,
-  listClubsApi,
-  listMembersApi,
-  listMembershipsApi,
-} from "@/lib/api/clubcrm";
+import { getClubApi, getMemberApi, listMembersApi, listMembershipsApi } from "@/lib/api/clubcrm";
+import { canAccessClub } from "@/features/auth/server";
+import type { AuthorizedBackendAuthSession } from "@/features/auth/types";
 import type {
   BackendMemberRecord,
   BackendMembershipRecord,
@@ -12,12 +8,6 @@ import type {
   MembershipStatus,
 } from "@/types/api";
 import type { MembershipAssignmentCandidate } from "@/features/memberships/types";
-
-function buildMemberNameLookup(members: BackendMemberRecord[]): Map<string, string> {
-  return new Map(
-    members.map((member) => [member.id, `${member.first_name} ${member.last_name}`.trim()])
-  );
-}
 
 function getMembershipStatus(status: string): MembershipStatus {
   return status === "pending" ? "pending" : "active";
@@ -48,45 +38,40 @@ function mapMembershipRecord(
   };
 }
 
-export async function getMembershipsForClub(clubId: string): Promise<MembershipRecord[]> {
+export async function getMembershipsForClub(
+  clubId: string,
+  session?: AuthorizedBackendAuthSession
+): Promise<MembershipRecord[]> {
+  if (session && !canAccessClub(session, clubId)) {
+    return [];
+  }
+
   const club = await getClubApi(clubId);
 
   if (!club) {
     return [];
   }
 
-  const [memberships, members] = await Promise.all([
-    listMembershipsApi({ clubId }),
-    listMembersApi(club.organization_id),
-  ]);
-
-  const memberNames = buildMemberNameLookup(members);
+  const memberships = await listMembershipsApi({ clubId });
 
   return memberships.map((membership) =>
     mapMembershipRecord(
       membership,
-      club.name,
-      memberNames.get(membership.member_id) ?? membership.member_id
+      membership.club_name ?? club.name,
+      membership.member_name ?? membership.member_id
     )
   );
 }
 
 export async function getMembershipsForMember(memberId: string): Promise<MembershipRecord[]> {
-  const [member, memberships, clubs] = await Promise.all([
+  const [member, memberships] = await Promise.all([
     getMemberApi(memberId),
     listMembershipsApi({ memberId }),
-    listClubsApi(),
   ]);
-
-  const clubNames = new Map(clubs.map((club) => [club.id, club.name]));
   const memberName = member ? `${member.first_name} ${member.last_name}`.trim() : memberId;
 
   return memberships.map((membership) =>
-    mapMembershipRecord(
-      membership,
-      clubNames.get(membership.club_id) ?? membership.club_id,
-      memberName
-    )
+    mapMembershipRecord(membership, membership.club_name ?? membership.club_id, memberName)
   );
 }
 

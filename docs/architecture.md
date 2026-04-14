@@ -72,6 +72,7 @@ The core application layer includes:
 - backend module structure
 - relational and document data responsibilities
 - cache and event-driven application behavior
+- external authentication plus internal ClubCRM authorization
 
 The companion networking layer includes:
 
@@ -81,7 +82,7 @@ The companion networking layer includes:
 - Kubernetes service communication
 - deployment reliability and recovery behavior
 
-See [plans/team-execution-plan.md](plans/team-execution-plan.md) for the main four-person application plan and [plans/networking-team-execution-plan.md](plans/networking-team-execution-plan.md) for the separate two-person networking workstream.
+See [plans/team-execution-plan.md](plans/team-execution-plan.md) and [plans/networking-team-execution-plan.md](plans/networking-team-execution-plan.md) for the original course-planning context behind these workstreams.
 
 ## Local Development Environment
 
@@ -147,7 +148,6 @@ Docker Compose in the devcontainer remains the standard local development enviro
   docker-compose.yml
 /docs
   README.md
-  /analysis
   /assets
   architecture.md
   contributing.md
@@ -172,18 +172,27 @@ Today the frontend is ahead of the backend contract. The implemented web app use
     /(app)
       layout.tsx
       /dashboard
+      /profile
       /clubs
         /[clubId]
       /members
         /[memberId]
       /system
+        /audit
         /health
     /(public)
       layout.tsx
       /login
+      /not-provisioned
       /join
         /[clubId]
+    /api
+      /auth
+        /login
+    /auth
+      /callback
   /features
+    /audit
     /auth
     /clubs
     /dashboard
@@ -192,15 +201,14 @@ Today the frontend is ahead of the backend contract. The implemented web app use
     /health
     /members
     /memberships
+    /profile
 ```
 
-Most current web data is provided by server-side view-model modules under `apps/web/src/features/*/server`. The live cross-app integrations today are the diagnostics flow on `/system/health`, which calls the backend `GET /health` endpoint, the protected `/profile` route, which reads `/auth/session` plus request cookies to surface stored identity and auth diagnostics, the admin club and member management flows, which create and update clubs, create and update members, and assign members to clubs through the backend CRUD endpoints, and the public login route, which reads `/auth/session` and hands off to the backend-owned `/auth/login` flow.
+Most current web data is still provided by server-side view-model modules under `apps/web/src/features/*/server`, but the live cross-app integrations are now broader than diagnostics alone. The frontend currently relies on backend-owned auth session checks and auth proxy routes, the `/profile` diagnostics surface, `/system/health`, `/system/audit`, club and member CRUD flows, club-manager grant management, and the public join-request submission and review flow. The admin shell is also role-aware: org admins see the full workspace, while club managers see a reduced shell scoped to their assigned clubs.
 
 ## Current Backend Implementation
 
-Today the backend is no longer just a single-route scaffold. The live API surface is still small,
-but the repo already encodes the intended backend layering through bootstrap, shared router
-composition, feature modules, infrastructure adapters, and unit tests.
+Today the backend is a real modular HTTP surface, not just a scaffold. The repo already encodes the intended backend layering through bootstrap, shared router composition, feature modules, infrastructure adapters, and unit tests, and several of those modules now power live product behavior.
 
 ```text
 /apps/api/src
@@ -215,6 +223,7 @@ composition, feature modules, infrastructure adapters, and unit tests.
       router.py
       exception_handlers.py
   /infrastructure
+    /auth
     /postgres
     /mongodb
     /redis
@@ -224,6 +233,8 @@ composition, feature modules, infrastructure adapters, and unit tests.
       /presentation
         /http
           routes.py
+    /audit
+    /dashboard
     /clubs
     /forms
     /members
@@ -237,9 +248,39 @@ composition, feature modules, infrastructure adapters, and unit tests.
     /infrastructure
 ```
 
-`GET /health` remains the baseline diagnostics handler, and the auth module now exposes a
-backend-owned session flow under `/auth`. The sections below describe how that module-first
-structure should keep growing as more endpoints and real persistence behavior are added.
+`GET /health` remains the baseline diagnostics handler, but the live API surface now also includes the backend-owned `/auth` session flow, `/audit-logs`, `/dashboard/summary/{club_id}`, the join-request workflow under `/forms`, and CRUD-style routes for clubs, members, memberships, announcements, and events. The sections below describe how that module-first structure should keep growing as more persistence behavior moves behind those routes.
+
+## Auth and Authorization Model
+
+Authentication and app authorization are separate concerns.
+
+- External identity still starts in the backend-owned `/auth` flow.
+- The backend session payload now distinguishes:
+  - `authenticated`: the user completed the identity-provider flow
+  - `authorized`: the user also has a ClubCRM access grant
+- ClubCRM currently supports two permission-bearing roles:
+  - `org_admin`
+  - `club_manager`
+
+Authorization is resolved in PostgreSQL after login.
+
+- `admin_users` is now an organization-admin grant table, not a local-password table.
+- `club_manager_roles` is the source of truth for club-manager authorization.
+- `memberships.role` remains roster or display data and does not grant app permissions.
+- `auth_user_bindings` persists the relationship between the external provider subject (`sub`) and the internal grant target.
+
+The binding flow is hybrid by design.
+
+- First successful login resolves by email against existing grants.
+- A successful match writes a persistent subject binding.
+- Later logins resolve by subject first, not by email.
+- Authenticated users without a matching admin or manager grant keep a valid backend session, but they are not allowed into the protected app shell.
+
+Current route rules follow that access model.
+
+- Org admins keep full CRUD access across the current protected API surface.
+- Club managers are limited to their assigned clubs for club detail, roster changes, join-request review, events, announcements, and dashboard data.
+- Org-wide member directory and diagnostics flows remain org-admin only in this slice.
 
 ## Target Backend Architectural Style
 

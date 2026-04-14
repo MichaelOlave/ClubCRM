@@ -13,7 +13,7 @@ The current deployment is live and DNS is already cut over.
 
 Current externally visible behavior:
 
-- the site root redirects to `/dashboard`
+- the site root redirects by backend auth state, landing on `/dashboard`, `/not-provisioned`, or `/login`
 - Caddy terminates TLS for both the apex and `www` hostnames
 - `/api/*` is proxied to the FastAPI container
 - all other traffic is proxied to the Next.js web container

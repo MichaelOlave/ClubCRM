@@ -7,7 +7,8 @@ import { logout } from "@/features/auth/server/actions";
 import type { LoginViewModel } from "@/features/auth/types";
 
 const alertVariantByStatus = {
-  authenticated: "success",
+  authorized: "success",
+  "not-provisioned": "warning",
   "signed-out": "info",
   unavailable: "warning",
 } as const;
@@ -23,7 +24,8 @@ export function LoginForm({
   title,
   user,
 }: LoginViewModel) {
-  const canAccessAdmin = status === "authenticated";
+  const canAccessApp = status === "authorized";
+  const canLogout = status === "authorized" || status === "not-provisioned";
 
   return (
     <Card className="w-full max-w-lg rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
@@ -55,26 +57,32 @@ export function LoginForm({
         </Alert>
 
         <div className="flex flex-wrap gap-3">
-          <Button asChild>
+          <Button
+            asChild
+            className="bg-brand-emphasis text-slate-950 hover:bg-brand hover:text-slate-950"
+            variant="secondary"
+          >
             <a href={loginHref}>
-              {status === "authenticated" ? "Refresh backend sign-in" : "Continue to sign in"}
+              {status === "authorized" || status === "not-provisioned"
+                ? "Refresh backend sign-in"
+                : "Continue to sign in"}
             </a>
           </Button>
-          {canAccessAdmin ? (
+          {canAccessApp ? (
             <Button asChild variant="secondary">
               <Link href="/dashboard">Open dashboard</Link>
             </Button>
           ) : null}
-          {canAccessAdmin ? (
+          {canLogout ? (
             <form action={logout}>
               <Button type="submit" variant="outline">
                 Logout
               </Button>
             </form>
           ) : null}
-          {canAccessAdmin ? (
+          {canAccessApp ? (
             <Button asChild variant="ghost">
-              <Link href="/system/health">View diagnostics</Link>
+              <Link href="/profile">Open profile</Link>
             </Button>
           ) : null}
         </div>

@@ -89,7 +89,10 @@ export async function approveJoinRequestAction(formData: FormData) {
       joinRequestId,
       { role },
       {
-        headers: await getJoinRequestApiAuthHeaders({ includeCsrf: true }),
+        headers: await getJoinRequestApiAuthHeaders({
+          includeCsrf: true,
+          originPath: redirectPath,
+        }),
       }
     );
 
@@ -124,7 +127,10 @@ export async function denyJoinRequestAction(formData: FormData) {
 
   try {
     await denyJoinRequestApi(joinRequestId, {
-      headers: await getJoinRequestApiAuthHeaders({ includeCsrf: true }),
+      headers: await getJoinRequestApiAuthHeaders({
+        includeCsrf: true,
+        originPath: redirectPath,
+      }),
     });
 
     revalidatePath(redirectPath);

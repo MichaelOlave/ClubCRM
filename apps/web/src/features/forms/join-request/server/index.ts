@@ -1,4 +1,6 @@
 import { getClubApi, listPendingJoinRequestsApi } from "@/lib/api/clubcrm";
+import { canAccessClub } from "@/features/auth/server";
+import type { AuthorizedBackendAuthSession } from "@/features/auth/types";
 import type {
   JoinRequestContext,
   JoinRequestReviewViewModel,
@@ -49,8 +51,13 @@ export async function getJoinRequestContext(clubId: string): Promise<JoinRequest
 }
 
 export async function getJoinRequestReview(
-  clubId: string
+  clubId: string,
+  session: AuthorizedBackendAuthSession
 ): Promise<JoinRequestReviewViewModel | null> {
+  if (!canAccessClub(session, clubId)) {
+    return null;
+  }
+
   const club = await getClubApi(clubId);
 
   if (!club) {
@@ -58,7 +65,9 @@ export async function getJoinRequestReview(
   }
 
   const requests = await listPendingJoinRequestsApi(clubId, {
-    headers: await getJoinRequestApiAuthHeaders(),
+    headers: await getJoinRequestApiAuthHeaders({
+      originPath: `/clubs/${clubId}/join-requests`,
+    }),
   });
 
   return {

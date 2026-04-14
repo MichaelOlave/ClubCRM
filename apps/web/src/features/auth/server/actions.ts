@@ -7,6 +7,8 @@ import { apiFetch } from "@/lib/api/client";
 import { buildApiUrl, getInternalApiBaseUrls } from "@/lib/api/server";
 import { env } from "@/lib/env/server";
 
+const APP_REDIRECT_HEADER = "x-clubcrm-app-redirect";
+
 function expireCookie(name: string) {
   return {
     name,
@@ -44,7 +46,12 @@ export async function logout() {
           continue;
         }
 
-        redirectUrl = nextLocation;
+        if (response.headers.get(APP_REDIRECT_HEADER) === "1") {
+          const appRedirectUrl = new URL(nextLocation, "http://clubcrm.local");
+          redirectUrl = `${appRedirectUrl.pathname}${appRedirectUrl.search}${appRedirectUrl.hash}`;
+        } else {
+          redirectUrl = nextLocation;
+        }
         break;
       } catch {
         continue;

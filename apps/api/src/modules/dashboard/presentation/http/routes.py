@@ -4,6 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from src.bootstrap.dependencies import get_dashboard_repository, get_dashboard_summary_cache
+from src.modules.auth.domain.entities import AppAccess
+from src.modules.auth.presentation.http.dependencies import (
+    ensure_club_access,
+    require_authorized_access,
+)
 from src.modules.dashboard.application.handlers import (
     GetDashboardRedisAnalyticsHandler,
     GetDashboardSummaryHandler,
@@ -73,9 +78,11 @@ class DashboardRedisAnalyticsResponse(BaseModel):
 @router.get("/summary/{club_id}", response_model=DashboardSummaryResponse)
 async def get_dashboard_summary(
     club_id: str,
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
     repository: Annotated[DashboardRepository, Depends(get_dashboard_repository)],
     cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
 ):
+    ensure_club_access(access, club_id)
     handler = GetDashboardSummaryHandler(repository=repository, cache=cache)
     query = DashboardSummaryQuery(club_id=club_id)
     try:
@@ -89,7 +96,9 @@ async def get_dashboard_summary(
 @router.get("/redis-analytics/{club_id}", response_model=DashboardRedisAnalyticsResponse)
 async def get_dashboard_redis_analytics(
     club_id: str,
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
     cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
 ):
+    ensure_club_access(access, club_id)
     analytics = await GetDashboardRedisAnalyticsHandler(cache=cache).handle(club_id)
     return DashboardRedisAnalyticsResponse.from_domain(analytics)

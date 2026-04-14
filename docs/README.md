@@ -2,7 +2,7 @@
 
 Use this directory as the main entry point for project documentation.
 
-## Start Here
+## Living Docs
 
 - [Contributing](contributing.md) for setup, workflow, and code standards
 - [Architecture](architecture.md) for system structure, module boundaries, and environment rules
@@ -17,19 +17,24 @@ Use this directory as the main entry point for project documentation.
 - [Redis Implementation Flow](guides/redis-implementation-flow.md) for caching and short-lived data
 - [Kafka Implementation Flow](guides/kafka-implementation-flow.md) for async events and side effects
 
-## Planning
+## Testing
 
-- [Team Execution Plan](plans/team-execution-plan.md) for the main database-project delivery plan
+- [Live Site Testing Guide](guides/live-site-testing.md) for manual smoke testing on the production site
+
+## Historical Planning
+
+- [Team Execution Plan](plans/team-execution-plan.md) for the original database-project delivery plan
 - [Networking Team Execution Plan](plans/networking-team-execution-plan.md) for the companion deployment workstream
-- [Checkpoint 1 Proposal](proposals/checkpoint1-proposal.md) for the checkpoint submission draft
-- [Final Project Proposal](proposals/final-project-proposal.md) for the fuller project proposal
+- [Checkpoint 1 Proposal](proposals/checkpoint1-proposal.md) for the historical checkpoint submission draft
+- [Final Project Proposal](proposals/final-project-proposal.md) for the historical project proposal
 
-## Deployment and Analysis
+These planning and proposal docs capture course-era context. Treat them as historical reference rather than the current runtime source of truth.
+
+## Deployment
 
 - [SSH Docker Deployment](deployment/ssh-docker-deploy.md) for the current VM deployment path
-- [Current Project Structure Analysis](analysis/current-project-structure-analysis.md) for a deeper review of the repo layout and tradeoffs
 
 ## Assets
 
 - [System Diagram](assets/system-diagram.png)
-- [Network Diagram](assets/network-arcitecture.png)
+- [Network Diagram](assets/network-architecture.png)

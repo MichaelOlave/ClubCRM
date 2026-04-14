@@ -10,3 +10,5 @@ class Membership:
     role: str
     status: str
     joined_at: datetime | None = None
+    club_name: str | None = None
+    member_name: str | None = None

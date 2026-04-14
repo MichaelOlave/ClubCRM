@@ -101,9 +101,10 @@ Treat the root scripts as the CI-facing contract unless there is a strong reason
 
 Current app behavior to keep in mind:
 
-- `src/app/page.tsx` currently redirects `/` to `/dashboard`.
-- Admin routes live under `src/app/(app)`, and public entry points live under `src/app/(public)`.
-- The current admin MVP includes dashboard, profile, clubs, members, and `/system/health`; public routes currently cover `/login` and `/join/[clubId]`.
+- `src/app/page.tsx` currently redirects authorized users to `/dashboard`, authenticated-but-unprovisioned users to `/not-provisioned`, and everyone else to `/login`.
+- Admin routes live under `src/app/(app)`, public entry points live under `src/app/(public)`, and the auth proxy handlers live at `/api/auth/login` and `/auth/callback`.
+- The current admin MVP includes dashboard, profile, clubs, members, `/system/audit`, and `/system/health`; public routes currently cover `/login`, `/join/[clubId]`, and `/not-provisioned`.
+- The admin shell is role-aware: org admins see the full workspace, while club managers get a reduced shell for assigned clubs.
 - Most feature data currently comes from server-side view-model modules in `src/features/*/server`, so the frontend is ahead of the backend contract.
 - `src/app/(app)/system/health/page.tsx` preserves the API diagnostics flow.
 - The diagnostics flow probes the API using `API_BASE_URL`, then `http://api:8000`, then `http://localhost:8000`.
@@ -125,11 +126,17 @@ src/
         [clubId]/
       members/
         [memberId]/
-      system/health/
+      system/
+        audit/
+        health/
     (public)/             # Public entry points
       login/
+      not-provisioned/
       join/[clubId]/
+    api/auth/login/       # Same-origin auth handoff proxy
+    auth/callback/        # Same-origin auth callback proxy
   features/               # Default home for business-facing feature code
+    audit/
     auth/
     clubs/
     dashboard/
@@ -137,6 +144,7 @@ src/
     health/
     members/
     memberships/
+    profile/
     <feature>/
       components/         # Feature-specific presentational components
       server/             # Server-only loaders/actions for App Router server components

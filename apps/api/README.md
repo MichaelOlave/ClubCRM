@@ -1,7 +1,6 @@
 # API
 
-FastAPI service for ClubCRM, organized as feature modules with capability-based database
-abstractions under `src/`.
+FastAPI service for ClubCRM, organized as feature modules with capability-based database abstractions under `src/`.
 
 ## Structure
 
@@ -22,6 +21,20 @@ src/
       presentation/
         http/
           routes.py
+    audit/
+      application/
+        commands/
+        ports/
+        queries/
+      domain/
+      presentation/
+        http/
+    dashboard/
+      application/
+        ports/
+      domain/
+      presentation/
+        http/
     clubs/
       domain/
       application/
@@ -37,6 +50,8 @@ src/
     forms/
     auth/
   infrastructure/
+    auth/
+      providers/
     postgres/
       client.py
       unit_of_work.py
@@ -47,6 +62,7 @@ src/
     redis/
       client.py
       caches/
+      sessions/
     kafka/
       client.py
       publishers/
@@ -64,8 +80,7 @@ The API does not use one generic database gateway. Abstractions live in
 - `Cache` for Redis-backed read models
 - `Publisher` for Kafka-backed async side effects
 
-Concrete adapters live in `src/infrastructure/*`, and `src/bootstrap/dependencies.py` is the
-manual wiring layer that binds ports to implementations.
+Concrete adapters live in `src/infrastructure/*`, and `src/bootstrap/dependencies.py` is the manual wiring layer that binds ports to implementations.
 
 ## Run locally
 
@@ -90,7 +105,9 @@ pnpm dev:api
 That development entrypoint runs Uvicorn with reload watching limited to `src/` and forces polling
 for file changes so API startup and live reload remain reliable in Windows-hosted devcontainers.
 It also runs `alembic upgrade head` first so the local database-backed routes start against the
-current schema, then loads the PostgreSQL seed data when the local database is still empty.
+current schema. The PostgreSQL seed flow loads the baseline dataset when the local database is
+still empty and backfills the default Champlain org-admin grants for `developer@clubcrm.local`
+and `michael.olave@mymail.champlain.edu` when that organization already exists.
 
 The API defaults to host port `8000` when the devcontainer is running, or the next available host
 port if `8000` is already in use. The resolved binding is written to
@@ -98,16 +115,14 @@ port if `8000` is already in use. The resolved binding is written to
 
 ## Application Routes
 
-- `GET /health` used by the web diagnostics page at `/system/health`
-- `GET /auth/login` starts the backend-owned Auth0 login flow or local bypass flow
-- `GET /auth/callback` completes the Auth0 callback and creates the backend session cookie
-- `GET /auth/session` returns the current backend session plus a CSRF token for same-origin requests
-- `POST /auth/logout` clears the backend auth session and redirects through logout
-- CRUD routes under `/clubs`
-- CRUD routes under `/members`
-- CRUD routes under `/memberships`
-- CRUD routes under `/events`
-- CRUD routes under `/announcements`
+- `GET /health` powers the web diagnostics page at `/system/health`
+- `/auth/*` owns login, callback, session, and logout for the backend-owned auth flow
+- `GET /audit-logs` returns the protected admin audit trail used by `/system/audit`
+- `GET /dashboard/summary/{club_id}` returns dashboard summary data for an authorized club
+- `/forms/*` owns public join-request submission plus protected pending, approve, and deny flows
+- `/clubs/*` includes CRUD plus club-manager grant management
+- `/members/*` and `/memberships/*` provide the current roster-management surface
+- `/events/*` and `/announcements/*` provide the current club activity surface
 
 FastAPI's default docs remain enabled as well:
 

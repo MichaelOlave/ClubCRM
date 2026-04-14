@@ -3,7 +3,10 @@ import {
   getDashboardSummaryApi,
   listAnnouncementsApi,
   listEventsApi,
+  listMembershipsApi,
 } from "@/lib/api/clubcrm";
+import { isOrgAdminBackendAuthSession } from "@/features/auth/server";
+import type { AuthorizedBackendAuthSession } from "@/features/auth/types";
 import { getClubList } from "@/features/clubs/server";
 import { getMemberList } from "@/features/members/server";
 import type { DashboardViewModel } from "@/features/dashboard/types";
@@ -44,8 +47,17 @@ type DashboardSnapshot = {
   summary: BackendDashboardSummaryRecord;
 };
 
-export async function getDashboardViewModel(): Promise<DashboardViewModel> {
-  const [clubs, members] = await Promise.all([getClubList(), getMemberList()]);
+export async function getDashboardViewModel(
+  session: AuthorizedBackendAuthSession
+): Promise<DashboardViewModel> {
+  const isOrgAdmin = isOrgAdminBackendAuthSession(session);
+  const [clubs, members] = await Promise.all([
+    getClubList(session),
+    isOrgAdmin ? getMemberList() : Promise.resolve([]),
+  ]);
+  const membershipLists = await Promise.all(
+    clubs.map((club) => listMembershipsApi({ clubId: club.id }))
+  );
   const clubActivity = await Promise.all(
     clubs.map(async (club) => {
       const [events, announcements] = await Promise.all([
@@ -66,6 +78,10 @@ export async function getDashboardViewModel(): Promise<DashboardViewModel> {
       return { club, redisAnalytics, summary };
     })
   );
+  const uniqueMemberIds = new Set(membershipLists.flat().map((membership) => membership.member_id));
+  const pendingRosterCount = membershipLists
+    .flat()
+    .filter((membership) => membership.status === "pending").length;
 
   const upcomingEventCount = clubActivity.reduce(
     (count, entry) =>
@@ -118,17 +134,19 @@ export async function getDashboardViewModel(): Promise<DashboardViewModel> {
   return {
     metrics: [
       {
-        label: "Active clubs",
+        label: isOrgAdmin ? "Active clubs" : "Managed clubs",
         value: `${clubs.filter((club) => club.status === "active").length}`,
-        detail: "Club records loaded from the connected PostgreSQL-backed API.",
+        detail: isOrgAdmin
+          ? "Club records loaded from the connected PostgreSQL-backed API."
+          : "Only clubs assigned through club-manager grants appear in this workspace.",
         tone: clubs.length ? "success" : "warning",
       },
       {
-        label: "Organization members",
-        value: `${members.length}`,
-        detail: `${
-          members.filter((member) => member.clubCount > 1).length
-        } members currently belong to more than one club.`,
+        label: isOrgAdmin ? "Organization members" : "Roster members",
+        value: `${isOrgAdmin ? members.length : uniqueMemberIds.size}`,
+        detail: isOrgAdmin
+          ? `${members.filter((member) => member.clubCount > 1).length} members currently belong to more than one club.`
+          : `${pendingRosterCount} pending roster assignments currently need review across your clubs.`,
         tone: "default",
       },
       {
@@ -145,12 +163,16 @@ export async function getDashboardViewModel(): Promise<DashboardViewModel> {
         id: "browse-clubs",
         description: "Review the live club directory and detail pages.",
       },
-      {
-        label: "Browse members",
-        href: "/members",
-        id: "browse-members",
-        description: "Inspect organization-level members and their memberships.",
-      },
+      ...(isOrgAdmin
+        ? [
+            {
+              label: "Browse members",
+              href: "/members",
+              id: "browse-members",
+              description: "Inspect organization-level members and their memberships.",
+            },
+          ]
+        : []),
       {
         label: clubs[0] ? "Preview join form" : "Open clubs",
         href: joinPreviewHref,
