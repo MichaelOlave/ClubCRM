@@ -82,7 +82,7 @@ The companion networking layer includes:
 - Kubernetes service communication
 - deployment reliability and recovery behavior
 
-See [plans/team-execution-plan.md](plans/team-execution-plan.md) for the main four-person application plan and [plans/networking-team-execution-plan.md](plans/networking-team-execution-plan.md) for the separate two-person networking workstream.
+See [plans/team-execution-plan.md](plans/team-execution-plan.md) and [plans/networking-team-execution-plan.md](plans/networking-team-execution-plan.md) for the original course-planning context behind these workstreams.
 
 ## Local Development Environment
 
@@ -148,7 +148,6 @@ Docker Compose in the devcontainer remains the standard local development enviro
   docker-compose.yml
 /docs
   README.md
-  /analysis
   /assets
   architecture.md
   contributing.md
@@ -179,13 +178,21 @@ Today the frontend is ahead of the backend contract. The implemented web app use
       /members
         /[memberId]
       /system
+        /audit
         /health
     /(public)
       layout.tsx
       /login
+      /not-provisioned
       /join
         /[clubId]
+    /api
+      /auth
+        /login
+    /auth
+      /callback
   /features
+    /audit
     /auth
     /clubs
     /dashboard
@@ -194,15 +201,14 @@ Today the frontend is ahead of the backend contract. The implemented web app use
     /health
     /members
     /memberships
+    /profile
 ```
 
-Most current web data is provided by server-side view-model modules under `apps/web/src/features/*/server`. The live cross-app integrations today are the diagnostics flow on `/system/health`, which calls the backend `GET /health` endpoint, the protected `/profile` route, which reads `/auth/session` plus request cookies to surface stored identity, access, and auth diagnostics, the club and member management flows, which create and update clubs, create and update members, assign members to clubs, and manage club-manager grants through the backend CRUD endpoints, and the public login route, which reads `/auth/session` and hands off to the backend-owned `/auth/login` flow.
+Most current web data is still provided by server-side view-model modules under `apps/web/src/features/*/server`, but the live cross-app integrations are now broader than diagnostics alone. The frontend currently relies on backend-owned auth session checks and auth proxy routes, the `/profile` diagnostics surface, `/system/health`, `/system/audit`, club and member CRUD flows, club-manager grant management, and the public join-request submission and review flow. The admin shell is also role-aware: org admins see the full workspace, while club managers see a reduced shell scoped to their assigned clubs.
 
 ## Current Backend Implementation
 
-Today the backend is no longer just a single-route scaffold. The live API surface is still small,
-but the repo already encodes the intended backend layering through bootstrap, shared router
-composition, feature modules, infrastructure adapters, and unit tests.
+Today the backend is a real modular HTTP surface, not just a scaffold. The repo already encodes the intended backend layering through bootstrap, shared router composition, feature modules, infrastructure adapters, and unit tests, and several of those modules now power live product behavior.
 
 ```text
 /apps/api/src
@@ -217,6 +223,7 @@ composition, feature modules, infrastructure adapters, and unit tests.
       router.py
       exception_handlers.py
   /infrastructure
+    /auth
     /postgres
     /mongodb
     /redis
@@ -226,6 +233,8 @@ composition, feature modules, infrastructure adapters, and unit tests.
       /presentation
         /http
           routes.py
+    /audit
+    /dashboard
     /clubs
     /forms
     /members
@@ -239,9 +248,7 @@ composition, feature modules, infrastructure adapters, and unit tests.
     /infrastructure
 ```
 
-`GET /health` remains the baseline diagnostics handler, and the auth module now exposes a
-backend-owned session flow under `/auth`. The sections below describe how that module-first
-structure should keep growing as more endpoints and real persistence behavior are added.
+`GET /health` remains the baseline diagnostics handler, but the live API surface now also includes the backend-owned `/auth` session flow, `/audit-logs`, `/dashboard/summary/{club_id}`, the join-request workflow under `/forms`, and CRUD-style routes for clubs, members, memberships, announcements, and events. The sections below describe how that module-first structure should keep growing as more persistence behavior moves behind those routes.
 
 ## Auth and Authorization Model
 

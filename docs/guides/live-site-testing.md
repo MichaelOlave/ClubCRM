@@ -1,14 +1,14 @@
 # Live Site Testing Guide
 
-Use this guide for manual smoke testing on the production ClubCRM site after deploys or before demos. These steps reflect the current merged route surface as of April 13, 2026, including the public join-request workflow and the admin join-request review page.
+Use this guide for manual smoke testing on the production ClubCRM site after deploys or before demos. These steps reflect the current public auth flow, protected admin shell, diagnostics pages, and join-request workflow.
 
 ## Live URLs
 
 - `https://clubcrm.org/login` is the safest starting point for signed-out testing.
-- `https://clubcrm.org` currently redirects signed-out sessions to `/login`.
+- `https://clubcrm.org` redirects by backend auth state and should send a signed-out session to `/login`.
 - `https://www.clubcrm.org` should serve the same app as the apex domain.
 - `https://clubcrm.org/api/health` returns the raw backend health payload.
-- `/dashboard`, `/profile`, `/clubs`, `/members`, and `/system/health` require an authenticated admin session.
+- `/dashboard`, `/profile`, `/clubs`, `/members`, `/system/audit`, and `/system/health` require an authorized admin session.
 
 ## Before You Start
 
@@ -28,20 +28,21 @@ Use this guide for manual smoke testing on the production ClubCRM site after dep
 - Confirm the page loads without a blank screen or server error.
 - Confirm the sign-in card shows a session status message and a `Continue to sign in` button when signed out.
 - Complete the sign-in handoff and confirm you land in the admin app.
-- Return to `/login` after signing in and confirm the page now offers `Open dashboard`, `View diagnostics`, and `Logout`.
+- Return to `/login` after signing in and confirm the page now offers `Open dashboard`, `Open profile`, and `Logout`.
 
 ### 2. Admin Shell And Navigation
 
 - Open `/dashboard`.
 - Confirm the dashboard renders metric cards, recent activity or an empty state, and quick action buttons.
-- Use the admin navigation to open `/profile`, `/clubs`, `/members`, and `/system/health`.
+- Use the admin navigation to open `/profile`, `/clubs`, `/members`, `/system/audit`, and `/system/health`.
 - Confirm each route loads inside the same admin shell without broken navigation, white screens, or obvious layout issues.
 
-### 3. Profile And Diagnostics
+### 3. Profile, Audit, And Diagnostics
 
 - On `/profile`, confirm your name, email, or fallback identity details appear.
 - Open the `Debug` tab and confirm the auth and session checks load.
 - Confirm the debug snapshot renders instead of failing or staying empty forever.
+- On `/system/audit`, confirm the page loads recent audit entries and that filters or empty states render cleanly.
 - On `/system/health`, confirm the page reports a healthy or connected backend state and shows the API endpoint being checked.
 - Use the refresh action on `/system/health` once and confirm the page still returns a valid status.
 
@@ -86,7 +87,7 @@ Use this guide for manual smoke testing on the production ClubCRM site after dep
 
 ### 8. Signed-Out Protection
 
-- In a signed-out window, try `/dashboard`, `/profile`, `/clubs`, `/members`, and `/system/health`.
+- In a signed-out window, try `/dashboard`, `/profile`, `/clubs`, `/members`, `/system/audit`, and `/system/health`.
 - Confirm each protected route redirects back to `/login` instead of exposing admin data.
 
 ## What To Report
@@ -103,7 +104,7 @@ Use this guide for manual smoke testing on the production ClubCRM site after dep
 
 - Public entry and login work.
 - Protected routes stay protected when signed out.
-- Dashboard, profile, clubs, members, and diagnostics all load after sign-in.
+- Dashboard, profile, clubs, members, audit, and diagnostics all load after sign-in.
 - Member creation, club creation, and club activity creation save successfully.
 - The public join form accepts a submission and returns a success state with a reference ID.
 - The matching club join-request review page shows the new pending submission in the admin shell.
