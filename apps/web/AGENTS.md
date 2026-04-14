@@ -107,8 +107,8 @@ Current app behavior to keep in mind:
 - The admin shell is role-aware: org admins see the full workspace, while club managers get a reduced shell for assigned clubs.
 - Most feature data currently comes from server-side view-model modules in `src/features/*/server`, so the frontend is ahead of the backend contract.
 - `src/app/(app)/system/health/page.tsx` preserves the admin diagnostics flow, and `src/app/demo/failover/page.tsx` provides the public failover-monitor route for the networking demo.
-- The diagnostics flow probes the API using `API_BASE_URL`, then `http://api:8000`, then `http://localhost:8000`.
-- The expected backend response comes from `apps/api/src/modules/system/presentation/http/routes.py` and returns `{"status": "ok"}`.
+- The diagnostics flow probes the API using `API_BASE_URL`, then `WEB_API_PUBLIC_BASE_URL`, then `http://api:8000`, then `http://localhost:8000`.
+- The expected backend response comes from `apps/api/src/modules/system/presentation/http/routes.py` and returns top-level `status: "ok"` plus nested health-check details such as `checks.redis`.
 - The diagnostics page exports `dynamic = "force-dynamic"` and uses `fetch(..., { cache: "no-store" })`.
 
 Do not remove or change this behavior casually unless the task explicitly calls for it.
@@ -120,8 +120,10 @@ The web app uses a **feature-first** layout under `src/`:
 ```
 src/
   app/                    # Routes, layouts, and metadata — composition only
+    api/auth/login/       # Server route handler for backend-owned login handoff
     (app)/                # Admin shell route group
       dashboard/
+      profile/
       clubs/
         [clubId]/
       members/

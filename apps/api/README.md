@@ -80,7 +80,8 @@ The API does not use one generic database gateway. Abstractions live in
 - `Cache` for Redis-backed read models
 - `Publisher` for Kafka-backed async side effects
 
-Concrete adapters live in `src/infrastructure/*`, and `src/bootstrap/dependencies.py` is the manual wiring layer that binds ports to implementations.
+Concrete adapters live in `src/infrastructure/*`, and `src/bootstrap/dependencies.py` is the
+manual wiring layer that binds ports to implementations.
 
 ## Run locally
 

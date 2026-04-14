@@ -35,6 +35,9 @@ Use this directory as the main entry point for project documentation.
 
 These planning and proposal docs capture course-era context. Treat them as historical reference rather than the current runtime source of truth.
 
+The proposal documents capture planned scope at the time they were written. Prefer the root README,
+the app READMEs, and the current-state analysis for the implemented surface.
+
 ## Deployment and Analysis
 
 - [SSH Docker Deployment](deployment/ssh-docker-deploy.md) for the current VM deployment path

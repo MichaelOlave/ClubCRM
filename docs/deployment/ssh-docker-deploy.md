@@ -15,7 +15,7 @@ Current externally visible behavior:
 
 - the site root redirects by backend auth state, landing on `/dashboard`, `/not-provisioned`, or `/login`
 - Caddy terminates TLS for both the apex and `www` hostnames
-- `/api/*` is proxied to the FastAPI container
+- `/api/*` is proxied to the FastAPI container for health, auth, and admin data routes
 - all other traffic is proxied to the Next.js web container
 
 ## Runtime Shape
