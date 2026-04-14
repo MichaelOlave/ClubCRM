@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: smoke-data
+  namespace: clubcrm-longhorn-smoke
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: clubcrm-longhorn-smoke
+  resources:
+    requests:
+      storage: 1Gi

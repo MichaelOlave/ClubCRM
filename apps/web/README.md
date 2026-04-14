@@ -39,6 +39,7 @@ The most useful entry points to edit are usually:
 - [`src/app/(app)/profile/page.tsx`](<src/app/(app)/profile/page.tsx>) for the signed-in auth profile and session diagnostics surface
 - [`src/app/(app)/system/audit/page.tsx`](<src/app/(app)/system/audit/page.tsx>) for the admin audit log surface
 - [`src/app/(app)/system/health/page.tsx`](<src/app/(app)/system/health/page.tsx>) for the API diagnostics surface
+- [`src/app/demo/failover/page.tsx`](<src/app/demo/failover/page.tsx>) for the public failover monitor used in the networking demo
 - [`src/app/(public)/login/page.tsx`](<src/app/(public)/login/page.tsx>), [`src/app/(public)/not-provisioned/page.tsx`](<src/app/(public)/not-provisioned/page.tsx>), or [`src/app/(public)/join/[clubId]/page.tsx`](<src/app/(public)/join/[clubId]/page.tsx>) for public entry points
 
 ## Notes
@@ -48,6 +49,7 @@ The most useful entry points to edit are usually:
 - File watching is configured with polling for reliable live reload in containers.
 - The web service waits for the API health check before it starts.
 - Most frontend data is currently provided by server-side view-model modules under `src/features/*/server`; `/system/health`, `/system/audit`, `/profile`, `/login`, and the protected admin route group now call into the FastAPI backend.
+- The public `/demo/failover` route also consumes the health feature's live-routing snapshot so the networking demo can watch pod changes without requiring a login.
 - `API_BASE_URL` is the web server's preferred internal API target.
 - `WEB_API_PUBLIC_BASE_URL` should stay pointed at the browser-reachable API origin for direct API links and as a server-side fallback when the web app cannot reach the Docker hostname directly.
 - The web app proxies both auth start (`/api/auth/login`) and callback (`/auth/callback`) through the current browser origin so backend auth cookies stay aligned even when the devcontainer remaps ports or the browser host differs from `localhost`.

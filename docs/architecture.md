@@ -81,6 +81,8 @@ The companion networking layer includes:
 - ingress and service routing
 - Kubernetes service communication
 - deployment reliability and recovery behavior
+- an optional companion monitoring and control plane for the networking demo, kept separate from the
+  core ClubCRM `web` and `api` apps
 
 See [plans/team-execution-plan.md](plans/team-execution-plan.md) and [plans/networking-team-execution-plan.md](plans/networking-team-execution-plan.md) for the original course-planning context behind these workstreams.
 
@@ -204,7 +206,7 @@ Today the frontend is ahead of the backend contract. The implemented web app use
     /profile
 ```
 
-Most current web data is still provided by server-side view-model modules under `apps/web/src/features/*/server`, but the live cross-app integrations are now broader than diagnostics alone. The frontend currently relies on backend-owned auth session checks and auth proxy routes, the `/profile` diagnostics surface, `/system/health`, `/system/audit`, club and member CRUD flows, club-manager grant management, and the public join-request submission and review flow. The admin shell is also role-aware: org admins see the full workspace, while club managers see a reduced shell scoped to their assigned clubs.
+Most current web data is still provided by server-side view-model modules under `apps/web/src/features/*/server`, but the live cross-app integrations are now broader than diagnostics alone. The frontend currently relies on backend-owned auth session checks and auth proxy routes, the `/profile` diagnostics surface, `/system/health`, `/system/audit`, club and member CRUD flows, club-manager grant management, the public join-request submission and review flow, and the public `/demo/failover` networking-demo route. The admin shell is also role-aware: org admins see the full workspace, while club managers see a reduced shell scoped to their assigned clubs.
 
 ## Current Backend Implementation
 

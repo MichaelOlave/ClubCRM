@@ -1,17 +1,22 @@
 import Link from "next/link";
 
-import { Button } from "@/components/shadcn/button";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Button } from "@/components/shadcn/button";
 import { requireOrgAdminBackendSession } from "@/features/auth/server";
-import { HealthOverview, RedisDiagnosticsOverview } from "@/features/health";
-import { getHealthCheck, getRedisDiagnosticsViewModel } from "@/features/health/server";
+import { HealthOverview, LiveRoutingPanel, RedisDiagnosticsOverview } from "@/features/health";
+import {
+  getHealthCheck,
+  getLiveRoutingSnapshot,
+  getRedisDiagnosticsViewModel,
+} from "@/features/health/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function SystemHealthPage() {
   const session = await requireOrgAdminBackendSession();
-  const [health, redisDiagnostics] = await Promise.all([
+  const [health, routingSnapshot, redisDiagnostics] = await Promise.all([
     getHealthCheck(),
+    getLiveRoutingSnapshot(),
     getRedisDiagnosticsViewModel(session),
   ]);
 
@@ -28,12 +33,13 @@ export default async function SystemHealthPage() {
             </Button>
           </>
         }
-        description="Operational checks for API connectivity and Redis-backed dashboard caching."
+        description="Operational checks for API connectivity, live routing, and Redis-backed dashboard caching."
         eyebrow="Diagnostics"
         title="System diagnostics"
       />
 
       <HealthOverview health={health} refreshHref="/system/health" />
+      <LiveRoutingPanel initialSnapshot={routingSnapshot} />
       <RedisDiagnosticsOverview views={redisDiagnostics} />
     </div>
   );
