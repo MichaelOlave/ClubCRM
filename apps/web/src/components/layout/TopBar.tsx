@@ -17,16 +17,18 @@ export function TopBar({ logoutAction, subtitle, title }: Props) {
         <h2 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">{title}</h2>
       </div>
 
-      <div className="flex items-center gap-3">
-        <Badge variant="success">Backend auth required</Badge>
+      <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
+        <Badge className="px-3.5 py-1.5" variant="success">
+          Backend auth required
+        </Badge>
+        <Button asChild size="sm" variant="ghost">
+          <Link href="/system/health">System health</Link>
+        </Button>
         <form action={logoutAction}>
-          <Button type="submit" variant="outline">
+          <Button size="sm" type="submit" variant="outline">
             Logout
           </Button>
         </form>
-        <Button asChild variant="secondary">
-          <Link href="/system/health">System health</Link>
-        </Button>
       </div>
     </header>
   );

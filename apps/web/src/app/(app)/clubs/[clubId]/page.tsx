@@ -11,6 +11,7 @@ import {
 import {
   ClubManagerAccessCard,
   ClubProfile,
+  ClubQuickActions,
   CreateAnnouncementDialog,
   CreateEventDialog,
   EditAnnouncementDialog,
@@ -149,40 +150,75 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
     <div className="space-y-8">
       <PageHeader
         actions={
-          <>
-            <EditClubDialog
-              action={updateClubAction}
-              club={detail.club}
-              notice={clubUpdateErrorNotice}
+          <div className="flex justify-start xl:justify-end">
+            <ClubQuickActions
+              footer={
+                <Button
+                  asChild
+                  className="px-0 text-muted-foreground hover:text-foreground"
+                  size="sm"
+                  variant="link"
+                >
+                  <Link href="/clubs">Back to clubs</Link>
+                </Button>
+              }
+              sections={[
+                {
+                  label: "Manage club",
+                  content: (
+                    <>
+                      {isOrgAdmin ? (
+                        <AddMemberToClubDialog
+                          action={createMembershipAction}
+                          clubId={detail.club.id}
+                          members={assignableMembers}
+                          notice={assignmentErrorNotice}
+                        />
+                      ) : null}
+                      <EditClubDialog
+                        action={updateClubAction}
+                        club={detail.club}
+                        notice={clubUpdateErrorNotice}
+                      />
+                      {isOrgAdmin ? (
+                        <ClubManagerAccessCard
+                          clubId={detail.club.id}
+                          createAction={createClubManagerGrantAction}
+                          currentGrants={managerGrants}
+                          deleteAction={deleteClubManagerGrantAction}
+                          memberships={memberships}
+                          notice={managerGrantErrorNotice}
+                        />
+                      ) : null}
+                    </>
+                  ),
+                },
+                {
+                  label: "Publish and review",
+                  content: (
+                    <>
+                      <CreateEventDialog
+                        action={createEventAction}
+                        clubId={detail.club.id}
+                        notice={eventCreateErrorNotice}
+                      />
+                      <CreateAnnouncementDialog
+                        action={createAnnouncementAction}
+                        clubId={detail.club.id}
+                        notice={announcementCreateErrorNotice}
+                      />
+                      <Button asChild size="sm" variant="outline">
+                        <Link href={`/clubs/${clubId}/join-requests`}>Review join requests</Link>
+                      </Button>
+                      <Button asChild size="sm" variant="ghost">
+                        <Link href={`/join/${clubId}`}>Open public form</Link>
+                      </Button>
+                    </>
+                  ),
+                },
+              ]}
             />
-            {isOrgAdmin ? (
-              <AddMemberToClubDialog
-                action={createMembershipAction}
-                clubId={detail.club.id}
-                members={assignableMembers}
-                notice={assignmentErrorNotice}
-              />
-            ) : null}
-            <CreateEventDialog
-              action={createEventAction}
-              clubId={detail.club.id}
-              notice={eventCreateErrorNotice}
-            />
-            <CreateAnnouncementDialog
-              action={createAnnouncementAction}
-              clubId={detail.club.id}
-              notice={announcementCreateErrorNotice}
-            />
-            <Button asChild variant="secondary">
-              <Link href={`/clubs/${clubId}/join-requests`}>View join requests</Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link href={`/join/${clubId}`}>Open public form</Link>
-            </Button>
-            <Button asChild variant="ghost">
-              <Link href="/clubs">Back to clubs</Link>
-            </Button>
-          </>
+          </div>
         }
         description="Club detail owns the MVP surface for memberships, events, and announcements so we can reuse the same shell and avoid extra top-level routes too early."
         eyebrow="Club detail"
@@ -199,17 +235,6 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
       <ActionNotice notice={announcementDeleteNotice} />
       <ActionNotice notice={membershipUpdateSuccessNotice} />
       <ActionNotice notice={managerGrantSuccessNotice} />
-      <ActionNotice notice={managerGrantErrorNotice} />
-
-      {isOrgAdmin ? (
-        <ClubManagerAccessCard
-          clubId={detail.club.id}
-          createAction={createClubManagerGrantAction}
-          currentGrants={managerGrants}
-          deleteAction={deleteClubManagerGrantAction}
-          memberships={memberships}
-        />
-      ) : null}
 
       <ClubProfile
         announcementActions={(announcement) => (
