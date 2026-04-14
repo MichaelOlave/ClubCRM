@@ -17,6 +17,10 @@ Use this directory as the main entry point for project documentation.
 - [Redis Implementation Flow](guides/redis-implementation-flow.md) for caching and short-lived data
 - [Kafka Implementation Flow](guides/kafka-implementation-flow.md) for async events and side effects
 
+## Testing
+
+- [Live Site Testing Guide](guides/live-site-testing.md) for manual smoke testing on the production site
+
 ## Planning
 
 - [Team Execution Plan](plans/team-execution-plan.md) for the main database-project delivery plan

@@ -5,7 +5,7 @@ This is the ClubCRM web client, built with [Next.js](https://nextjs.org).
 The current frontend is a UI-first MVP with:
 
 - admin routes for the dashboard, profile, clubs, members, and diagnostics
-- public routes for login and club join-form previews
+- public routes for login and club join-request submission, with club-level join-request review in the admin shell
 - feature-owned server modules that provide view models while the backend contract is still minimal
 
 ## Getting Started
