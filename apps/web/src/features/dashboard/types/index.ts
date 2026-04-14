@@ -14,31 +14,8 @@ export type QuickAction = {
   label: string;
 };
 
-export type DashboardRedisClubSummary = {
-  cacheDetail: string;
-  cacheStatus: string;
-  clubId: string;
-  clubName: string;
-  hitRate: string;
-  requestCount: string;
-  totalAnnouncements: number;
-  totalEvents: number;
-  totalMembers: number;
-};
-
-export type DashboardRedisView = {
-  clubSummaries: DashboardRedisClubSummary[];
-  description: string;
-  metrics: DashboardMetric[];
-  title: string;
-};
-
 export type DashboardViewModel = {
   activity: ActivityRecord[];
   metrics: DashboardMetric[];
   quickActions: QuickAction[];
-  redisViews: {
-    admin: DashboardRedisView;
-    user: DashboardRedisView;
-  };
 };

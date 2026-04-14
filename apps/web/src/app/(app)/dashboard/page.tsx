@@ -33,8 +33,8 @@ export default async function DashboardPage() {
         }
         description={
           isOrgAdmin
-            ? "This organization-level overview renders live backend data and includes Redis-backed dashboard cache analytics across your club activity."
-            : "This role-aware overview focuses on your assigned clubs and includes Redis-backed dashboard cache signals for the summaries you can access."
+            ? "A live overview of clubs, members, and upcoming activity across the current ClubCRM organization."
+            : "A focused view of the clubs you manage, with live roster and activity data from the backend."
         }
         eyebrow="Dashboard"
         title={isOrgAdmin ? "Organization overview" : "Club manager overview"}

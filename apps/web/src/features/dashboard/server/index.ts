@@ -1,6 +1,4 @@
 import {
-  getDashboardRedisAnalyticsApi,
-  getDashboardSummaryApi,
   listAnnouncementsApi,
   listEventsApi,
   listMembershipsApi,
@@ -10,10 +8,6 @@ import type { AuthorizedBackendAuthSession } from "@/features/auth/types";
 import { getClubList } from "@/features/clubs/server";
 import { getMemberList } from "@/features/members/server";
 import type { DashboardViewModel } from "@/features/dashboard/types";
-import type {
-  BackendDashboardRedisAnalyticsRecord,
-  BackendDashboardSummaryRecord,
-} from "@/types/api";
 
 function createExcerpt(value: string): string {
   const normalizedValue = value.replace(/\s+/g, " ").trim();
@@ -24,28 +18,6 @@ function createExcerpt(value: string): string {
 
   return `${normalizedValue.slice(0, 117)}...`;
 }
-
-function formatPercent(value: number): string {
-  return `${Math.round(value * 100)}%`;
-}
-
-function formatTtl(ttlSeconds: number | null): string {
-  if (ttlSeconds === null) {
-    return "Not cached yet";
-  }
-
-  if (ttlSeconds < 60) {
-    return `${ttlSeconds}s remaining`;
-  }
-
-  return `${Math.ceil(ttlSeconds / 60)}m remaining`;
-}
-
-type DashboardSnapshot = {
-  club: Awaited<ReturnType<typeof getClubList>>[number];
-  redisAnalytics: BackendDashboardRedisAnalyticsRecord;
-  summary: BackendDashboardSummaryRecord;
-};
 
 export async function getDashboardViewModel(
   session: AuthorizedBackendAuthSession
@@ -68,16 +40,6 @@ export async function getDashboardViewModel(
       return { announcements, club, events };
     })
   );
-  const dashboardSnapshots: DashboardSnapshot[] = await Promise.all(
-    clubs.map(async (club) => {
-      const [summary, redisAnalytics] = await Promise.all([
-        getDashboardSummaryApi(club.id),
-        getDashboardRedisAnalyticsApi(club.id),
-      ]);
-
-      return { club, redisAnalytics, summary };
-    })
-  );
   const uniqueMemberIds = new Set(membershipLists.flat().map((membership) => membership.member_id));
   const pendingRosterCount = membershipLists
     .flat()
@@ -92,44 +54,6 @@ export async function getDashboardViewModel(
     0
   );
   const joinPreviewHref = clubs[0] ? `/join/${clubs[0].id}` : "/clubs";
-  const totalRequests = dashboardSnapshots.reduce(
-    (count, entry) => count + entry.redisAnalytics.request_count,
-    0
-  );
-  const totalHits = dashboardSnapshots.reduce(
-    (count, entry) => count + entry.redisAnalytics.hit_count,
-    0
-  );
-  const totalRefreshes = dashboardSnapshots.reduce(
-    (count, entry) => count + entry.redisAnalytics.refresh_count,
-    0
-  );
-  const totalInvalidations = dashboardSnapshots.reduce(
-    (count, entry) => count + entry.redisAnalytics.invalidation_count,
-    0
-  );
-  const warmClubCount = dashboardSnapshots.filter((entry) => entry.redisAnalytics.cache_present)
-    .length;
-  const aggregateHitRate = totalRequests ? totalHits / totalRequests : 0;
-  const warmClubLabel = clubs.length ? `${warmClubCount}/${clubs.length}` : "0/0";
-  const clubSummaries = dashboardSnapshots
-    .map(({ club, redisAnalytics, summary }) => ({
-      clubId: club.id,
-      clubName: club.name,
-      totalMembers: summary.total_members,
-      totalEvents: summary.total_events,
-      totalAnnouncements: summary.total_announcements,
-      cacheStatus: redisAnalytics.status,
-      cacheDetail: redisAnalytics.error ?? formatTtl(redisAnalytics.ttl_seconds),
-      hitRate: formatPercent(redisAnalytics.hit_rate),
-      requestCount: `${redisAnalytics.request_count} requests`,
-    }))
-    .sort((left, right) => left.clubName.localeCompare(right.clubName));
-  const warmTtlSeconds =
-    dashboardSnapshots
-      .map((entry) => entry.redisAnalytics.ttl_seconds)
-      .filter((value): value is number => typeof value === "number")
-      .sort((left, right) => right - left)[0] ?? null;
 
   return {
     metrics: [
@@ -182,65 +106,6 @@ export async function getDashboardViewModel(
           : "Create or seed a club record before testing the public join route.",
       },
     ],
-    redisViews: {
-      admin: {
-        title: "Admin Redis analytics",
-        description:
-          "Operational cache telemetry for the Redis-backed dashboard summaries, including warmth, hit rate, and invalidation activity.",
-        metrics: [
-          {
-            label: "Warm club caches",
-            value: warmClubLabel,
-            detail:
-              "Club dashboard summaries currently served from Redis instead of requiring a full rebuild.",
-            tone: warmClubCount ? "success" : "warning",
-          },
-          {
-            label: "Cache hit rate",
-            value: formatPercent(aggregateHitRate),
-            detail:
-              `${totalHits} cache hits across ${totalRequests} summary requests observed through the dashboard cache adapter.`,
-            tone: totalHits ? "success" : "warning",
-          },
-          {
-            label: "Refresh vs invalidation",
-            value: `${totalRefreshes}/${totalInvalidations}`,
-            detail:
-              "Refreshes count summary repopulations after misses; invalidations track writes that intentionally clear stale club summaries.",
-            tone: "default",
-          },
-        ],
-        clubSummaries,
-      },
-      user: {
-        title: "Member-facing Redis view",
-        description:
-          "A simpler view of what the cache means for people browsing the product: warm summaries, quick rebuilds, and short freshness windows.",
-        metrics: [
-          {
-            label: "Ready club summaries",
-            value: `${warmClubCount}`,
-            detail: "These club overviews are already staged in Redis for the next dashboard read.",
-            tone: warmClubCount ? "success" : "warning",
-          },
-          {
-            label: "Freshness window",
-            value: warmTtlSeconds === null ? "Cold cache" : formatTtl(warmTtlSeconds),
-            detail:
-              "Dashboard summaries expire quickly on purpose so Redis stays a speed layer instead of becoming the system of record.",
-            tone: warmTtlSeconds === null ? "warning" : "default",
-          },
-          {
-            label: "Safe fallback path",
-            value: "Postgres-backed",
-            detail:
-              "If Redis is cold or unavailable, the dashboard still rebuilds its club summary from canonical relational data.",
-            tone: "default",
-          },
-        ],
-        clubSummaries,
-      },
-    },
     activity: clubActivity
       .flatMap((entry) => [
         ...entry.events

@@ -3,14 +3,17 @@ import Link from "next/link";
 import { Button } from "@/components/shadcn/button";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { requireOrgAdminBackendSession } from "@/features/auth/server";
-import { HealthOverview } from "@/features/health";
-import { getHealthCheck } from "@/features/health/server";
+import { HealthOverview, RedisDiagnosticsOverview } from "@/features/health";
+import { getHealthCheck, getRedisDiagnosticsViewModel } from "@/features/health/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function SystemHealthPage() {
-  await requireOrgAdminBackendSession();
-  const health = await getHealthCheck();
+  const session = await requireOrgAdminBackendSession();
+  const [health, redisDiagnostics] = await Promise.all([
+    getHealthCheck(),
+    getRedisDiagnosticsViewModel(session),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -21,16 +24,17 @@ export default async function SystemHealthPage() {
               <Link href="/dashboard">Back to dashboard</Link>
             </Button>
             <Button asChild variant="ghost">
-              <Link href="/system/health">Refresh</Link>
+              <Link href="/system/health">Refresh diagnostics</Link>
             </Button>
           </>
         }
-        description="This preserves the current scaffold's API connectivity check while freeing the homepage to become the product-facing dashboard."
+        description="Operational checks for API connectivity and Redis-backed dashboard caching."
         eyebrow="Diagnostics"
-        title="System health"
+        title="System diagnostics"
       />
 
       <HealthOverview health={health} refreshHref="/system/health" />
+      <RedisDiagnosticsOverview views={redisDiagnostics} />
     </div>
   );
 }
