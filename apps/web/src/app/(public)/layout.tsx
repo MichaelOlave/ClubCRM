@@ -25,13 +25,19 @@ export default function PublicLayout({
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <Button asChild variant="secondary">
+            <Button asChild variant="outline">
+              <Link href="/testing">Tester guide</Link>
+            </Button>
+            <Button
+              asChild
+              className="border-brand-border bg-brand-surface text-brand-foreground hover:bg-brand-border"
+            >
               <Link href="/login">Admin sign in</Link>
             </Button>
           </div>
         </header>
 
-        <main className="flex flex-1 items-center justify-center">{children}</main>
+        <main className="flex flex-1 flex-col">{children}</main>
       </div>
     </div>
   );
