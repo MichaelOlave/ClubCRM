@@ -57,7 +57,11 @@ export function LoginForm({
         </Alert>
 
         <div className="flex flex-wrap gap-3">
-          <Button asChild>
+          <Button
+            asChild
+            className="bg-brand-emphasis text-slate-950 hover:bg-brand hover:text-slate-950"
+            variant="secondary"
+          >
             <a href={loginHref}>
               {status === "authorized" || status === "not-provisioned"
                 ? "Refresh backend sign-in"
