@@ -13,6 +13,9 @@ Key relationships:
 - one `Club` belongs to one `Organization`
 - one `Member` can belong to many `Clubs`
 - `Membership` links `Member` and `Club`
+- `AdminUser` grants organization-admin access inside ClubCRM
+- `ClubManagerRole` grants club-manager access for one club
+- `AuthUserBinding` links an external provider subject to an internal admin or manager grant
 - one `Club` has many `Events`
 - one `Club` has many `Announcements`
 
@@ -62,9 +65,18 @@ These tables should live in PostgreSQL as the primary system of record.
 - `id`
 - `organization_id`
 - `email`
-- `password_hash`
 - `is_active`
 - `created_at`
+
+### `auth_user_bindings`
+
+- `id`
+- `provider_subject`
+- `email`
+- `admin_user_id`
+- `member_id`
+- `created_at`
+- `updated_at`
 
 ### `club_manager_roles`
 
@@ -102,8 +114,24 @@ Recommended constraints:
 - foreign keys from `members.organization_id` to `organizations.id`
 - foreign keys from `memberships.club_id` to `clubs.id`
 - foreign keys from `memberships.member_id` to `members.id`
+- foreign keys from `auth_user_bindings.admin_user_id` to `admin_users.id`
+- foreign keys from `auth_user_bindings.member_id` to `members.id`
 - unique constraint on member email within an organization
 - unique constraint on `(club_id, member_id)` in `memberships`
+- unique constraint on `(club_id, member_id)` in `club_manager_roles`
+- unique constraint on `auth_user_bindings.provider_subject`
+- unique constraint on `auth_user_bindings.admin_user_id`
+- unique constraint on `auth_user_bindings.member_id`
+
+## Authorization Notes
+
+ClubCRM currently separates authentication from application authorization.
+
+- `admin_users` stores provisioned organization-admin grants.
+- `club_manager_roles` stores provisioned club-manager grants and is the only source of truth for manager permissions.
+- `memberships.role` is roster data only and does not authorize app access.
+- `auth_user_bindings` persists the provider subject after the first successful email-based grant match.
+- Club managers must already be active members of the club they manage before a `club_manager_roles` row can be created.
 
 ## MongoDB Collections
 
