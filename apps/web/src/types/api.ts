@@ -29,16 +29,19 @@ export type ClubRecord = {
 export type EventRecord = {
   id: string;
   title: string;
-  location: string;
+  description: string;
+  location: string | null;
   startsAt: string;
+  endsAt: string | null;
   status: EventStatus;
 };
 
 export type AnnouncementRecord = {
   id: string;
   title: string;
-  excerpt: string;
+  body: string;
   publishedAt: string;
+  createdBy: string | null;
   status: AnnouncementStatus;
 };
 

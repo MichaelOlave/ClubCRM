@@ -1,5 +1,5 @@
 from dataclasses import asdict
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -25,6 +25,7 @@ from src.modules.events.application.commands.create_event import CreateEvent
 from src.modules.events.application.commands.delete_event import DeleteEvent
 from src.modules.events.application.commands.update_event import UpdateEvent
 from src.modules.events.application.ports.event_repository import (
+    UNSET,
     EventConflictError,
     EventRepository,
 )
@@ -86,6 +87,23 @@ def _to_event_read(event) -> EventRead:
     return EventRead(**asdict(event))
 
 
+def _validate_event_schedule(starts_at: datetime, ends_at: datetime | None) -> None:
+    normalized_starts_at = (
+        starts_at if starts_at.tzinfo is not None else starts_at.replace(tzinfo=UTC)
+    )
+
+    if ends_at is not None:
+        normalized_ends_at = ends_at if ends_at.tzinfo is not None else ends_at.replace(tzinfo=UTC)
+    else:
+        normalized_ends_at = None
+
+    if normalized_ends_at is not None and normalized_ends_at <= normalized_starts_at:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Event end time must be after the start time.",
+        )
+
+
 @router.get("", response_model=list[EventRead])
 def list_events(
     club_id: str,
@@ -122,6 +140,7 @@ def create_event(
     context: Annotated[AuthenticatedRequestContext, Depends(get_authenticated_write_context)],
 ) -> EventRead:
     ensure_club_access(access, payload.club_id)
+    _validate_event_schedule(payload.starts_at, payload.ends_at)
     try:
         event = CreateEvent(repository=repository).execute(
             club_id=payload.club_id,
@@ -157,21 +176,27 @@ def update_event(
     dashboard_cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
     context: Annotated[AuthenticatedRequestContext, Depends(get_authenticated_write_context)],
 ) -> EventRead:
-    changed_fields = sorted(payload.model_dump(exclude_unset=True).keys())
+    update_payload = payload.model_dump(exclude_unset=True)
+    changed_fields = sorted(update_payload.keys())
     try:
         existing_event = GetEvent(repository=repository).execute(event_id)
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
     ensure_club_access(access, existing_event.club_id)
+    effective_starts_at = (
+        payload.starts_at if "starts_at" in update_payload else existing_event.starts_at
+    )
+    effective_ends_at = payload.ends_at if "ends_at" in update_payload else existing_event.ends_at
+    _validate_event_schedule(effective_starts_at, effective_ends_at)
     try:
         event = UpdateEvent(repository=repository).execute(
             event_id,
             title=payload.title,
             description=payload.description,
             starts_at=payload.starts_at,
-            location=payload.location,
-            ends_at=payload.ends_at,
+            location=payload.location if "location" in update_payload else UNSET,
+            ends_at=payload.ends_at if "ends_at" in update_payload else UNSET,
         )
     except EventConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc

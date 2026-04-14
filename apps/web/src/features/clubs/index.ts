@@ -1,6 +1,11 @@
 export { ClubDirectory } from "./components/ClubDirectory";
 export { ClubManagerAccessCard } from "./components/ClubManagerAccessCard";
 export { ClubProfile } from "./components/ClubProfile";
+export { ClubQuickActions } from "./components/ClubQuickActions";
+export { CreateAnnouncementDialog } from "./components/CreateAnnouncementDialog";
 export { CreateClubDialog } from "./components/CreateClubDialog";
+export { CreateEventDialog } from "./components/CreateEventDialog";
+export { EditAnnouncementDialog } from "./components/EditAnnouncementDialog";
 export { EditClubDialog } from "./components/EditClubDialog";
+export { EditEventDialog } from "./components/EditEventDialog";
 export type { ClubDetailViewModel, ClubListViewModel } from "./types";

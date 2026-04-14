@@ -53,16 +53,6 @@ function getAnnouncementStatus(
   return new Date(announcement.published_at).getTime() > Date.now() ? "scheduled" : "published";
 }
 
-function createExcerpt(body: string): string {
-  const normalizedBody = body.replace(/\s+/g, " ").trim();
-
-  if (normalizedBody.length <= 120) {
-    return normalizedBody;
-  }
-
-  return `${normalizedBody.slice(0, 117)}...`;
-}
-
 function getCurrentUserDisplayName(session: AuthorizedBackendAuthSession): string | null {
   return session.user.name ?? session.user.email ?? null;
 }
@@ -96,8 +86,10 @@ function mapEventRecord(event: DatedBackendEventRecord): EventRecord {
   return {
     id: event.id,
     title: event.title,
-    location: event.location ?? "Location TBD",
+    description: event.description,
+    location: event.location,
     startsAt: event.starts_at,
+    endsAt: event.ends_at,
     status: "upcoming",
   };
 }
@@ -106,8 +98,9 @@ function mapAnnouncementRecord(announcement: BackendAnnouncementRecord): Announc
   return {
     id: announcement.id,
     title: announcement.title,
-    excerpt: createExcerpt(announcement.body),
+    body: announcement.body,
     publishedAt: announcement.published_at,
+    createdBy: announcement.created_by,
     status: getAnnouncementStatus(announcement),
   };
 }
@@ -186,4 +179,15 @@ export async function getClubManagerGrants(
   return listClubManagerGrantsApi(clubId);
 }
 
-export { createClubAction, updateClubAction } from "./actions";
+export {
+  createAnnouncementAction,
+  createClubAction,
+  createClubManagerGrantAction,
+  createEventAction,
+  deleteClubManagerGrantAction,
+  deleteAnnouncementAction,
+  deleteEventAction,
+  updateAnnouncementAction,
+  updateClubAction,
+  updateEventAction,
+} from "./actions";

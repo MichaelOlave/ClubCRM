@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
+from typing import Final
 
 from src.modules.announcements.domain.entities import Announcement
+
+UNSET: Final = object()
 
 
 class AnnouncementConflictError(ValueError):
@@ -37,7 +40,7 @@ class AnnouncementRepository(ABC):
         title: str | None = None,
         body: str | None = None,
         published_at: datetime | None = None,
-        created_by: str | None = None,
+        created_by: str | None | object = UNSET,
     ) -> Announcement:
         """Update an existing announcement."""
 
