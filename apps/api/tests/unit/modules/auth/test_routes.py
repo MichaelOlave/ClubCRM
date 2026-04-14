@@ -14,6 +14,7 @@ from src.bootstrap.dependencies import (
     get_app_settings,
     get_auth_session_store,
     get_authorization_repository,
+    get_club_repository,
     get_optional_auth_identity_provider,
 )
 from src.config import get_settings
@@ -28,6 +29,8 @@ from src.modules.auth.application.ports.authorization_repository import (
 )
 from src.modules.auth.application.ports.identity_provider import AuthIdentityProvider
 from src.modules.auth.domain.entities import AppAccess, CurrentUser
+from src.modules.clubs.application.ports.club_repository import ClubRepository
+from src.modules.clubs.domain.entities import Club
 
 
 class InMemoryAuthSessionStore(AuthSessionStore):
@@ -149,6 +152,50 @@ class FakeAuthorizationRepository(AuthorizationRepository):
         raise NotImplementedError((club_id, grant_id))
 
 
+class FakeClubRepository(ClubRepository):
+    def __init__(self, seeded: list[Club] | None = None) -> None:
+        self.seeded = seeded or [
+            Club(
+                id="club-1",
+                organization_id="org-1",
+                name="Computer Science Club",
+                description="A club for CS enthusiasts.",
+                status="active",
+            )
+        ]
+
+    def list_clubs(self, organization_id: str | None = None) -> list[Club]:
+        if organization_id is None:
+            return list(self.seeded)
+
+        return [club for club in self.seeded if club.organization_id == organization_id]
+
+    def get_club(self, club_id: str) -> Club | None:
+        return next((club for club in self.seeded if club.id == club_id), None)
+
+    def create_club(
+        self,
+        organization_id: str,
+        name: str,
+        description: str,
+        status: str,
+    ) -> Club:
+        raise NotImplementedError((organization_id, name, description, status))
+
+    def update_club(
+        self,
+        club_id: str,
+        *,
+        name: str | None = None,
+        description: str | None = None,
+        status: str | None = None,
+    ) -> Club | None:
+        raise NotImplementedError((club_id, name, description, status))
+
+    def delete_club(self, club_id: str) -> bool:
+        raise NotImplementedError(club_id)
+
+
 @contextmanager
 def auth_test_environment(**overrides: str | None):
     original_values = {key: os.environ.get(key) for key in overrides}
@@ -182,10 +229,12 @@ def auth_test_client(
     store: AuthSessionStore | None = None,
     provider: AuthIdentityProvider | None = None,
     authorization_repository: AuthorizationRepository | None = None,
+    club_repository: ClubRepository | None = None,
     **environment: str | None,
 ):
     active_store = store or InMemoryAuthSessionStore()
     active_authorization_repository = authorization_repository or FakeAuthorizationRepository()
+    active_club_repository = club_repository or FakeClubRepository()
 
     with auth_test_environment(**environment):
         with patch(
@@ -196,15 +245,22 @@ def auth_test_client(
                 "src.modules.auth.presentation.http.dependencies.get_authorization_repository",
                 return_value=active_authorization_repository,
             ):
-                app = create_app()
-                app.dependency_overrides[get_authorization_repository] = (
-                    lambda: active_authorization_repository
-                )
-                if provider is not None:
-                    app.dependency_overrides[get_optional_auth_identity_provider] = lambda: provider
+                with patch(
+                    "src.modules.auth.presentation.http.dependencies.get_club_repository",
+                    return_value=active_club_repository,
+                ):
+                    app = create_app()
+                    app.dependency_overrides[get_authorization_repository] = (
+                        lambda: active_authorization_repository
+                    )
+                    app.dependency_overrides[get_club_repository] = lambda: active_club_repository
+                    if provider is not None:
+                        app.dependency_overrides[get_optional_auth_identity_provider] = (
+                            lambda: provider
+                        )
 
-                with TestClient(app) as client:
-                    yield client, active_store, active_authorization_repository
+                    with TestClient(app) as client:
+                        yield client, active_store, active_authorization_repository
 
 
 class AuthRouteTests(unittest.TestCase):
@@ -289,6 +345,123 @@ class AuthRouteTests(unittest.TestCase):
             self.assertIsNone(session_record.csrf_token)
             self.assertIsNotNone(session_record.auth_flow_state)
 
+    def test_login_uses_the_web_origin_for_callback_when_proxied(self) -> None:
+        with auth_test_client(
+            provider=FakeAuthIdentityProvider(),
+            IS_AUTH_BYPASS="false",
+            AUTH0_DOMAIN="example.us.auth0.com",
+            AUTH0_CLIENT_ID="client-id",
+            AUTH0_CLIENT_SECRET="client-secret",
+            WEB_API_PUBLIC_BASE_URL="http://localhost:8000",
+        ) as (client, _store, _authorization_repository):
+            response = client.get(
+                "/auth/login",
+                headers={
+                    "host": "127.0.0.1:3001",
+                    "x-clubcrm-proxied-auth": "1",
+                },
+                follow_redirects=False,
+            )
+
+            self.assertEqual(response.status_code, 307)
+            self.assertIn(
+                "redirect_uri=http://127.0.0.1:3001/auth/callback",
+                response.headers["location"],
+            )
+
+    def test_login_uses_the_forwarded_host_for_callback_when_proxied(self) -> None:
+        with auth_test_client(
+            provider=FakeAuthIdentityProvider(),
+            IS_AUTH_BYPASS="false",
+            AUTH0_DOMAIN="example.us.auth0.com",
+            AUTH0_CLIENT_ID="client-id",
+            AUTH0_CLIENT_SECRET="client-secret",
+            WEB_API_PUBLIC_BASE_URL="http://localhost:8000",
+        ) as (client, _store, _authorization_repository):
+            response = client.get(
+                "/auth/login",
+                headers={
+                    "x-clubcrm-proxied-auth": "1",
+                    "x-forwarded-host": "localhost:3000",
+                    "x-forwarded-proto": "http",
+                },
+                follow_redirects=False,
+            )
+
+            self.assertEqual(response.status_code, 307)
+            self.assertIn(
+                "redirect_uri=http://localhost:3000/auth/callback",
+                response.headers["location"],
+            )
+
+    def test_bypass_login_marks_success_redirect_for_origin_rewrite(self) -> None:
+        with auth_test_client(
+            IS_AUTH_BYPASS="true",
+            AUTH_LOGIN_SUCCESS_URL="http://localhost:3000/dashboard",
+        ) as (client, _store, _authorization_repository):
+            response = client.get("/auth/login", follow_redirects=False)
+
+            self.assertEqual(response.status_code, 307)
+            self.assertEqual(response.headers["x-clubcrm-app-redirect"], "1")
+
+    def test_bypass_login_can_create_a_club_manager_session(self) -> None:
+        with auth_test_client(
+            IS_AUTH_BYPASS="true",
+            AUTH_LOGIN_SUCCESS_URL="http://localhost:3000/dashboard",
+        ) as (client, store, _authorization_repository):
+            response = client.get("/auth/login?role=club_manager", follow_redirects=False)
+
+            self.assertEqual(response.status_code, 307)
+            self.assertEqual(response.headers["location"], "http://localhost:3000/dashboard")
+
+            session_id = client.cookies.get("clubcrm_session")
+            session_record = store.get(session_id or "")
+            self.assertIsNotNone(session_record)
+            self.assertEqual(
+                session_record.user,
+                {
+                    "sub": "dev-auth-bypass-club-manager",
+                    "email": "club-manager@clubcrm.local",
+                    "name": "Local Club Manager",
+                    "picture": None,
+                    "email_verified": True,
+                },
+            )
+            self.assertEqual(
+                session_record.access,
+                {
+                    "primary_role": "club_manager",
+                    "organization_id": "org-1",
+                    "managed_club_ids": ["club-1"],
+                },
+            )
+
+            session_payload = client.get("/auth/session").json()
+            self.assertTrue(session_payload["authenticated"])
+            self.assertTrue(session_payload["authorized"])
+            self.assertEqual(session_payload["access"]["primaryRole"], "club_manager")
+            self.assertEqual(session_payload["access"]["managedClubIds"], ["club-1"])
+
+    def test_bypass_login_can_switch_roles_between_requests(self) -> None:
+        with auth_test_client(
+            IS_AUTH_BYPASS="true",
+            AUTH_LOGIN_SUCCESS_URL="http://localhost:3000/dashboard",
+        ) as (client, store, _authorization_repository):
+            client.get("/auth/login?role=org_admin", follow_redirects=False)
+            admin_session_id = client.cookies.get("clubcrm_session")
+
+            response = client.get("/auth/login?role=club_manager", follow_redirects=False)
+
+            self.assertEqual(response.status_code, 307)
+
+            club_manager_session_id = client.cookies.get("clubcrm_session")
+            self.assertNotEqual(admin_session_id, club_manager_session_id)
+            self.assertIsNone(store.get(admin_session_id or ""))
+
+            session_payload = client.get("/auth/session").json()
+            self.assertEqual(session_payload["user"]["sub"], "dev-auth-bypass-club-manager")
+            self.assertEqual(session_payload["access"]["primaryRole"], "club_manager")
+
     def test_callback_rotates_the_pre_auth_session_into_an_authenticated_session(self) -> None:
         with auth_test_client(
             provider=FakeAuthIdentityProvider(),
@@ -310,6 +483,7 @@ class AuthRouteTests(unittest.TestCase):
 
             self.assertEqual(response.status_code, 303)
             self.assertEqual(response.headers["location"], "http://localhost:3000/dashboard")
+            self.assertEqual(response.headers["x-clubcrm-app-redirect"], "1")
 
             authenticated_session_id = client.cookies.get("clubcrm_session")
             csrf_token = client.cookies.get("clubcrm_csrf")
@@ -509,6 +683,7 @@ class AuthRouteTests(unittest.TestCase):
 
             self.assertEqual(response.status_code, 303)
             self.assertEqual(response.headers["location"], "http://localhost:3000/login")
+            self.assertEqual(response.headers["x-clubcrm-app-redirect"], "1")
             self.assertIsNone(store.get(session_id or ""))
 
             session_response = client.get("/auth/session")

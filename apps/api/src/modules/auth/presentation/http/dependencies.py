@@ -1,26 +1,121 @@
 from dataclasses import asdict, replace
 from datetime import UTC, datetime
 from secrets import compare_digest, token_urlsafe
+from typing import Literal
 
 from fastapi import HTTPException, Request, Response, status
 
-from src.bootstrap.dependencies import get_auth_session_store, get_authorization_repository
+from src.bootstrap.dependencies import (
+    get_auth_session_store,
+    get_authorization_repository,
+    get_club_repository,
+)
 from src.config import get_settings
 from src.modules.auth.application.commands.resolve_authorized_access import (
     ResolveAuthorizedAccess,
 )
 from src.modules.auth.application.ports.auth_session_store import AuthSessionRecord
+from src.modules.auth.application.ports.authorization_repository import AuthorizationRepository
 from src.modules.auth.application.queries.get_current_user import GetCurrentUser
 from src.modules.auth.application.queries.get_session_access import GetSessionAccess
 from src.modules.auth.domain.entities import AppAccess, CurrentUser
+from src.modules.clubs.application.ports.club_repository import ClubRepository
+
+DeveloperBypassRole = Literal["org_admin", "club_manager"]
+
+DEFAULT_DEVELOPER_BYPASS_ORGANIZATION_ID = "dev-org-bypass"
+DEVELOPER_BYPASS_ROLE_QUERY_PARAM = "role"
 
 
-def build_developer_bypass_user() -> CurrentUser:
+def parse_developer_bypass_role(role: str | None) -> DeveloperBypassRole:
+    return "club_manager" if role == "club_manager" else "org_admin"
+
+
+def get_requested_developer_bypass_role(request: Request) -> DeveloperBypassRole | None:
+    requested_role = request.query_params.get(DEVELOPER_BYPASS_ROLE_QUERY_PARAM)
+    if not isinstance(requested_role, str) or not requested_role:
+        return None
+
+    return parse_developer_bypass_role(requested_role)
+
+
+def get_developer_bypass_role(current_user: CurrentUser) -> DeveloperBypassRole | None:
+    if current_user.sub == "dev-auth-bypass-club-manager":
+        return "club_manager"
+
+    if current_user.sub in {"dev-auth-bypass-org-admin", "dev-auth-bypass-user"}:
+        return "org_admin"
+
+    return None
+
+
+def build_developer_bypass_user(role: DeveloperBypassRole = "org_admin") -> CurrentUser:
+    if role == "club_manager":
+        return CurrentUser(
+            sub="dev-auth-bypass-club-manager",
+            email="club-manager@clubcrm.local",
+            name="Local Club Manager",
+            email_verified=True,
+        )
+
     return CurrentUser(
         sub="dev-auth-bypass-user",
         email="developer@clubcrm.local",
         name="Local Developer",
         email_verified=True,
+    )
+
+
+def _get_developer_bypass_organization_id(
+    *,
+    authorization_repository: AuthorizationRepository,
+    club_repository: ClubRepository,
+) -> str:
+    admin_resolution = ResolveAuthorizedAccess(repository=authorization_repository).execute(
+        build_developer_bypass_user("org_admin")
+    )
+    if admin_resolution.access is not None:
+        return admin_resolution.access.organization_id
+
+    clubs = club_repository.list_clubs()
+    if clubs:
+        return clubs[0].organization_id
+
+    return DEFAULT_DEVELOPER_BYPASS_ORGANIZATION_ID
+
+
+def build_developer_bypass_access(
+    role: DeveloperBypassRole,
+    *,
+    authorization_repository: AuthorizationRepository | None = None,
+    club_repository: ClubRepository | None = None,
+) -> AppAccess:
+    active_authorization_repository = authorization_repository or get_authorization_repository()
+    active_club_repository = club_repository or get_club_repository()
+
+    organization_id = _get_developer_bypass_organization_id(
+        authorization_repository=active_authorization_repository,
+        club_repository=active_club_repository,
+    )
+    if role == "org_admin":
+        admin_resolution = ResolveAuthorizedAccess(
+            repository=active_authorization_repository
+        ).execute(build_developer_bypass_user("org_admin"))
+        if admin_resolution.access is not None:
+            return admin_resolution.access
+
+        return AppAccess(
+            primary_role="org_admin",
+            organization_id=organization_id,
+            managed_club_ids=(),
+        )
+
+    managed_clubs = active_club_repository.list_clubs(organization_id)
+    managed_club_ids = (managed_clubs[0].id,) if managed_clubs else ()
+    return AppAccess(
+        primary_role="club_manager",
+        organization_id=organization_id,
+        managed_club_ids=managed_club_ids,
     )
 
 
@@ -265,17 +360,28 @@ def refresh_session_access(request: Request) -> AppAccess | None:
     if current_user is None:
         return None
 
-    resolved_access = ResolveAuthorizedAccess(repository=get_authorization_repository()).execute(
-        current_user
-    )
-    next_access_payload = _serialize_session_access(resolved_access.access)
+    developer_bypass_role = get_developer_bypass_role(current_user)
+    if get_settings().auth.bypass_enabled and developer_bypass_role is not None:
+        next_access = build_developer_bypass_access(
+            developer_bypass_role,
+            authorization_repository=get_authorization_repository(),
+            club_repository=get_club_repository(),
+        )
+    else:
+        next_access = (
+            ResolveAuthorizedAccess(repository=get_authorization_repository())
+            .execute(current_user)
+            .access
+        )
+
+    next_access_payload = _serialize_session_access(next_access)
     if session_record.access != next_access_payload:
         get_auth_session_store().save(
             session_id,
             replace(session_record, access=next_access_payload),
         )
 
-    return resolved_access.access
+    return next_access
 
 
 def require_authenticated_user(request: Request) -> CurrentUser:

@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 from src.bootstrap.dependencies import (
     get_authorization_repository,
+    get_club_repository,
     get_optional_auth_identity_provider,
 )
 from src.config import get_settings
@@ -25,6 +26,7 @@ from src.modules.auth.presentation.http.dependencies import (
     attach_csrf_cookie,
     attach_session_cookie,
     begin_auth_flow,
+    build_developer_bypass_access,
     build_developer_bypass_user,
     clear_auth_session,
     clear_csrf_cookie,
@@ -32,6 +34,8 @@ from src.modules.auth.presentation.http.dependencies import (
     consume_auth_flow_state,
     delete_auth_session,
     ensure_csrf_token,
+    get_developer_bypass_role,
+    get_requested_developer_bypass_role,
     get_session_access,
     get_session_id,
     get_session_user,
@@ -41,15 +45,42 @@ from src.modules.auth.presentation.http.dependencies import (
     serialize_access_for_response,
     touch_auth_session,
 )
+from src.modules.clubs.application.ports.club_repository import ClubRepository
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+PROXIED_AUTH_REQUEST_HEADER = "x-clubcrm-proxied-auth"
+APP_REDIRECT_HEADER = "x-clubcrm-app-redirect"
+
+
+def mark_app_redirect(response: RedirectResponse) -> None:
+    response.headers[APP_REDIRECT_HEADER] = "1"
 
 
 def build_public_callback_url(request: Request) -> str:
     auth_settings = get_settings().auth
-    callback_path = request.app.url_path_for("auth_callback")
+    if request.headers.get(PROXIED_AUTH_REQUEST_HEADER) == "1":
+        callback_path = request.app.url_path_for("auth_callback")
+        forwarded_proto = request.headers.get("x-forwarded-proto")
+        forwarded_host = request.headers.get("x-forwarded-host")
+
+        if isinstance(forwarded_host, str) and forwarded_host:
+            callback_scheme = (
+                forwarded_proto
+                if isinstance(forwarded_proto, str) and forwarded_proto
+                else request.url.scheme
+            )
+            return f"{callback_scheme}://{forwarded_host}{callback_path}"
+
+        callback_url = request.url_for("auth_callback")
+
+        if isinstance(forwarded_proto, str) and forwarded_proto:
+            callback_url = callback_url.replace(scheme=forwarded_proto)
+
+        return str(callback_url)
 
     if auth_settings.public_api_base_url:
+        callback_path = request.app.url_path_for("auth_callback")
         return f"{auth_settings.public_api_base_url.rstrip('/')}{callback_path}"
 
     return str(request.url_for("auth_callback"))
@@ -62,19 +93,53 @@ async def login(
         AuthorizationRepository,
         Depends(get_authorization_repository),
     ],
+    club_repository: Annotated[
+        ClubRepository,
+        Depends(get_club_repository),
+    ],
     provider: Annotated[
         AuthIdentityProvider | None,
         Depends(get_optional_auth_identity_provider),
     ],
 ) -> RedirectResponse:
     auth_settings = get_settings().auth
+    requested_bypass_role = (
+        get_requested_developer_bypass_role(request) if auth_settings.bypass_enabled else None
+    )
+
+    if auth_settings.bypass_enabled and requested_bypass_role is not None:
+        current_user = build_developer_bypass_user(requested_bypass_role)
+        current_access = build_developer_bypass_access(
+            requested_bypass_role,
+            authorization_repository=authorization_repository,
+            club_repository=club_repository,
+        )
+        session_id, csrf_token = persist_session_user(request, current_user, current_access)
+
+        response = RedirectResponse(
+            url=auth_settings.login_success_url,
+            status_code=status.HTTP_307_TEMPORARY_REDIRECT,
+        )
+        mark_app_redirect(response)
+        attach_session_cookie(response, session_id)
+        attach_csrf_cookie(response, csrf_token)
+        return response
+
     current_user = get_session_user(request)
     if current_user is not None:
-        current_access = (
-            ResolveAuthorizedAccess(repository=authorization_repository)
-            .execute(current_user)
-            .access
-        )
+        developer_bypass_role = get_developer_bypass_role(current_user)
+        if auth_settings.bypass_enabled and developer_bypass_role is not None:
+            current_access = build_developer_bypass_access(
+                developer_bypass_role,
+                authorization_repository=authorization_repository,
+                club_repository=club_repository,
+            )
+        else:
+            current_access = (
+                ResolveAuthorizedAccess(repository=authorization_repository)
+                .execute(current_user)
+                .access
+            )
         session_id = get_session_id(request)
         if session_id is None:
             session_id, csrf_token = persist_session_user(request, current_user, current_access)
@@ -87,16 +152,18 @@ async def login(
             url=auth_settings.login_success_url,
             status_code=status.HTTP_307_TEMPORARY_REDIRECT,
         )
+        mark_app_redirect(response)
         attach_session_cookie(response, session_id)
         attach_csrf_cookie(response, csrf_token)
         return response
 
     if auth_settings.bypass_enabled:
-        current_user = build_developer_bypass_user()
-        current_access = (
-            ResolveAuthorizedAccess(repository=authorization_repository)
-            .execute(current_user)
-            .access
+        bypass_role = requested_bypass_role or "org_admin"
+        current_user = build_developer_bypass_user(bypass_role)
+        current_access = build_developer_bypass_access(
+            bypass_role,
+            authorization_repository=authorization_repository,
+            club_repository=club_repository,
         )
         session_id, csrf_token = persist_session_user(request, current_user, current_access)
 
@@ -104,6 +171,7 @@ async def login(
             url=auth_settings.login_success_url,
             status_code=status.HTTP_307_TEMPORARY_REDIRECT,
         )
+        mark_app_redirect(response)
         attach_session_cookie(response, session_id)
         attach_csrf_cookie(response, csrf_token)
         return response
@@ -150,6 +218,10 @@ async def callback(
         AuthorizationRepository,
         Depends(get_authorization_repository),
     ],
+    club_repository: Annotated[
+        ClubRepository,
+        Depends(get_club_repository),
+    ],
     provider: Annotated[
         AuthIdentityProvider | None,
         Depends(get_optional_auth_identity_provider),
@@ -157,11 +229,12 @@ async def callback(
 ) -> RedirectResponse:
     auth_settings = get_settings().auth
     if auth_settings.bypass_enabled:
-        current_user = build_developer_bypass_user()
-        current_access = (
-            ResolveAuthorizedAccess(repository=authorization_repository)
-            .execute(current_user)
-            .access
+        bypass_role = get_requested_developer_bypass_role(request) or "org_admin"
+        current_user = build_developer_bypass_user(bypass_role)
+        current_access = build_developer_bypass_access(
+            bypass_role,
+            authorization_repository=authorization_repository,
+            club_repository=club_repository,
         )
         session_id, csrf_token = persist_session_user(request, current_user, current_access)
 
@@ -169,6 +242,7 @@ async def callback(
             url=auth_settings.login_success_url,
             status_code=status.HTTP_303_SEE_OTHER,
         )
+        mark_app_redirect(response)
         attach_session_cookie(response, session_id)
         attach_csrf_cookie(response, csrf_token)
         return response
@@ -223,6 +297,7 @@ async def callback(
         url=auth_settings.login_success_url,
         status_code=status.HTTP_303_SEE_OTHER,
     )
+    mark_app_redirect(response)
     attach_session_cookie(response, session_id)
     attach_csrf_cookie(response, csrf_token)
     return response
@@ -285,6 +360,8 @@ def logout(
         url=redirect_url,
         status_code=status.HTTP_303_SEE_OTHER,
     )
+    if redirect_url == auth_settings.logout_redirect_url:
+        mark_app_redirect(response)
     clear_session_cookie(response)
     clear_csrf_cookie(response)
     return response

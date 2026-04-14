@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from helpers import add_api_root_to_path
@@ -6,7 +7,8 @@ from helpers import add_api_root_to_path
 add_api_root_to_path()
 
 from src.infrastructure.postgres.client import PostgresClient
-from src.infrastructure.postgres.seed import seed
+from src.infrastructure.postgres.models.tables import AdminUserModel
+from src.infrastructure.postgres.seed import DEFAULT_ADMIN_EMAILS, seed
 
 
 class PostgresSeedTests(unittest.TestCase):
@@ -19,6 +21,9 @@ class PostgresSeedTests(unittest.TestCase):
     def test_seed_inserts_records_when_database_is_empty(self) -> None:
         client, session = self._build_client_and_session()
         session.scalar.return_value = None
+        existing_admins_result = MagicMock()
+        existing_admins_result.scalars.return_value.all.return_value = []
+        session.execute.return_value = existing_admins_result
 
         seeded = seed(client=client)
 
@@ -26,10 +31,42 @@ class PostgresSeedTests(unittest.TestCase):
         session.add.assert_called()
         session.add_all.assert_called()
         session.commit.assert_called_once()
+        seeded_admin_emails = [
+            model.email
+            for call in session.add_all.call_args_list
+            for model in call.args[0]
+            if isinstance(model, AdminUserModel)
+        ]
+        self.assertCountEqual(seeded_admin_emails, DEFAULT_ADMIN_EMAILS)
+
+    def test_seed_backfills_default_admin_users_for_existing_champlain_org(self) -> None:
+        client, session = self._build_client_and_session()
+        session.scalar.return_value = "org-123"
+
+        seed_org_result = MagicMock()
+        seed_org_result.scalar_one_or_none.return_value = SimpleNamespace(id="org-123")
+        existing_admins_result = MagicMock()
+        existing_admins_result.scalars.return_value.all.return_value = []
+        session.execute.side_effect = [seed_org_result, existing_admins_result]
+
+        seeded = seed(client=client)
+
+        self.assertTrue(seeded)
+        session.add.assert_not_called()
+        session.commit.assert_called_once()
+        seeded_admin_emails = [
+            model.email
+            for model in session.add_all.call_args.args[0]
+            if isinstance(model, AdminUserModel)
+        ]
+        self.assertCountEqual(seeded_admin_emails, DEFAULT_ADMIN_EMAILS)
 
     def test_seed_skips_when_database_already_contains_organizations(self) -> None:
         client, session = self._build_client_and_session()
         session.scalar.return_value = "org-123"
+        seed_org_result = MagicMock()
+        seed_org_result.scalar_one_or_none.return_value = None
+        session.execute.return_value = seed_org_result
 
         seeded = seed(client=client)
 
