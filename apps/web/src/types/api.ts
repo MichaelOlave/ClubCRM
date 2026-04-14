@@ -5,6 +5,14 @@ export type EventStatus = "upcoming" | "draft";
 export type AnnouncementStatus = "published" | "scheduled";
 export type JoinRequestStatus = "pending" | "approved" | "denied";
 export type ActivityType = "club" | "member" | "form" | "event" | "announcement";
+export type AuditAction = "create" | "update" | "delete" | "approve" | "deny";
+export type AuditResourceType =
+  | "club"
+  | "member"
+  | "membership"
+  | "event"
+  | "announcement"
+  | "join_request";
 
 export type ClubRecord = {
   id: string;
@@ -147,4 +155,25 @@ export type BackendAnnouncementRecord = {
   body: string;
   published_at: string;
   created_by: string | null;
+};
+
+export type BackendAuditLogRecord = {
+  id: string;
+  occurred_at: string;
+  action: AuditAction;
+  actor: {
+    sub: string;
+    email: string | null;
+    name: string | null;
+  };
+  resource: {
+    type: AuditResourceType;
+    id: string;
+    label: string | null;
+  };
+  api_route: string;
+  http_method: string;
+  origin_path: string | null;
+  request_id: string;
+  summary_json: Record<string, unknown>;
 };

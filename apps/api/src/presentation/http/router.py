@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from src.modules.announcements.presentation.http.routes import router as announcements_router
+from src.modules.audit.presentation.http.routes import router as audit_router
 from src.modules.auth.presentation.http.routes import router as auth_router
 from src.modules.clubs.presentation.http.routes import router as clubs_router
 from src.modules.dashboard.presentation.http.routes import router as dashboard_router
@@ -15,6 +16,7 @@ def build_api_router() -> APIRouter:
     router = APIRouter()
     router.include_router(system_router)
     router.include_router(auth_router)
+    router.include_router(audit_router)
     router.include_router(announcements_router)
     router.include_router(clubs_router)
     router.include_router(events_router)

@@ -58,7 +58,9 @@ export async function getJoinRequestReview(
   }
 
   const requests = await listPendingJoinRequestsApi(clubId, {
-    headers: await getJoinRequestApiAuthHeaders(),
+    headers: await getJoinRequestApiAuthHeaders({
+      originPath: `/clubs/${clubId}/join-requests`,
+    }),
   });
 
   return {

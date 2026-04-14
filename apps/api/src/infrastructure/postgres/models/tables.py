@@ -2,9 +2,11 @@ import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
     ForeignKey,
+    Index,
     String,
     Text,
     UniqueConstraint,
@@ -182,3 +184,29 @@ class AnnouncementModel(Base):
     created_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     club: Mapped["ClubModel"] = relationship("ClubModel", back_populates="announcements")
+
+
+class AuditLogModel(Base):
+    __tablename__ = "audit_logs"
+    __table_args__ = (
+        Index("ix_audit_logs_occurred_at", "occurred_at"),
+        Index("ix_audit_logs_action", "action"),
+        Index("ix_audit_logs_resource_type", "resource_type"),
+        Index("ix_audit_logs_resource_id", "resource_id"),
+        Index("ix_audit_logs_actor_sub", "actor_sub"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    actor_sub: Mapped[str] = mapped_column(String(255), nullable=False)
+    actor_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    actor_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    action: Mapped[str] = mapped_column(String(50), nullable=False)
+    resource_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    resource_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    resource_label: Mapped[str | None] = mapped_column(Text, nullable=True)
+    api_route: Mapped[str] = mapped_column(String(255), nullable=False)
+    http_method: Mapped[str] = mapped_column(String(10), nullable=False)
+    origin_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    request_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    summary_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)

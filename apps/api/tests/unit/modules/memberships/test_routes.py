@@ -1,19 +1,22 @@
+# ruff: noqa: E402,I001
 import unittest
 from datetime import UTC, datetime
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
 from helpers import add_api_root_to_path
 
 add_api_root_to_path()
 
-from src.bootstrap.dependencies import get_membership_repository
+from src.bootstrap.dependencies import get_audit_log_repository, get_membership_repository
 from src.modules.memberships.application.ports.membership_repository import (
     MembershipRepository,
 )
 from src.modules.memberships.domain.entities import Membership
 from src.modules.memberships.presentation.http.routes import router
+from src.presentation.http.request_context import get_authenticated_write_context
+
+from tests.audit_fakes import FakeAuditLogRepository, build_authenticated_request_context
 
 
 class FakeMembershipRepository(MembershipRepository):
@@ -91,9 +94,14 @@ class FakeMembershipRepository(MembershipRepository):
 class MembershipRouteTests(unittest.TestCase):
     def setUp(self) -> None:
         self.repository = FakeMembershipRepository()
+        self.audit_repository = FakeAuditLogRepository()
         self.app = FastAPI()
         self.app.include_router(router)
         self.app.dependency_overrides[get_membership_repository] = lambda: self.repository
+        self.app.dependency_overrides[get_audit_log_repository] = lambda: self.audit_repository
+        self.app.dependency_overrides[get_authenticated_write_context] = (
+            lambda: build_authenticated_request_context()
+        )
         self.client = TestClient(self.app)
 
     def tearDown(self) -> None:
@@ -131,3 +139,4 @@ class MembershipRouteTests(unittest.TestCase):
 
         missing_response = self.client.get("/memberships/membership-2")
         self.assertEqual(missing_response.status_code, 404)
+        self.assertEqual(len(self.audit_repository.audit_logs), 3)

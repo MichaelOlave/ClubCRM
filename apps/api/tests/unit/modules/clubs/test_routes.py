@@ -1,17 +1,24 @@
+# ruff: noqa: E402,I001
 import unittest
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
 from helpers import add_api_root_to_path
 
 add_api_root_to_path()
 
-from src.bootstrap.dependencies import get_club_event_publisher, get_club_repository
+from src.bootstrap.dependencies import (
+    get_audit_log_repository,
+    get_club_event_publisher,
+    get_club_repository,
+)
 from src.modules.clubs.application.ports.club_event_publisher import ClubEventPublisher
 from src.modules.clubs.application.ports.club_repository import ClubRepository
 from src.modules.clubs.domain.entities import Club
 from src.modules.clubs.presentation.http.routes import router
+from src.presentation.http.request_context import get_authenticated_write_context
+
+from tests.audit_fakes import FakeAuditLogRepository, build_authenticated_request_context
 
 
 class FakeClubRepository(ClubRepository):
@@ -91,10 +98,15 @@ class ClubRouteTests(unittest.TestCase):
     def setUp(self) -> None:
         self.repository = FakeClubRepository()
         self.publisher = FakeClubEventPublisher()
+        self.audit_repository = FakeAuditLogRepository()
         self.app = FastAPI()
         self.app.include_router(router)
         self.app.dependency_overrides[get_club_repository] = lambda: self.repository
         self.app.dependency_overrides[get_club_event_publisher] = lambda: self.publisher
+        self.app.dependency_overrides[get_audit_log_repository] = lambda: self.audit_repository
+        self.app.dependency_overrides[get_authenticated_write_context] = (
+            lambda: build_authenticated_request_context()
+        )
         self.client = TestClient(self.app)
 
     def tearDown(self) -> None:
@@ -136,3 +148,4 @@ class ClubRouteTests(unittest.TestCase):
 
         missing_response = self.client.get("/clubs/club-2")
         self.assertEqual(missing_response.status_code, 404)
+        self.assertEqual(len(self.audit_repository.audit_logs), 3)

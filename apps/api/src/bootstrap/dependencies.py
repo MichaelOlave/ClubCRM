@@ -11,6 +11,7 @@ from src.infrastructure.postgres.client import PostgresClient
 from src.infrastructure.postgres.repositories.announcements import (
     PostgresAnnouncementRepository,
 )
+from src.infrastructure.postgres.repositories.audit import PostgresAuditLogRepository
 from src.infrastructure.postgres.repositories.clubs import PostgresClubRepository
 from src.infrastructure.postgres.repositories.dashboard import PostgresDashboardRepository
 from src.infrastructure.postgres.repositories.events import PostgresEventRepository
@@ -25,6 +26,7 @@ from src.infrastructure.redis.sessions.session_store import RedisAuthSessionStor
 from src.modules.announcements.application.ports.announcement_repository import (
     AnnouncementRepository,
 )
+from src.modules.audit.application.ports.audit_log_repository import AuditLogRepository
 from src.modules.auth.application.ports.auth_session_store import AuthSessionStore
 from src.modules.auth.application.ports.identity_provider import AuthIdentityProvider
 from src.modules.clubs.application.ports.club_event_publisher import ClubEventPublisher
@@ -111,6 +113,10 @@ def get_club_repository() -> ClubRepository:
 
 def get_club_summary_cache() -> ClubSummaryCache:
     return RedisClubSummaryCache(client=get_redis_client())
+
+
+def get_audit_log_repository() -> AuditLogRepository:
+    return PostgresAuditLogRepository(client=get_postgres_client())
 
 
 def get_club_event_publisher() -> ClubEventPublisher:

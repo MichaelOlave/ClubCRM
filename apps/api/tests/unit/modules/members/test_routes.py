@@ -9,11 +9,13 @@ from helpers import add_api_root_to_path
 
 add_api_root_to_path()
 
-from src.bootstrap.dependencies import get_member_repository
+from src.bootstrap.dependencies import get_audit_log_repository, get_member_repository
 from src.modules.members.application.models import CreateMemberInput, UpdateMemberInput
 from src.modules.members.application.ports.member_repository import MemberRepository
 from src.modules.members.domain.entities import Member
 from src.modules.members.presentation.http.routes import router
+from src.presentation.http.request_context import get_authenticated_write_context
+from tests.audit_fakes import FakeAuditLogRepository, build_authenticated_request_context
 
 
 class FakeMemberRepository(MemberRepository):
@@ -34,9 +36,7 @@ class FakeMemberRepository(MemberRepository):
 
     def list_members(self, organization_id: str) -> list[Member]:
         return [
-            member
-            for member in self.members.values()
-            if member.organization_id == organization_id
+            member for member in self.members.values() if member.organization_id == organization_id
         ]
 
     def get_member(self, member_id: str) -> Member | None:
@@ -74,6 +74,16 @@ class FakeMemberRepository(MemberRepository):
         self.members[member_id] = updated
         return updated
 
+    def find_by_email(self, organization_id: str, email: str) -> Member | None:
+        return next(
+            (
+                member
+                for member in self.members.values()
+                if member.organization_id == organization_id and member.email == email
+            ),
+            None,
+        )
+
     def delete_member(self, member_id: str) -> bool:
         return self.members.pop(member_id, None) is not None
 
@@ -81,9 +91,14 @@ class FakeMemberRepository(MemberRepository):
 class MemberRouteTests(unittest.TestCase):
     def setUp(self) -> None:
         self.repository = FakeMemberRepository()
+        self.audit_repository = FakeAuditLogRepository()
         self.app = FastAPI()
         self.app.include_router(router)
         self.app.dependency_overrides[get_member_repository] = lambda: self.repository
+        self.app.dependency_overrides[get_audit_log_repository] = lambda: self.audit_repository
+        self.app.dependency_overrides[get_authenticated_write_context] = (
+            lambda: build_authenticated_request_context()
+        )
         self.client = TestClient(self.app)
 
     def tearDown(self) -> None:
@@ -132,6 +147,7 @@ class MemberRouteTests(unittest.TestCase):
         delete_response = self.client.delete("/members/member-2")
         self.assertEqual(delete_response.status_code, 204)
         self.assertEqual(delete_response.content, b"")
+        self.assertEqual(len(self.audit_repository.audit_logs), 3)
 
     def test_read_member_returns_404_when_missing(self) -> None:
         response = self.client.get("/members/does-not-exist")

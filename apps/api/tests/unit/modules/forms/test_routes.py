@@ -1,3 +1,4 @@
+# ruff: noqa: E402,I001
 import unittest
 from dataclasses import replace
 from datetime import datetime
@@ -9,13 +10,12 @@ from helpers import add_api_root_to_path
 add_api_root_to_path()
 
 from src.bootstrap.dependencies import (
+    get_audit_log_repository,
     get_form_submission_publisher,
     get_join_request_store,
     get_member_repository,
     get_membership_repository,
 )
-from src.modules.auth.domain.entities import CurrentUser
-from src.modules.auth.presentation.http.dependencies import require_authenticated_user, require_csrf
 from src.modules.forms.application.ports.form_submission_publisher import FormSubmissionPublisher
 from src.modules.forms.application.ports.join_request_store import JoinRequestStore
 from src.modules.forms.domain.entities import JoinRequest
@@ -25,6 +25,12 @@ from src.modules.members.application.ports.member_repository import MemberReposi
 from src.modules.members.domain.entities import Member
 from src.modules.memberships.application.ports.membership_repository import MembershipRepository
 from src.modules.memberships.domain.entities import Membership
+from src.presentation.http.request_context import (
+    get_authenticated_request_context,
+    get_authenticated_write_context,
+)
+
+from tests.audit_fakes import FakeAuditLogRepository, build_authenticated_request_context
 
 
 class FakeJoinRequestStore(JoinRequestStore):
@@ -187,17 +193,22 @@ class JoinRequestRouteTests(unittest.TestCase):
         self.publisher = FakeFormSubmissionPublisher()
         self.members = FakeMemberRepository()
         self.memberships = FakeMembershipRepository()
+        self.audit_repository = FakeAuditLogRepository()
         self.app = FastAPI()
         self.app.include_router(router)
         self.app.dependency_overrides[get_join_request_store] = lambda: self.store
         self.app.dependency_overrides[get_form_submission_publisher] = lambda: self.publisher
         self.app.dependency_overrides[get_member_repository] = lambda: self.members
         self.app.dependency_overrides[get_membership_repository] = lambda: self.memberships
-        self.app.dependency_overrides[require_authenticated_user] = lambda: CurrentUser(
-            sub="user-1",
-            email="manager@example.edu",
+        self.app.dependency_overrides[get_audit_log_repository] = lambda: self.audit_repository
+        self.app.dependency_overrides[get_authenticated_request_context] = (
+            lambda: build_authenticated_request_context(
+                api_route="/forms/join-requests/{club_id}/pending", http_method="GET"
+            )
         )
-        self.app.dependency_overrides[require_csrf] = lambda: None
+        self.app.dependency_overrides[get_authenticated_write_context] = (
+            lambda: build_authenticated_request_context()
+        )
         self.client = TestClient(self.app)
 
     def tearDown(self) -> None:
@@ -346,7 +357,7 @@ class JoinRequestRouteTests(unittest.TestCase):
         self.assertEqual(body[0]["message"], "I love chess.")
 
     def test_list_pending_join_requests_requires_authentication(self) -> None:
-        self.app.dependency_overrides.pop(require_authenticated_user, None)
+        self.app.dependency_overrides.pop(get_authenticated_request_context, None)
 
         response = self.client.get("/forms/join-requests/club-1/pending")
 
@@ -377,7 +388,9 @@ class JoinRequestRouteTests(unittest.TestCase):
 
         created_member = self.members.get_member(body["member_id"])
         self.assertIsNotNone(created_member)
-        self.assertEqual(created_member.student_id if created_member is not None else None, "S12345")
+        self.assertEqual(
+            created_member.student_id if created_member is not None else None, "S12345"
+        )
 
     def test_deny_join_request_marks_request_denied(self) -> None:
         self.store = FakeJoinRequestStore(

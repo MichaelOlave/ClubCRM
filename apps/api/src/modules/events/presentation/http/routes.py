@@ -5,7 +5,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 
-from src.bootstrap.dependencies import get_event_repository
+from src.bootstrap.dependencies import get_audit_log_repository, get_event_repository
+from src.modules.audit.application.ports.audit_log_repository import AuditLogRepository
+from src.modules.audit.presentation.http.helpers import record_audit_action
 from src.modules.events.application.commands.create_event import CreateEvent
 from src.modules.events.application.commands.delete_event import DeleteEvent
 from src.modules.events.application.commands.update_event import UpdateEvent
@@ -15,6 +17,11 @@ from src.modules.events.application.ports.event_repository import (
 )
 from src.modules.events.application.queries.get_event import GetEvent
 from src.modules.events.application.queries.list_events import ListEvents
+from src.modules.events.domain.entities import Event
+from src.presentation.http.request_context import (
+    AuthenticatedRequestContext,
+    get_authenticated_write_context,
+)
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -47,6 +54,21 @@ class EventUpdateRequest(BaseModel):
     ends_at: datetime | None = None
 
 
+def _build_event_summary(
+    event: Event,
+    *,
+    changed_fields: list[str] | None = None,
+) -> dict[str, object]:
+    summary: dict[str, object] = {
+        "club_id": event.club_id,
+        "starts_at": event.starts_at.isoformat(),
+        "location": event.location,
+    }
+    if changed_fields:
+        summary["changed_fields"] = changed_fields
+    return summary
+
+
 def _to_event_read(event) -> EventRead:
     return EventRead(**asdict(event))
 
@@ -77,6 +99,8 @@ def get_event(
 def create_event(
     payload: EventCreateRequest,
     repository: Annotated[EventRepository, Depends(get_event_repository)],
+    audit_repository: Annotated[AuditLogRepository, Depends(get_audit_log_repository)],
+    context: Annotated[AuthenticatedRequestContext, Depends(get_authenticated_write_context)],
 ) -> EventRead:
     try:
         event = CreateEvent(repository=repository).execute(
@@ -90,6 +114,15 @@ def create_event(
     except EventConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
+    record_audit_action(
+        repository=audit_repository,
+        context=context,
+        action="create",
+        resource_type="event",
+        resource_id=event.id,
+        resource_label=event.title,
+        summary_json=_build_event_summary(event),
+    )
     return _to_event_read(event)
 
 
@@ -98,7 +131,10 @@ def update_event(
     event_id: str,
     payload: EventUpdateRequest,
     repository: Annotated[EventRepository, Depends(get_event_repository)],
+    audit_repository: Annotated[AuditLogRepository, Depends(get_audit_log_repository)],
+    context: Annotated[AuthenticatedRequestContext, Depends(get_authenticated_write_context)],
 ) -> EventRead:
+    changed_fields = sorted(payload.model_dump(exclude_unset=True).keys())
     try:
         event = UpdateEvent(repository=repository).execute(
             event_id,
@@ -113,6 +149,15 @@ def update_event(
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
+    record_audit_action(
+        repository=audit_repository,
+        context=context,
+        action="update",
+        resource_type="event",
+        resource_id=event.id,
+        resource_label=event.title,
+        summary_json=_build_event_summary(event, changed_fields=changed_fields),
+    )
     return _to_event_read(event)
 
 
@@ -120,10 +165,22 @@ def update_event(
 def delete_event(
     event_id: str,
     repository: Annotated[EventRepository, Depends(get_event_repository)],
+    audit_repository: Annotated[AuditLogRepository, Depends(get_audit_log_repository)],
+    context: Annotated[AuthenticatedRequestContext, Depends(get_authenticated_write_context)],
 ) -> Response:
     try:
+        event = GetEvent(repository=repository).execute(event_id)
         DeleteEvent(repository=repository).execute(event_id)
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
+    record_audit_action(
+        repository=audit_repository,
+        context=context,
+        action="delete",
+        resource_type="event",
+        resource_id=event.id,
+        resource_label=event.title,
+        summary_json=_build_event_summary(event),
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

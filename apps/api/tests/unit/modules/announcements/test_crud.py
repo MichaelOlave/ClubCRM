@@ -1,3 +1,4 @@
+# ruff: noqa: E402,I001
 import tempfile
 import unittest
 from datetime import UTC, datetime
@@ -5,12 +6,11 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-
 from helpers import add_api_root_to_path
 
 add_api_root_to_path()
 
-from src.bootstrap.dependencies import get_announcement_repository
+from src.bootstrap.dependencies import get_announcement_repository, get_audit_log_repository
 from src.infrastructure.postgres.client import PostgresClient
 from src.infrastructure.postgres.models import tables  # noqa: F401
 from src.infrastructure.postgres.models.base import Base
@@ -18,6 +18,8 @@ from src.infrastructure.postgres.repositories.announcements import (
     PostgresAnnouncementRepository,
 )
 from src.modules.announcements.presentation.http.routes import router
+from src.presentation.http.request_context import get_authenticated_write_context
+from tests.audit_fakes import FakeAuditLogRepository, build_authenticated_request_context
 
 
 def make_repository() -> tuple[
@@ -36,6 +38,10 @@ def build_client(repository: PostgresAnnouncementRepository) -> TestClient:
     app = FastAPI()
     app.include_router(router)
     app.dependency_overrides[get_announcement_repository] = lambda: repository
+    app.dependency_overrides[get_audit_log_repository] = lambda: FakeAuditLogRepository()
+    app.dependency_overrides[get_authenticated_write_context] = (
+        lambda: build_authenticated_request_context()
+    )
     return TestClient(app)
 
 

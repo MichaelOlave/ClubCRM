@@ -27,6 +27,11 @@ const navItems: NavItem[] = [
     description: "Organization-level member records and shared memberships.",
   },
   {
+    href: "/system/audit",
+    label: "Audit log",
+    description: "Admin write history with actor, request path, and resource details.",
+  },
+  {
     href: "/system/health",
     label: "Diagnostics",
     description: "Preserved API connectivity surface for the current scaffold.",
