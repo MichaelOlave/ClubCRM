@@ -12,7 +12,7 @@ ClubCRM is a devcontainer-first monorepo for a club management platform with:
 Current implementation status:
 
 - `apps/web` now provides a UI-first MVP: `/` sends authorized users to `/dashboard`, authenticated-but-unprovisioned users to `/not-provisioned`, and everyone else to `/login`; admin pages live under `src/app/(app)`, public entry points live under `src/app/(public)`, and auth proxy handlers live at `/api/auth/login` and `/auth/callback`
-- the frontend currently includes dashboard, profile, audit, club and member directory/detail pages, club and member creation and update flows, roster assignment from club detail, public join-request submission plus club-level join-request review, a `/login` route that hands off to backend-owned auth, and a dedicated `/system/health` diagnostics route
+- the frontend currently includes dashboard, profile, audit, club and member directory/detail pages, club and member creation and update flows, roster assignment plus event and announcement management from club detail, public join-request submission plus club-level join-request review, a `/login` route that hands off to backend-owned auth, and a dedicated `/system/health` diagnostics route
 - `apps/api` now includes bootstrap, config, infrastructure, module, and test layers, with live routes for system health, backend-owned auth, audit logs, dashboard summaries, clubs, members, memberships, announcements, events, and join-request flows
 - the admin route group now checks the backend session before rendering and serves a role-aware shell for organization admins and club managers
 - the local data and app stack is wired up through the repository devcontainer

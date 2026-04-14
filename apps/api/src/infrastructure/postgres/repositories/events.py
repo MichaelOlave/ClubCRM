@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import cast
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -6,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from src.infrastructure.postgres.client import PostgresClient
 from src.infrastructure.postgres.models.tables import EventModel
 from src.modules.events.application.ports.event_repository import (
+    UNSET,
     EventConflictError,
     EventRepository,
 )
@@ -85,8 +87,8 @@ class PostgresEventRepository(EventRepository):
         title: str | None = None,
         description: str | None = None,
         starts_at: datetime | None = None,
-        location: str | None = None,
-        ends_at: datetime | None = None,
+        location: str | None | object = UNSET,
+        ends_at: datetime | None | object = UNSET,
     ) -> Event:
         with self.client.create_session() as session:
             row = session.get(EventModel, event_id)
@@ -99,10 +101,10 @@ class PostgresEventRepository(EventRepository):
                 row.description = description
             if starts_at is not None:
                 row.starts_at = starts_at
-            if location is not None:
-                row.location = location
-            if ends_at is not None:
-                row.ends_at = ends_at
+            if location is not UNSET:
+                row.location = cast("str | None", location)
+            if ends_at is not UNSET:
+                row.ends_at = cast("datetime | None", ends_at)
 
             try:
                 session.commit()

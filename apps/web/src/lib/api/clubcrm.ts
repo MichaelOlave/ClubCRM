@@ -280,8 +280,113 @@ export async function updateMembershipApi(
   ).data;
 }
 
+export async function createEventApi(
+  payload: {
+    club_id: string;
+    title: string;
+    description: string;
+    starts_at: string;
+    location: string | null;
+    ends_at: string | null;
+  },
+  init?: RequestInit
+): Promise<BackendEventRecord> {
+  const headers = new Headers(init?.headers);
+
+  headers.set("Content-Type", "application/json");
+
+  return (
+    await fetchApiJson<BackendEventRecord>("/events", {
+      ...init,
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    })
+  ).data;
+}
+
+export async function updateEventApi(
+  eventId: string,
+  payload: {
+    title: string;
+    description: string;
+    starts_at: string;
+    location: string | null;
+    ends_at: string | null;
+  },
+  init?: RequestInit
+): Promise<BackendEventRecord> {
+  const headers = new Headers(init?.headers);
+
+  headers.set("Content-Type", "application/json");
+
+  return (
+    await fetchApiJson<BackendEventRecord>(`/events/${eventId}`, {
+      ...init,
+      method: "PATCH",
+      headers,
+      body: JSON.stringify(payload),
+    })
+  ).data;
+}
+
 export async function listEventsApi(clubId: string): Promise<BackendEventRecord[]> {
   return (await fetchApiJson<BackendEventRecord[]>(buildPath("/events", { club_id: clubId }))).data;
+}
+
+export async function deleteEventApi(eventId: string, init?: RequestInit): Promise<void> {
+  await fetchApiJson(`/events/${eventId}`, {
+    ...init,
+    method: "DELETE",
+  });
+}
+
+export async function createAnnouncementApi(
+  payload: {
+    club_id: string;
+    title: string;
+    body: string;
+    published_at: string | null;
+    created_by: string | null;
+  },
+  init?: RequestInit
+): Promise<BackendAnnouncementRecord> {
+  const headers = new Headers(init?.headers);
+
+  headers.set("Content-Type", "application/json");
+
+  return (
+    await fetchApiJson<BackendAnnouncementRecord>("/announcements", {
+      ...init,
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    })
+  ).data;
+}
+
+export async function updateAnnouncementApi(
+  announcementId: string,
+  payload: {
+    title: string;
+    body: string;
+    published_at: string;
+    created_by: string | null;
+  },
+  init?: RequestInit
+): Promise<BackendAnnouncementRecord> {
+  const headers = new Headers(init?.headers);
+
+  headers.set("Content-Type", "application/json");
+
+  return (
+    await fetchApiJson<BackendAnnouncementRecord>(`/announcements/${announcementId}`, {
+      ...init,
+      method: "PATCH",
+      headers,
+      body: JSON.stringify(payload),
+    })
+  ).data;
 }
 
 export async function listAnnouncementsApi(clubId: string): Promise<BackendAnnouncementRecord[]> {
@@ -290,6 +395,16 @@ export async function listAnnouncementsApi(clubId: string): Promise<BackendAnnou
       buildPath("/announcements", { club_id: clubId })
     )
   ).data;
+}
+
+export async function deleteAnnouncementApi(
+  announcementId: string,
+  init?: RequestInit
+): Promise<void> {
+  await fetchApiJson(`/announcements/${announcementId}`, {
+    ...init,
+    method: "DELETE",
+  });
 }
 
 export async function getDashboardSummaryApi(
@@ -302,9 +417,7 @@ export async function getDashboardRedisAnalyticsApi(
   clubId: string
 ): Promise<BackendDashboardRedisAnalyticsRecord> {
   return (
-    await fetchApiJson<BackendDashboardRedisAnalyticsRecord>(
-      `/dashboard/redis-analytics/${clubId}`
-    )
+    await fetchApiJson<BackendDashboardRedisAnalyticsRecord>(`/dashboard/redis-analytics/${clubId}`)
   ).data;
 }
 

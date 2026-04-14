@@ -8,12 +8,28 @@ import {
   isOrgAdminBackendAuthSession,
   requireAuthorizedBackendSession,
 } from "@/features/auth/server";
-import { ClubManagerAccessCard, ClubProfile, EditClubDialog } from "@/features/clubs";
 import {
+  ClubManagerAccessCard,
+  ClubProfile,
+  CreateAnnouncementDialog,
+  CreateEventDialog,
+  EditAnnouncementDialog,
+  EditClubDialog,
+  EditEventDialog,
+} from "@/features/clubs";
+import {
+  createAnnouncementAction,
   createClubManagerGrantAction,
+  createEventAction,
+  deleteAnnouncementAction,
   deleteClubManagerGrantAction,
-} from "@/features/clubs/server/actions";
-import { getClubDetail, getClubManagerGrants, updateClubAction } from "@/features/clubs/server";
+  deleteEventAction,
+  getClubDetail,
+  getClubManagerGrants,
+  updateAnnouncementAction,
+  updateClubAction,
+  updateEventAction,
+} from "@/features/clubs/server";
 import { AddMemberToClubDialog, EditMembershipRoleDialog } from "@/features/memberships";
 import {
   createMembershipAction,
@@ -38,6 +54,20 @@ type Props = {
     managerGrantCreated?: string | string[];
     managerGrantDeleted?: string | string[];
     managerGrantError?: string | string[];
+    eventCreated?: string | string[];
+    eventCreateError?: string | string[];
+    eventUpdated?: string | string[];
+    eventUpdateError?: string | string[];
+    eventEditTarget?: string | string[];
+    eventDeleted?: string | string[];
+    eventDeleteError?: string | string[];
+    announcementCreated?: string | string[];
+    announcementCreateError?: string | string[];
+    announcementUpdated?: string | string[];
+    announcementUpdateError?: string | string[];
+    announcementEditTarget?: string | string[];
+    announcementDeleted?: string | string[];
+    announcementDeleteError?: string | string[];
   }>;
 };
 
@@ -67,13 +97,46 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
     query.managerGrantCreated ?? query.managerGrantDeleted,
     query.managerGrantError
   );
+  const eventCreateNotice = getActionNotice(query.eventCreated, query.eventCreateError);
+  const eventUpdateNotice = getActionNotice(query.eventUpdated, query.eventUpdateError);
+  const eventDeleteNotice = getActionNotice(query.eventDeleted, query.eventDeleteError);
+  const announcementCreateNotice = getActionNotice(
+    query.announcementCreated,
+    query.announcementCreateError
+  );
+  const announcementUpdateNotice = getActionNotice(
+    query.announcementUpdated,
+    query.announcementUpdateError
+  );
+  const announcementDeleteNotice = getActionNotice(
+    query.announcementDeleted,
+    query.announcementDeleteError
+  );
   const membershipUpdateTarget = Array.isArray(query.membershipUpdateTarget)
     ? query.membershipUpdateTarget[0]
     : query.membershipUpdateTarget;
+  const eventEditTarget = Array.isArray(query.eventEditTarget)
+    ? query.eventEditTarget[0]
+    : query.eventEditTarget;
+  const announcementEditTarget = Array.isArray(query.announcementEditTarget)
+    ? query.announcementEditTarget[0]
+    : query.announcementEditTarget;
   const assignmentSuccessNotice = assignmentNotice?.kind === "success" ? assignmentNotice : null;
   const assignmentErrorNotice = assignmentNotice?.kind === "error" ? assignmentNotice : null;
   const clubUpdateSuccessNotice = clubUpdateNotice?.kind === "success" ? clubUpdateNotice : null;
   const clubUpdateErrorNotice = clubUpdateNotice?.kind === "error" ? clubUpdateNotice : null;
+  const eventCreateErrorNotice = eventCreateNotice?.kind === "error" ? eventCreateNotice : null;
+  const eventCreateSuccessNotice = eventCreateNotice?.kind === "success" ? eventCreateNotice : null;
+  const eventUpdateErrorNotice = eventUpdateNotice?.kind === "error" ? eventUpdateNotice : null;
+  const eventUpdateSuccessNotice = eventUpdateNotice?.kind === "success" ? eventUpdateNotice : null;
+  const announcementCreateErrorNotice =
+    announcementCreateNotice?.kind === "error" ? announcementCreateNotice : null;
+  const announcementCreateSuccessNotice =
+    announcementCreateNotice?.kind === "success" ? announcementCreateNotice : null;
+  const announcementUpdateErrorNotice =
+    announcementUpdateNotice?.kind === "error" ? announcementUpdateNotice : null;
+  const announcementUpdateSuccessNotice =
+    announcementUpdateNotice?.kind === "success" ? announcementUpdateNotice : null;
   const membershipUpdateSuccessNotice =
     membershipUpdateNotice?.kind === "success" ? membershipUpdateNotice : null;
   const membershipUpdateErrorNotice =
@@ -100,6 +163,16 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
                 notice={assignmentErrorNotice}
               />
             ) : null}
+            <CreateEventDialog
+              action={createEventAction}
+              clubId={detail.club.id}
+              notice={eventCreateErrorNotice}
+            />
+            <CreateAnnouncementDialog
+              action={createAnnouncementAction}
+              clubId={detail.club.id}
+              notice={announcementCreateErrorNotice}
+            />
             <Button asChild variant="secondary">
               <Link href={`/clubs/${clubId}/join-requests`}>View join requests</Link>
             </Button>
@@ -118,6 +191,12 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
 
       <ActionNotice notice={clubUpdateSuccessNotice} />
       <ActionNotice notice={assignmentSuccessNotice} />
+      <ActionNotice notice={eventCreateSuccessNotice} />
+      <ActionNotice notice={eventUpdateSuccessNotice} />
+      <ActionNotice notice={eventDeleteNotice} />
+      <ActionNotice notice={announcementCreateSuccessNotice} />
+      <ActionNotice notice={announcementUpdateSuccessNotice} />
+      <ActionNotice notice={announcementDeleteNotice} />
       <ActionNotice notice={membershipUpdateSuccessNotice} />
       <ActionNotice notice={managerGrantSuccessNotice} />
       <ActionNotice notice={managerGrantErrorNotice} />
@@ -133,7 +212,43 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
       ) : null}
 
       <ClubProfile
+        announcementActions={(announcement) => (
+          <>
+            <EditAnnouncementDialog
+              action={updateAnnouncementAction}
+              announcement={announcement}
+              clubId={detail.club.id}
+              notice={
+                announcementEditTarget === announcement.id ? announcementUpdateErrorNotice : null
+              }
+            />
+            <form action={deleteAnnouncementAction}>
+              <input name="announcementId" type="hidden" value={announcement.id} />
+              <input name="clubId" type="hidden" value={detail.club.id} />
+              <Button size="sm" type="submit" variant="destructive">
+                Delete
+              </Button>
+            </form>
+          </>
+        )}
         detail={detail}
+        eventActions={(event) => (
+          <>
+            <EditEventDialog
+              action={updateEventAction}
+              clubId={detail.club.id}
+              event={event}
+              notice={eventEditTarget === event.id ? eventUpdateErrorNotice : null}
+            />
+            <form action={deleteEventAction}>
+              <input name="clubId" type="hidden" value={detail.club.id} />
+              <input name="eventId" type="hidden" value={event.id} />
+              <Button size="sm" type="submit" variant="destructive">
+                Delete
+              </Button>
+            </form>
+          </>
+        )}
         membershipActions={(membership) => (
           <EditMembershipRoleDialog
             action={updateMembershipRoleAction}

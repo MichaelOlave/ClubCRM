@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
+from typing import Final
 
 from src.modules.events.domain.entities import Event
+
+UNSET: Final = object()
 
 
 class EventConflictError(ValueError):
@@ -38,8 +41,8 @@ class EventRepository(ABC):
         title: str | None = None,
         description: str | None = None,
         starts_at: datetime | None = None,
-        location: str | None = None,
-        ends_at: datetime | None = None,
+        location: str | None | object = UNSET,
+        ends_at: datetime | None | object = UNSET,
     ) -> Event:
         """Update an existing event."""
 

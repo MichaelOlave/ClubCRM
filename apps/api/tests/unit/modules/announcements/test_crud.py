@@ -17,9 +17,19 @@ from src.infrastructure.postgres.models.base import Base
 from src.infrastructure.postgres.repositories.announcements import (
     PostgresAnnouncementRepository,
 )
+from src.modules.auth.domain.entities import AppAccess
+from src.modules.auth.presentation.http.dependencies import require_authorized_access
 from src.modules.announcements.presentation.http.routes import router
 from src.presentation.http.request_context import get_authenticated_write_context
 from tests.audit_fakes import FakeAuditLogRepository, build_authenticated_request_context
+
+
+def build_org_admin_access() -> AppAccess:
+    return AppAccess(
+        primary_role="org_admin",
+        organization_id="org-1",
+        managed_club_ids=(),
+    )
 
 
 def make_repository() -> tuple[
@@ -42,6 +52,7 @@ def build_client(repository: PostgresAnnouncementRepository) -> TestClient:
     app.dependency_overrides[get_authenticated_write_context] = (
         lambda: build_authenticated_request_context()
     )
+    app.dependency_overrides[require_authorized_access] = build_org_admin_access
     return TestClient(app)
 
 
@@ -64,8 +75,13 @@ class AnnouncementCrudTests(unittest.TestCase):
         self.assertEqual(len(listed), 1)
         self.assertEqual(repository.get_announcement(created.id).title, "Welcome")
 
-        updated = repository.update_announcement(created.id, body="Updated body")
+        updated = repository.update_announcement(
+            created.id,
+            body="Updated body",
+            created_by=None,
+        )
         self.assertEqual(updated.body, "Updated body")
+        self.assertIsNone(updated.created_by)
 
         repository.delete_announcement(created.id)
         self.assertEqual(repository.list_announcements("club-1"), [])
@@ -93,10 +109,11 @@ class AnnouncementCrudTests(unittest.TestCase):
 
         updated_response = client.patch(
             f"/announcements/{announcement_id}",
-            json={"body": "Updated body"},
+            json={"body": "Updated body", "created_by": None},
         )
         self.assertEqual(updated_response.status_code, 200)
         self.assertEqual(updated_response.json()["body"], "Updated body")
+        self.assertIsNone(updated_response.json()["created_by"])
 
         delete_response = client.delete(f"/announcements/{announcement_id}")
         self.assertEqual(delete_response.status_code, 204)

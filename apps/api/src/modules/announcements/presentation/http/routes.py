@@ -20,6 +20,7 @@ from src.modules.announcements.application.commands.update_announcement import (
     UpdateAnnouncement,
 )
 from src.modules.announcements.application.ports.announcement_repository import (
+    UNSET,
     AnnouncementConflictError,
     AnnouncementRepository,
 )
@@ -161,7 +162,8 @@ def update_announcement(
     dashboard_cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
     context: Annotated[AuthenticatedRequestContext, Depends(get_authenticated_write_context)],
 ) -> AnnouncementRead:
-    changed_fields = sorted(payload.model_dump(exclude_unset=True).keys())
+    update_payload = payload.model_dump(exclude_unset=True)
+    changed_fields = sorted(update_payload.keys())
     try:
         existing_announcement = GetAnnouncement(repository=repository).execute(announcement_id)
     except LookupError as exc:
@@ -174,7 +176,7 @@ def update_announcement(
             title=payload.title,
             body=payload.body,
             published_at=payload.published_at,
-            created_by=payload.created_by,
+            created_by=payload.created_by if "created_by" in update_payload else UNSET,
         )
     except AnnouncementConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc

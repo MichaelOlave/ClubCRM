@@ -10,7 +10,9 @@ import { TabsView } from "@/components/shadcn/tabs-view";
 import { formatDateTime } from "@/lib/utils/formatters";
 
 type Props = {
+  announcementActions?: (announcement: ClubDetailViewModel["announcements"][number]) => ReactNode;
   detail: ClubDetailViewModel;
+  eventActions?: (event: ClubDetailViewModel["events"][number]) => ReactNode;
   membershipActions?: (membership: MembershipRecord) => ReactNode;
   memberships: MembershipRecord[];
 };
@@ -36,7 +38,21 @@ function getEventVariant(status: ClubDetailViewModel["events"][number]["status"]
   return status === "upcoming" ? "success" : "warning";
 }
 
-export function ClubProfile({ detail, membershipActions, memberships }: Props) {
+function formatEventWindow(event: ClubDetailViewModel["events"][number]): string {
+  if (!event.endsAt) {
+    return formatDateTime(event.startsAt);
+  }
+
+  return `${formatDateTime(event.startsAt)} to ${formatDateTime(event.endsAt)}`;
+}
+
+export function ClubProfile({
+  announcementActions,
+  detail,
+  eventActions,
+  membershipActions,
+  memberships,
+}: Props) {
   const overview = (
     <div className="space-y-6">
       <Card className="space-y-5 rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
@@ -111,20 +127,33 @@ export function ClubProfile({ detail, membershipActions, memberships }: Props) {
           <div className="space-y-4">
             {detail.events.map((event) => (
               <div className="rounded-[1.25rem] border border-border p-4" key={event.id}>
-                <div className="flex flex-wrap items-center gap-3">
-                  <Badge variant={getEventVariant(event.status)}>{event.status}</Badge>
-                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                    {formatDateTime(event.startsAt)}
-                  </p>
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Badge variant={getEventVariant(event.status)}>{event.status}</Badge>
+                      <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                        {formatEventWindow(event)}
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="text-base font-semibold text-foreground">{event.title}</h4>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {event.location ?? "Location TBD"}
+                      </p>
+                    </div>
+                    <p className="text-sm leading-6 text-muted-foreground">{event.description}</p>
+                  </div>
+
+                  {eventActions ? (
+                    <div className="flex flex-wrap gap-2">{eventActions(event)}</div>
+                  ) : null}
                 </div>
-                <h4 className="mt-3 text-base font-semibold text-foreground">{event.title}</h4>
-                <p className="mt-1 text-sm text-muted-foreground">{event.location}</p>
               </div>
             ))}
           </div>
         ) : (
           <EmptyState
-            description="Event creation will plug into the same club detail surface when the CRUD workflow is added."
+            description="Use the add event action on this page to schedule the club's next activity."
             title="No events yet"
           />
         )}
@@ -142,26 +171,39 @@ export function ClubProfile({ detail, membershipActions, memberships }: Props) {
           <div className="space-y-4">
             {detail.announcements.map((announcement) => (
               <div className="rounded-[1.25rem] border border-border p-4" key={announcement.id}>
-                <div className="flex flex-wrap items-center gap-3">
-                  <Badge variant={getAnnouncementVariant(announcement.status)}>
-                    {announcement.status}
-                  </Badge>
-                  <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                    {formatDateTime(announcement.publishedAt)}
-                  </p>
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Badge variant={getAnnouncementVariant(announcement.status)}>
+                        {announcement.status}
+                      </Badge>
+                      <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                        {formatDateTime(announcement.publishedAt)}
+                      </p>
+                    </div>
+                    <div>
+                      <h4 className="text-base font-semibold text-foreground">
+                        {announcement.title}
+                      </h4>
+                      {announcement.createdBy ? (
+                        <p className="mt-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                          Created by {announcement.createdBy}
+                        </p>
+                      ) : null}
+                    </div>
+                    <p className="text-sm leading-6 text-muted-foreground">{announcement.body}</p>
+                  </div>
+
+                  {announcementActions ? (
+                    <div className="flex flex-wrap gap-2">{announcementActions(announcement)}</div>
+                  ) : null}
                 </div>
-                <h4 className="mt-3 text-base font-semibold text-foreground">
-                  {announcement.title}
-                </h4>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  {announcement.excerpt}
-                </p>
               </div>
             ))}
           </div>
         ) : (
           <EmptyState
-            description="Published updates will appear here once announcement creation is connected."
+            description="Use the add announcement action on this page to publish or schedule an update."
             title="No announcements yet"
           />
         )}

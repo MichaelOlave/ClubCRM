@@ -61,7 +61,10 @@ Use this guide for manual smoke testing on the production ClubCRM site after dep
 - Open the club detail page and confirm the `Overview` tab shows status, description, manager, member count, and roster content.
 - Use `Add member` to assign your test member to the club and confirm the roster updates after save.
 - Use `Add event` to create one future event and confirm it appears under the `Activity` tab.
+- Edit that same event and confirm the updated title or time range appears after save.
 - Use `Add announcement` to create one announcement and confirm it appears under the `Activity` tab.
+- Edit that same announcement and confirm the updated message appears after save.
+- Delete the test event and announcement and confirm both disappear from the `Activity` tab.
 - Confirm the page offers both `View join requests` and `Open public form` actions for the same club.
 - Refresh the club detail page and confirm the newly created records persist.
 
