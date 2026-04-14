@@ -1,17 +1,52 @@
+# ruff: noqa: E402,I001
 import unittest
+from datetime import UTC, datetime
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from fastapi.testclient import TestClient
-
 from helpers import add_api_root_to_path
 
 add_api_root_to_path()
 
-from src.bootstrap.dependencies import get_club_event_publisher, get_club_repository
+from src.bootstrap.dependencies import (
+    get_audit_log_repository,
+    get_authorization_repository,
+    get_club_event_publisher,
+    get_club_repository,
+)
+from src.modules.auth.application.ports.authorization_repository import (
+    AuthorizationRepository,
+    AuthorizationResolution,
+    ClubManagerGrant,
+)
+from src.modules.auth.domain.entities import AppAccess
+from src.modules.auth.presentation.http.dependencies import (
+    require_authorized_access,
+    require_org_admin_access,
+)
 from src.modules.clubs.application.ports.club_event_publisher import ClubEventPublisher
 from src.modules.clubs.application.ports.club_repository import ClubRepository
 from src.modules.clubs.domain.entities import Club
 from src.modules.clubs.presentation.http.routes import router
+from src.presentation.http.request_context import get_authenticated_write_context
+
+from tests.audit_fakes import FakeAuditLogRepository, build_authenticated_request_context
+
+
+def build_org_admin_access() -> AppAccess:
+    return AppAccess(
+        primary_role="org_admin",
+        organization_id="org-1",
+        managed_club_ids=(),
+    )
+
+
+def build_club_manager_access(*club_ids: str) -> AppAccess:
+    return AppAccess(
+        primary_role="club_manager",
+        organization_id="org-1",
+        managed_club_ids=tuple(club_ids),
+    )
 
 
 class FakeClubRepository(ClubRepository):
@@ -23,7 +58,14 @@ class FakeClubRepository(ClubRepository):
                 name="Chess Club",
                 description="Strategy and tournaments.",
                 status="active",
-            )
+            ),
+            "club-9": Club(
+                id="club-9",
+                organization_id="org-1",
+                name="Debate Club",
+                description="Public speaking and competitions.",
+                status="active",
+            ),
         }
 
     def list_clubs(self, organization_id: str | None = None) -> list[Club]:
@@ -43,8 +85,9 @@ class FakeClubRepository(ClubRepository):
         description: str,
         status: str,
     ) -> Club:
+        club_id = f"club-{len(self.clubs) + 1}"
         club = Club(
-            id="club-2",
+            id=club_id,
             organization_id=organization_id,
             name=name,
             description=description,
@@ -87,23 +130,94 @@ class FakeClubEventPublisher(ClubEventPublisher):
         self.created_club_ids.append(club.id)
 
 
+class FakeAuthorizationRepository(AuthorizationRepository):
+    def __init__(self) -> None:
+        self.grants_by_club: dict[str, list[ClubManagerGrant]] = {"club-1": []}
+
+    def resolve_access_for_identity(
+        self,
+        *,
+        provider_subject: str,
+        email: str | None,
+    ) -> AuthorizationResolution:
+        _ = (provider_subject, email)
+        return AuthorizationResolution(
+            admin_user_id="admin-user-1",
+            member_id=None,
+            access=build_org_admin_access(),
+        )
+
+    def list_club_manager_grants(self, club_id: str) -> list[ClubManagerGrant]:
+        return list(self.grants_by_club.get(club_id, []))
+
+    def create_club_manager_grant(
+        self,
+        *,
+        club_id: str,
+        member_id: str,
+        role_name: str,
+    ) -> ClubManagerGrant:
+        grant = ClubManagerGrant(
+            id=f"grant-{len(self.grants_by_club.get(club_id, [])) + 1}",
+            club_id=club_id,
+            member_id=member_id,
+            role_name=role_name,
+            assigned_at=datetime.now(UTC),
+            member_email=f"{member_id}@example.edu",
+            member_name=f"Member {member_id}",
+        )
+        self.grants_by_club.setdefault(club_id, []).append(grant)
+        return grant
+
+    def delete_club_manager_grant(self, *, club_id: str, grant_id: str) -> bool:
+        existing_grants = self.grants_by_club.get(club_id, [])
+        remaining_grants = [grant for grant in existing_grants if grant.id != grant_id]
+        deleted = len(remaining_grants) != len(existing_grants)
+        self.grants_by_club[club_id] = remaining_grants
+        return deleted
+
+
 class ClubRouteTests(unittest.TestCase):
     def setUp(self) -> None:
         self.repository = FakeClubRepository()
         self.publisher = FakeClubEventPublisher()
+        self.audit_repository = FakeAuditLogRepository()
+        self.authorization_repository = FakeAuthorizationRepository()
         self.app = FastAPI()
         self.app.include_router(router)
         self.app.dependency_overrides[get_club_repository] = lambda: self.repository
         self.app.dependency_overrides[get_club_event_publisher] = lambda: self.publisher
+        self.app.dependency_overrides[get_audit_log_repository] = lambda: self.audit_repository
+        self.app.dependency_overrides[get_authorization_repository] = (
+            lambda: self.authorization_repository
+        )
+        self.app.dependency_overrides[get_authenticated_write_context] = (
+            lambda: build_authenticated_request_context()
+        )
+        self.app.dependency_overrides[require_authorized_access] = build_org_admin_access
+        self.app.dependency_overrides[require_org_admin_access] = build_org_admin_access
         self.client = TestClient(self.app)
 
     def tearDown(self) -> None:
         self.app.dependency_overrides.clear()
 
-    def test_club_routes_support_crud_roundtrip(self) -> None:
+    def set_club_manager_access(self, *club_ids: str) -> None:
+        self.app.dependency_overrides[require_authorized_access] = (
+            lambda: build_club_manager_access(*club_ids)
+        )
+
+        def reject_org_admin_access() -> AppAccess:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Organization admin access is required for this action.",
+            )
+
+        self.app.dependency_overrides[require_org_admin_access] = reject_org_admin_access
+
+    def test_club_routes_support_crud_roundtrip_for_org_admins(self) -> None:
         list_response = self.client.get("/clubs/", params={"organization_id": "org-1"})
         self.assertEqual(list_response.status_code, 200)
-        self.assertEqual(len(list_response.json()), 1)
+        self.assertEqual(len(list_response.json()), 2)
 
         create_response = self.client.post(
             "/clubs/",
@@ -115,14 +229,15 @@ class ClubRouteTests(unittest.TestCase):
             },
         )
         self.assertEqual(create_response.status_code, 201)
-        self.assertEqual(self.publisher.created_club_ids, ["club-2"])
+        created = create_response.json()
+        self.assertEqual(self.publisher.created_club_ids, [created["id"]])
 
-        read_response = self.client.get("/clubs/club-2")
+        read_response = self.client.get(f"/clubs/{created['id']}")
         self.assertEqual(read_response.status_code, 200)
         self.assertEqual(read_response.json()["name"], "Robotics Club")
 
         update_response = self.client.patch(
-            "/clubs/club-2",
+            f"/clubs/{created['id']}",
             json={"description": "Builds robots and hosts workshops."},
         )
         self.assertEqual(update_response.status_code, 200)
@@ -131,8 +246,53 @@ class ClubRouteTests(unittest.TestCase):
             "Builds robots and hosts workshops.",
         )
 
-        delete_response = self.client.delete("/clubs/club-2")
+        delete_response = self.client.delete(f"/clubs/{created['id']}")
         self.assertEqual(delete_response.status_code, 204)
 
-        missing_response = self.client.get("/clubs/club-2")
+        missing_response = self.client.get(f"/clubs/{created['id']}")
         self.assertEqual(missing_response.status_code, 404)
+        self.assertEqual(len(self.audit_repository.audit_logs), 3)
+
+    def test_club_manager_only_sees_assigned_clubs_and_cannot_create_clubs(self) -> None:
+        self.set_club_manager_access("club-1")
+
+        list_response = self.client.get("/clubs/")
+        self.assertEqual(list_response.status_code, 200)
+        self.assertEqual([club["id"] for club in list_response.json()], ["club-1"])
+
+        allowed_response = self.client.get("/clubs/club-1")
+        self.assertEqual(allowed_response.status_code, 200)
+
+        forbidden_response = self.client.get("/clubs/club-9")
+        self.assertEqual(forbidden_response.status_code, 403)
+
+        update_response = self.client.patch("/clubs/club-9", json={"description": "Blocked"})
+        self.assertEqual(update_response.status_code, 403)
+
+        create_response = self.client.post(
+            "/clubs/",
+            json={
+                "organization_id": "org-1",
+                "name": "Should Fail",
+                "description": "Blocked",
+                "status": "active",
+            },
+        )
+        self.assertEqual(create_response.status_code, 403)
+
+    def test_org_admin_can_manage_club_manager_grants(self) -> None:
+        list_response = self.client.get("/clubs/club-1/manager-grants")
+        self.assertEqual(list_response.status_code, 200)
+        self.assertEqual(list_response.json(), [])
+
+        create_response = self.client.post(
+            "/clubs/club-1/manager-grants",
+            json={"member_id": "member-7", "role_name": "President"},
+        )
+        self.assertEqual(create_response.status_code, 201)
+        created = create_response.json()
+        self.assertEqual(created["member_id"], "member-7")
+        self.assertEqual(created["role_name"], "President")
+
+        delete_response = self.client.delete(f"/clubs/club-1/manager-grants/{created['id']}")
+        self.assertEqual(delete_response.status_code, 204)

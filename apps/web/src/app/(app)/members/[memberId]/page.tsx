@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ActionNotice } from "@/components/ui/ActionNotice";
 import { Button } from "@/components/shadcn/button";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { requireOrgAdminBackendSession } from "@/features/auth/server";
 import { EditMemberDialog, MemberProfile } from "@/features/members";
 import { getMemberDetail, updateMemberAction } from "@/features/members/server";
 import { getMembershipsForMember } from "@/features/memberships/server";
@@ -20,6 +21,7 @@ type Props = {
 };
 
 export default async function MemberDetailPage({ params, searchParams }: Props) {
+  await requireOrgAdminBackendSession();
   const { memberId } = await params;
   const [detail, memberships, query] = await Promise.all([
     getMemberDetail(memberId),

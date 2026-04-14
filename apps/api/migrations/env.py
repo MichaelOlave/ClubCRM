@@ -7,6 +7,7 @@ from src.infrastructure.postgres.models.base import Base
 from src.infrastructure.postgres.models.tables import (  # noqa: F401
     AdminUserModel,
     AnnouncementModel,
+    AuditLogModel,
     ClubManagerRoleModel,
     ClubModel,
     EventModel,

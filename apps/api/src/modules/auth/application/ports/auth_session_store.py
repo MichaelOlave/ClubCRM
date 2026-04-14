@@ -9,6 +9,7 @@ class AuthSessionRecord:
     csrf_token: str | None
     auth_flow_state: str | None
     created_at: str
+    access: dict[str, Any] | None = None
 
 
 class AuthSessionStore(ABC):

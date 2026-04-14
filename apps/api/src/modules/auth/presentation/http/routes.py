@@ -4,12 +4,19 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
 
-from src.bootstrap.dependencies import get_optional_auth_identity_provider
+from src.bootstrap.dependencies import (
+    get_authorization_repository,
+    get_optional_auth_identity_provider,
+)
 from src.config import get_settings
 from src.modules.auth.application.commands.finalize_auth_session import (
     FinalizeAuthSession,
 )
+from src.modules.auth.application.commands.resolve_authorized_access import (
+    ResolveAuthorizedAccess,
+)
 from src.modules.auth.application.commands.start_login import StartLogin
+from src.modules.auth.application.ports.authorization_repository import AuthorizationRepository
 from src.modules.auth.application.ports.identity_provider import (
     AuthIdentityProvider,
     AuthIdentityProviderError,
@@ -25,10 +32,13 @@ from src.modules.auth.presentation.http.dependencies import (
     consume_auth_flow_state,
     delete_auth_session,
     ensure_csrf_token,
+    get_session_access,
     get_session_id,
     get_session_user,
     persist_session_user,
+    refresh_session_access,
     require_csrf,
+    serialize_access_for_response,
     touch_auth_session,
 )
 
@@ -48,6 +58,10 @@ def build_public_callback_url(request: Request) -> str:
 @router.get("/login", name="auth_login")
 async def login(
     request: Request,
+    authorization_repository: Annotated[
+        AuthorizationRepository,
+        Depends(get_authorization_repository),
+    ],
     provider: Annotated[
         AuthIdentityProvider | None,
         Depends(get_optional_auth_identity_provider),
@@ -56,10 +70,16 @@ async def login(
     auth_settings = get_settings().auth
     current_user = get_session_user(request)
     if current_user is not None:
+        current_access = (
+            ResolveAuthorizedAccess(repository=authorization_repository)
+            .execute(current_user)
+            .access
+        )
         session_id = get_session_id(request)
         if session_id is None:
-            session_id, csrf_token = persist_session_user(request, current_user)
+            session_id, csrf_token = persist_session_user(request, current_user, current_access)
         else:
+            refresh_session_access(request)
             csrf_token = ensure_csrf_token(request)
             touch_auth_session(request)
 
@@ -72,7 +92,13 @@ async def login(
         return response
 
     if auth_settings.bypass_enabled:
-        session_id, csrf_token = persist_session_user(request, build_developer_bypass_user())
+        current_user = build_developer_bypass_user()
+        current_access = (
+            ResolveAuthorizedAccess(repository=authorization_repository)
+            .execute(current_user)
+            .access
+        )
+        session_id, csrf_token = persist_session_user(request, current_user, current_access)
 
         response = RedirectResponse(
             url=auth_settings.login_success_url,
@@ -120,6 +146,10 @@ async def login(
 @router.get("/callback", name="auth_callback")
 async def callback(
     request: Request,
+    authorization_repository: Annotated[
+        AuthorizationRepository,
+        Depends(get_authorization_repository),
+    ],
     provider: Annotated[
         AuthIdentityProvider | None,
         Depends(get_optional_auth_identity_provider),
@@ -127,7 +157,13 @@ async def callback(
 ) -> RedirectResponse:
     auth_settings = get_settings().auth
     if auth_settings.bypass_enabled:
-        session_id, csrf_token = persist_session_user(request, build_developer_bypass_user())
+        current_user = build_developer_bypass_user()
+        current_access = (
+            ResolveAuthorizedAccess(repository=authorization_repository)
+            .execute(current_user)
+            .access
+        )
+        session_id, csrf_token = persist_session_user(request, current_user, current_access)
 
         response = RedirectResponse(
             url=auth_settings.login_success_url,
@@ -178,7 +214,10 @@ async def callback(
         ) from exc
 
     clear_auth_session(request)
-    session_id, csrf_token = persist_session_user(request, current_user)
+    current_access = (
+        ResolveAuthorizedAccess(repository=authorization_repository).execute(current_user).access
+    )
+    session_id, csrf_token = persist_session_user(request, current_user, current_access)
 
     response = RedirectResponse(
         url=auth_settings.login_success_url,
@@ -192,12 +231,17 @@ async def callback(
 @router.get("/session", name="auth_session")
 def read_session(request: Request) -> JSONResponse:
     current_user = get_session_user(request)
+    current_access = (
+        refresh_session_access(request) if current_user is not None else get_session_access(request)
+    )
     csrf_token = ensure_csrf_token(request) if current_user is not None else None
     response = JSONResponse(
         {
             "authenticated": current_user is not None,
+            "authorized": current_access is not None,
             "csrfToken": csrf_token,
             "user": asdict(current_user) if current_user is not None else None,
+            "access": serialize_access_for_response(current_access),
         }
     )
 

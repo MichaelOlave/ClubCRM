@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { getAdminApiHeaders } from "@/lib/api/adminAuthHeaders";
 import { createMemberApi, updateMemberApi } from "@/lib/api/clubcrm";
 import { getApiErrorMessage } from "@/lib/api/server-data";
 import { buildPathWithSearchParams, getOptionalString, getRequiredString } from "@/lib/forms";
@@ -16,13 +17,18 @@ export async function createMemberAction(formData: FormData) {
   let successRedirectPath = "/members";
 
   try {
-    const member = await createMemberApi({
-      organization_id: organizationId,
-      first_name: firstName,
-      last_name: lastName,
-      email,
-      student_id: studentId,
-    });
+    const member = await createMemberApi(
+      {
+        organization_id: organizationId,
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        student_id: studentId,
+      },
+      {
+        headers: await getAdminApiHeaders({ includeCsrf: true, originPath: "/members" }),
+      }
+    );
 
     revalidatePath("/members");
     revalidatePath("/dashboard");
@@ -51,12 +57,18 @@ export async function updateMemberAction(formData: FormData) {
   let successRedirectPath = detailPath;
 
   try {
-    const member = await updateMemberApi(memberId, {
-      first_name: firstName,
-      last_name: lastName,
-      email,
-      student_id: studentId,
-    });
+    const member = await updateMemberApi(
+      memberId,
+      {
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        student_id: studentId,
+      },
+      {
+        headers: await getAdminApiHeaders({ includeCsrf: true, originPath: detailPath }),
+      }
+    );
 
     revalidatePath("/members");
     revalidatePath(detailPath);
