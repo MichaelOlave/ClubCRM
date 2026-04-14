@@ -3,6 +3,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from src.bootstrap.dependencies import get_member_repository
+from src.modules.auth.domain.entities import AppAccess
+from src.modules.auth.presentation.http.dependencies import require_org_admin_access
 from src.modules.members.application.commands.create_member import CreateMember
 from src.modules.members.application.commands.delete_member import DeleteMember
 from src.modules.members.application.commands.update_member import UpdateMember
@@ -25,6 +27,7 @@ def _member_response(member) -> MemberReadModel:
 
 @router.get("/", response_model=list[MemberReadModel])
 def list_members(
+    _access: Annotated[AppAccess, Depends(require_org_admin_access)],
     organization_id: str,
     repository: Annotated[MemberRepository, Depends(get_member_repository)],
 ) -> list[MemberReadModel]:
@@ -35,6 +38,7 @@ def list_members(
 @router.get("/{member_id}", response_model=MemberReadModel)
 def read_member(
     member_id: str,
+    _access: Annotated[AppAccess, Depends(require_org_admin_access)],
     repository: Annotated[MemberRepository, Depends(get_member_repository)],
 ) -> MemberReadModel:
     member = GetMember(repository=repository).execute(member_id)
@@ -47,6 +51,7 @@ def read_member(
 @router.post("/", response_model=MemberReadModel, status_code=status.HTTP_201_CREATED)
 def create_member(
     payload: MemberCreateRequest,
+    _access: Annotated[AppAccess, Depends(require_org_admin_access)],
     repository: Annotated[MemberRepository, Depends(get_member_repository)],
 ) -> MemberReadModel:
     try:
@@ -69,6 +74,7 @@ def create_member(
 def update_member(
     member_id: str,
     payload: MemberUpdateRequest,
+    _access: Annotated[AppAccess, Depends(require_org_admin_access)],
     repository: Annotated[MemberRepository, Depends(get_member_repository)],
 ) -> MemberReadModel:
     try:
@@ -93,6 +99,7 @@ def update_member(
 @router.delete("/{member_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_member(
     member_id: str,
+    _access: Annotated[AppAccess, Depends(require_org_admin_access)],
     repository: Annotated[MemberRepository, Depends(get_member_repository)],
 ) -> Response:
     deleted = DeleteMember(repository=repository).execute(member_id)

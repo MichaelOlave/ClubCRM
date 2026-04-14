@@ -4,6 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 
 from src.bootstrap.dependencies import get_membership_repository
+from src.modules.auth.domain.entities import AppAccess
+from src.modules.auth.presentation.http.dependencies import (
+    ensure_club_access,
+    require_authorized_access,
+)
 from src.modules.memberships.application.commands.create_membership import (
     CreateMembership,
 )
@@ -31,6 +36,8 @@ class MembershipResponse(BaseModel):
     role: str
     status: str
     joined_at: str | None = None
+    club_name: str | None = None
+    member_name: str | None = None
 
     @classmethod
     def from_domain(cls, membership: Membership) -> "MembershipResponse":
@@ -41,6 +48,8 @@ class MembershipResponse(BaseModel):
             role=membership.role,
             status=membership.status,
             joined_at=membership.joined_at.isoformat() if membership.joined_at else None,
+            club_name=membership.club_name,
+            member_name=membership.member_name,
         )
 
 
@@ -58,10 +67,19 @@ class UpdateMembershipRequest(BaseModel):
 
 @router.get("/", response_model=list[MembershipResponse])
 def list_memberships(
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
     repository: Annotated[MembershipRepository, Depends(get_membership_repository)],
     club_id: str | None = None,
     member_id: str | None = None,
 ) -> list[MembershipResponse]:
+    if access.primary_role != "org_admin":
+        if club_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Club managers must scope roster queries to one managed club.",
+            )
+        ensure_club_access(access, club_id)
+
     memberships = ListMemberships(repository=repository).execute(
         club_id=club_id,
         member_id=member_id,
@@ -72,6 +90,7 @@ def list_memberships(
 @router.get("/{membership_id}", response_model=MembershipResponse)
 def get_membership(
     membership_id: str,
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
     repository: Annotated[MembershipRepository, Depends(get_membership_repository)],
 ) -> MembershipResponse:
     membership = GetMembership(repository=repository).execute(membership_id)
@@ -81,14 +100,17 @@ def get_membership(
             detail="Membership not found.",
         )
 
+    ensure_club_access(access, membership.club_id)
     return MembershipResponse.from_domain(membership)
 
 
 @router.post("/", response_model=MembershipResponse, status_code=status.HTTP_201_CREATED)
 def create_membership(
     request: CreateMembershipRequest,
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
     repository: Annotated[MembershipRepository, Depends(get_membership_repository)],
 ) -> MembershipResponse:
+    ensure_club_access(access, request.club_id)
     try:
         membership = CreateMembership(repository=repository).execute(
             club_id=request.club_id,
@@ -106,8 +128,17 @@ def create_membership(
 def update_membership(
     membership_id: str,
     request: UpdateMembershipRequest,
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
     repository: Annotated[MembershipRepository, Depends(get_membership_repository)],
 ) -> MembershipResponse:
+    existing_membership = GetMembership(repository=repository).execute(membership_id)
+    if existing_membership is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Membership not found.",
+        )
+
+    ensure_club_access(access, existing_membership.club_id)
     try:
         membership = UpdateMembership(repository=repository).execute(
             membership_id,
@@ -128,8 +159,17 @@ def update_membership(
 @router.delete("/{membership_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_membership(
     membership_id: str,
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
     repository: Annotated[MembershipRepository, Depends(get_membership_repository)],
 ) -> Response:
+    membership = GetMembership(repository=repository).execute(membership_id)
+    if membership is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Membership not found.",
+        )
+
+    ensure_club_access(access, membership.club_id)
     deleted = DeleteMembership(repository=repository).execute(membership_id)
     if not deleted:
         raise HTTPException(

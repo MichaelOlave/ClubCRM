@@ -2,6 +2,7 @@ import { fetchApiJson, fetchApiJsonOrNull } from "@/lib/api/server-data";
 import type {
   BackendAnnouncementRecord,
   BackendClubRecord,
+  BackendClubManagerGrantRecord,
   BackendEventRecord,
   BackendJoinRequestApprovalRecord,
   BackendJoinRequestModerationRecord,
@@ -66,6 +67,37 @@ export async function updateClubApi(
       body: JSON.stringify(payload),
     })
   ).data;
+}
+
+export async function listClubManagerGrantsApi(
+  clubId: string
+): Promise<BackendClubManagerGrantRecord[]> {
+  return (await fetchApiJson<BackendClubManagerGrantRecord[]>(`/clubs/${clubId}/manager-grants`))
+    .data;
+}
+
+export async function createClubManagerGrantApi(
+  clubId: string,
+  payload: {
+    member_id: string;
+    role_name: string;
+  }
+): Promise<BackendClubManagerGrantRecord> {
+  return (
+    await fetchApiJson<BackendClubManagerGrantRecord>(`/clubs/${clubId}/manager-grants`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+  ).data;
+}
+
+export async function deleteClubManagerGrantApi(clubId: string, grantId: string): Promise<void> {
+  await fetchApiJson(`/clubs/${clubId}/manager-grants/${grantId}`, {
+    method: "DELETE",
+  });
 }
 
 export async function listMembersApi(organizationId: string): Promise<BackendMemberRecord[]> {

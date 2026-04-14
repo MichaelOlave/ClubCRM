@@ -2,6 +2,7 @@ from src.infrastructure.postgres.models.base import Base
 from src.infrastructure.postgres.models.tables import (
     AdminUserModel,
     AnnouncementModel,
+    AuthUserBindingModel,
     ClubManagerRoleModel,
     ClubModel,
     EventModel,
@@ -17,6 +18,7 @@ __all__ = [
     "MemberModel",
     "MembershipModel",
     "AdminUserModel",
+    "AuthUserBindingModel",
     "ClubManagerRoleModel",
     "EventModel",
     "AnnouncementModel",

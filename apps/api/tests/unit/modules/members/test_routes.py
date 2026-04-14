@@ -2,7 +2,7 @@
 import unittest
 from datetime import UTC, datetime
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from fastapi.testclient import TestClient
 
 from helpers import add_api_root_to_path
@@ -10,10 +10,20 @@ from helpers import add_api_root_to_path
 add_api_root_to_path()
 
 from src.bootstrap.dependencies import get_member_repository
+from src.modules.auth.domain.entities import AppAccess
+from src.modules.auth.presentation.http.dependencies import require_org_admin_access
 from src.modules.members.application.models import CreateMemberInput, UpdateMemberInput
 from src.modules.members.application.ports.member_repository import MemberRepository
 from src.modules.members.domain.entities import Member
 from src.modules.members.presentation.http.routes import router
+
+
+def build_org_admin_access() -> AppAccess:
+    return AppAccess(
+        primary_role="org_admin",
+        organization_id="org-1",
+        managed_club_ids=(),
+    )
 
 
 class FakeMemberRepository(MemberRepository):
@@ -34,9 +44,7 @@ class FakeMemberRepository(MemberRepository):
 
     def list_members(self, organization_id: str) -> list[Member]:
         return [
-            member
-            for member in self.members.values()
-            if member.organization_id == organization_id
+            member for member in self.members.values() if member.organization_id == organization_id
         ]
 
     def get_member(self, member_id: str) -> Member | None:
@@ -74,6 +82,16 @@ class FakeMemberRepository(MemberRepository):
         self.members[member_id] = updated
         return updated
 
+    def find_by_email(self, organization_id: str, email: str) -> Member | None:
+        return next(
+            (
+                member
+                for member in self.members.values()
+                if member.organization_id == organization_id and member.email == email
+            ),
+            None,
+        )
+
     def delete_member(self, member_id: str) -> bool:
         return self.members.pop(member_id, None) is not None
 
@@ -84,6 +102,7 @@ class MemberRouteTests(unittest.TestCase):
         self.app = FastAPI()
         self.app.include_router(router)
         self.app.dependency_overrides[get_member_repository] = lambda: self.repository
+        self.app.dependency_overrides[require_org_admin_access] = build_org_admin_access
         self.client = TestClient(self.app)
 
     def tearDown(self) -> None:
@@ -137,3 +156,16 @@ class MemberRouteTests(unittest.TestCase):
         response = self.client.get("/members/does-not-exist")
 
         self.assertEqual(response.status_code, 404)
+
+    def test_club_manager_is_rejected_from_member_directory_routes(self) -> None:
+        def reject_org_admin_access() -> AppAccess:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Organization admin access is required for this action.",
+            )
+
+        self.app.dependency_overrides[require_org_admin_access] = reject_org_admin_access
+
+        response = self.client.get("/members/", params={"organization_id": "org-1"})
+
+        self.assertEqual(response.status_code, 403)

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from src.config import get_settings
 from src.infrastructure.postgres.client import PostgresClient
 from src.infrastructure.postgres.models.tables import (
+    AdminUserModel,
     AnnouncementModel,
     ClubModel,
     EventModel,
@@ -38,6 +39,15 @@ def seed(client: PostgresClient | None = None) -> bool:
         )
         session.add(org)
         session.flush()
+
+        session.add(
+            AdminUserModel(
+                id=str(uuid.uuid4()),
+                organization_id=org.id,
+                email="developer@clubcrm.local",
+                is_active=True,
+            )
+        )
 
         club = ClubModel(
             id=str(uuid.uuid4()),

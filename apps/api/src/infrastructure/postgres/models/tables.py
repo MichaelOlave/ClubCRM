@@ -97,6 +97,9 @@ class MemberModel(Base):
     manager_roles: Mapped[list["ClubManagerRoleModel"]] = relationship(
         "ClubManagerRoleModel", back_populates="member"
     )
+    auth_bindings: Mapped[list["AuthUserBindingModel"]] = relationship(
+        "AuthUserBindingModel", back_populates="member"
+    )
 
 
 class MembershipModel(Base):
@@ -126,17 +129,51 @@ class AdminUserModel(Base):
         String(36), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
     )
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     organization: Mapped["OrganizationModel"] = relationship(
         "OrganizationModel", back_populates="admin_users"
     )
+    auth_bindings: Mapped[list["AuthUserBindingModel"]] = relationship(
+        "AuthUserBindingModel", back_populates="admin_user"
+    )
+
+
+class AuthUserBindingModel(Base):
+    __tablename__ = "auth_user_bindings"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    provider_subject: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    admin_user_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("admin_users.id", ondelete="SET NULL"),
+        nullable=True,
+        unique=True,
+    )
+    member_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("members.id", ondelete="SET NULL"),
+        nullable=True,
+        unique=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_now, onupdate=_now
+    )
+
+    admin_user: Mapped["AdminUserModel | None"] = relationship(
+        "AdminUserModel", back_populates="auth_bindings"
+    )
+    member: Mapped["MemberModel | None"] = relationship(
+        "MemberModel", back_populates="auth_bindings"
+    )
 
 
 class ClubManagerRoleModel(Base):
     __tablename__ = "club_manager_roles"
+    __table_args__ = (UniqueConstraint("club_id", "member_id", name="uq_manager_role_club_member"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     club_id: Mapped[str] = mapped_column(

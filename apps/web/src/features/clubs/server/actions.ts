@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createClubApi, updateClubApi } from "@/lib/api/clubcrm";
+import {
+  createClubApi,
+  createClubManagerGrantApi,
+  deleteClubManagerGrantApi,
+  updateClubApi,
+} from "@/lib/api/clubcrm";
 import { getApiErrorMessage } from "@/lib/api/server-data";
 import { buildPathWithSearchParams, getOptionalString, getRequiredString } from "@/lib/forms";
 
@@ -65,6 +70,70 @@ export async function updateClubAction(formData: FormData) {
     redirect(
       buildPathWithSearchParams(detailPath, {
         clubUpdateError: getApiErrorMessage(error, "The club could not be updated right now."),
+      })
+    );
+  }
+
+  redirect(successRedirectPath);
+}
+
+export async function createClubManagerGrantAction(formData: FormData) {
+  const clubId = getRequiredString(formData, "clubId", "Club");
+  const memberId = getRequiredString(formData, "memberId", "Member");
+  const roleName = getRequiredString(formData, "roleName", "Manager title");
+  const detailPath = `/clubs/${clubId}`;
+  let successRedirectPath = detailPath;
+
+  try {
+    const grant = await createClubManagerGrantApi(clubId, {
+      member_id: memberId,
+      role_name: roleName,
+    });
+
+    revalidatePath("/clubs");
+    revalidatePath(detailPath);
+    revalidatePath("/dashboard");
+
+    successRedirectPath = buildPathWithSearchParams(detailPath, {
+      managerGrantCreated: `${grant.member_name} can now manage this club as ${grant.role_name}.`,
+    });
+  } catch (error) {
+    redirect(
+      buildPathWithSearchParams(detailPath, {
+        managerGrantError: getApiErrorMessage(
+          error,
+          "The club manager grant could not be created right now."
+        ),
+      })
+    );
+  }
+
+  redirect(successRedirectPath);
+}
+
+export async function deleteClubManagerGrantAction(formData: FormData) {
+  const clubId = getRequiredString(formData, "clubId", "Club");
+  const grantId = getRequiredString(formData, "grantId", "Manager grant");
+  const detailPath = `/clubs/${clubId}`;
+  let successRedirectPath = detailPath;
+
+  try {
+    await deleteClubManagerGrantApi(clubId, grantId);
+
+    revalidatePath("/clubs");
+    revalidatePath(detailPath);
+    revalidatePath("/dashboard");
+
+    successRedirectPath = buildPathWithSearchParams(detailPath, {
+      managerGrantDeleted: "Club manager access has been revoked.",
+    });
+  } catch (error) {
+    redirect(
+      buildPathWithSearchParams(detailPath, {
+        managerGrantError: getApiErrorMessage(
+          error,
+          "The club manager grant could not be removed right now."
+        ),
       })
     );
   }

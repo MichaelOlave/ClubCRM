@@ -25,6 +25,11 @@ from src.modules.announcements.application.queries.get_announcement import (
 from src.modules.announcements.application.queries.list_announcements import (
     ListAnnouncements,
 )
+from src.modules.auth.domain.entities import AppAccess
+from src.modules.auth.presentation.http.dependencies import (
+    ensure_club_access,
+    require_authorized_access,
+)
 
 router = APIRouter(prefix="/announcements", tags=["announcements"])
 
@@ -60,8 +65,10 @@ def _to_announcement_read(announcement) -> AnnouncementRead:
 @router.get("", response_model=list[AnnouncementRead])
 def list_announcements(
     club_id: str,
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
     repository: Annotated[AnnouncementRepository, Depends(get_announcement_repository)],
 ) -> list[AnnouncementRead]:
+    ensure_club_access(access, club_id)
     announcements = ListAnnouncements(repository=repository).execute(club_id)
     return [_to_announcement_read(announcement) for announcement in announcements]
 
@@ -69,6 +76,7 @@ def list_announcements(
 @router.get("/{announcement_id}", response_model=AnnouncementRead)
 def get_announcement(
     announcement_id: str,
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
     repository: Annotated[AnnouncementRepository, Depends(get_announcement_repository)],
 ) -> AnnouncementRead:
     try:
@@ -76,14 +84,17 @@ def get_announcement(
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
+    ensure_club_access(access, announcement.club_id)
     return _to_announcement_read(announcement)
 
 
 @router.post("", response_model=AnnouncementRead, status_code=status.HTTP_201_CREATED)
 def create_announcement(
     payload: AnnouncementCreateRequest,
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
     repository: Annotated[AnnouncementRepository, Depends(get_announcement_repository)],
 ) -> AnnouncementRead:
+    ensure_club_access(access, payload.club_id)
     try:
         announcement = CreateAnnouncement(repository=repository).execute(
             club_id=payload.club_id,
@@ -102,8 +113,15 @@ def create_announcement(
 def update_announcement(
     announcement_id: str,
     payload: AnnouncementUpdateRequest,
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
     repository: Annotated[AnnouncementRepository, Depends(get_announcement_repository)],
 ) -> AnnouncementRead:
+    try:
+        existing_announcement = GetAnnouncement(repository=repository).execute(announcement_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    ensure_club_access(access, existing_announcement.club_id)
     try:
         announcement = UpdateAnnouncement(repository=repository).execute(
             announcement_id,
@@ -123,11 +141,14 @@ def update_announcement(
 @router.delete("/{announcement_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_announcement(
     announcement_id: str,
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
     repository: Annotated[AnnouncementRepository, Depends(get_announcement_repository)],
 ) -> Response:
     try:
-        DeleteAnnouncement(repository=repository).execute(announcement_id)
+        announcement = GetAnnouncement(repository=repository).execute(announcement_id)
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    ensure_club_access(access, announcement.club_id)
+    DeleteAnnouncement(repository=repository).execute(announcement_id)
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -6,6 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 
 from src.bootstrap.dependencies import get_event_repository
+from src.modules.auth.domain.entities import AppAccess
+from src.modules.auth.presentation.http.dependencies import (
+    ensure_club_access,
+    require_authorized_access,
+)
 from src.modules.events.application.commands.create_event import CreateEvent
 from src.modules.events.application.commands.delete_event import DeleteEvent
 from src.modules.events.application.commands.update_event import UpdateEvent
@@ -54,8 +59,10 @@ def _to_event_read(event) -> EventRead:
 @router.get("", response_model=list[EventRead])
 def list_events(
     club_id: str,
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
     repository: Annotated[EventRepository, Depends(get_event_repository)],
 ) -> list[EventRead]:
+    ensure_club_access(access, club_id)
     events = ListEvents(repository=repository).execute(club_id)
     return [_to_event_read(event) for event in events]
 
@@ -63,6 +70,7 @@ def list_events(
 @router.get("/{event_id}", response_model=EventRead)
 def get_event(
     event_id: str,
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
     repository: Annotated[EventRepository, Depends(get_event_repository)],
 ) -> EventRead:
     try:
@@ -70,14 +78,17 @@ def get_event(
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
+    ensure_club_access(access, event.club_id)
     return _to_event_read(event)
 
 
 @router.post("", response_model=EventRead, status_code=status.HTTP_201_CREATED)
 def create_event(
     payload: EventCreateRequest,
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
     repository: Annotated[EventRepository, Depends(get_event_repository)],
 ) -> EventRead:
+    ensure_club_access(access, payload.club_id)
     try:
         event = CreateEvent(repository=repository).execute(
             club_id=payload.club_id,
@@ -97,8 +108,15 @@ def create_event(
 def update_event(
     event_id: str,
     payload: EventUpdateRequest,
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
     repository: Annotated[EventRepository, Depends(get_event_repository)],
 ) -> EventRead:
+    try:
+        existing_event = GetEvent(repository=repository).execute(event_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    ensure_club_access(access, existing_event.club_id)
     try:
         event = UpdateEvent(repository=repository).execute(
             event_id,
@@ -119,11 +137,14 @@ def update_event(
 @router.delete("/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_event(
     event_id: str,
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
     repository: Annotated[EventRepository, Depends(get_event_repository)],
 ) -> Response:
     try:
-        DeleteEvent(repository=repository).execute(event_id)
+        event = GetEvent(repository=repository).execute(event_id)
     except LookupError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    ensure_club_access(access, event.club_id)
+    DeleteEvent(repository=repository).execute(event_id)
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
