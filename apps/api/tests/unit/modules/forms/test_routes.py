@@ -16,6 +16,8 @@ from src.bootstrap.dependencies import (
     get_member_repository,
     get_membership_repository,
 )
+from src.modules.auth.domain.entities import AppAccess
+from src.modules.auth.presentation.http.dependencies import require_authorized_access
 from src.modules.forms.application.ports.form_submission_publisher import FormSubmissionPublisher
 from src.modules.forms.application.ports.join_request_store import JoinRequestStore
 from src.modules.forms.domain.entities import JoinRequest
@@ -25,12 +27,25 @@ from src.modules.members.application.ports.member_repository import MemberReposi
 from src.modules.members.domain.entities import Member
 from src.modules.memberships.application.ports.membership_repository import MembershipRepository
 from src.modules.memberships.domain.entities import Membership
-from src.presentation.http.request_context import (
-    get_authenticated_request_context,
-    get_authenticated_write_context,
-)
+from src.presentation.http.request_context import get_authenticated_write_context
 
 from tests.audit_fakes import FakeAuditLogRepository, build_authenticated_request_context
+
+
+def build_org_admin_access() -> AppAccess:
+    return AppAccess(
+        primary_role="org_admin",
+        organization_id="org-1",
+        managed_club_ids=(),
+    )
+
+
+def build_club_manager_access(*club_ids: str) -> AppAccess:
+    return AppAccess(
+        primary_role="club_manager",
+        organization_id="org-1",
+        managed_club_ids=tuple(club_ids),
+    )
 
 
 class FakeJoinRequestStore(JoinRequestStore):
@@ -201,14 +216,10 @@ class JoinRequestRouteTests(unittest.TestCase):
         self.app.dependency_overrides[get_member_repository] = lambda: self.members
         self.app.dependency_overrides[get_membership_repository] = lambda: self.memberships
         self.app.dependency_overrides[get_audit_log_repository] = lambda: self.audit_repository
-        self.app.dependency_overrides[get_authenticated_request_context] = (
-            lambda: build_authenticated_request_context(
-                api_route="/forms/join-requests/{club_id}/pending", http_method="GET"
-            )
-        )
         self.app.dependency_overrides[get_authenticated_write_context] = (
             lambda: build_authenticated_request_context()
         )
+        self.app.dependency_overrides[require_authorized_access] = build_org_admin_access
         self.client = TestClient(self.app)
 
     def tearDown(self) -> None:
@@ -357,7 +368,7 @@ class JoinRequestRouteTests(unittest.TestCase):
         self.assertEqual(body[0]["message"], "I love chess.")
 
     def test_list_pending_join_requests_requires_authentication(self) -> None:
-        self.app.dependency_overrides.pop(get_authenticated_request_context, None)
+        self.app.dependency_overrides.pop(require_authorized_access, None)
 
         response = self.client.get("/forms/join-requests/club-1/pending")
 
@@ -391,6 +402,7 @@ class JoinRequestRouteTests(unittest.TestCase):
         self.assertEqual(
             created_member.student_id if created_member is not None else None, "S12345"
         )
+        self.assertEqual(len(self.audit_repository.audit_logs), 1)
 
     def test_deny_join_request_marks_request_denied(self) -> None:
         self.store = FakeJoinRequestStore(
@@ -410,3 +422,55 @@ class JoinRequestRouteTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "denied")
+        self.assertEqual(len(self.audit_repository.audit_logs), 1)
+
+    def test_club_manager_can_review_requests_for_an_assigned_club(self) -> None:
+        self.app.dependency_overrides[require_authorized_access] = (
+            lambda: build_club_manager_access("club-1")
+        )
+        self.store = FakeJoinRequestStore(
+            seeded=[
+                JoinRequest(
+                    id="join-1",
+                    organization_id="org-1",
+                    club_id="club-1",
+                    submitter_name="Taylor Student",
+                    submitter_email="taylor@example.edu",
+                )
+            ]
+        )
+        self.app.dependency_overrides[get_join_request_store] = lambda: self.store
+
+        response = self.client.get("/forms/join-requests/club-1/pending")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()), 1)
+
+    def test_club_manager_is_rejected_for_join_requests_on_other_clubs(self) -> None:
+        self.app.dependency_overrides[require_authorized_access] = (
+            lambda: build_club_manager_access("club-1")
+        )
+        self.store = FakeJoinRequestStore(
+            seeded=[
+                JoinRequest(
+                    id="join-9",
+                    organization_id="org-1",
+                    club_id="club-9",
+                    submitter_name="Taylor Student",
+                    submitter_email="taylor@example.edu",
+                )
+            ]
+        )
+        self.app.dependency_overrides[get_join_request_store] = lambda: self.store
+
+        pending_response = self.client.get("/forms/join-requests/club-9/pending")
+        self.assertEqual(pending_response.status_code, 403)
+
+        approve_response = self.client.post(
+            "/forms/join-requests/join-9/approve",
+            json={"role": "member"},
+        )
+        self.assertEqual(approve_response.status_code, 403)
+
+        deny_response = self.client.post("/forms/join-requests/join-9/deny")
+        self.assertEqual(deny_response.status_code, 403)

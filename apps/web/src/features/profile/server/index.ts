@@ -1,7 +1,8 @@
 import { cookies, headers } from "next/headers";
 
-import { getBackendAuthSession, getBackendLoginUrl } from "@/features/auth/server/authApi";
-import type { BackendAuthUser } from "@/features/auth/types";
+import { isOrgAdminBackendAuthSession } from "@/features/auth/server";
+import { getBackendLoginUrl } from "@/features/auth/server/authApi";
+import type { AuthorizedBackendAuthSession, BackendAuthUser } from "@/features/auth/types";
 import type {
   ProfileBadge,
   ProfileCheck,
@@ -47,13 +48,19 @@ function maskValue(value: string | null | undefined): string {
   return `${value.slice(0, 6)}...${value.slice(-4)} (${value.length} chars)`;
 }
 
-function buildSummary(user: BackendAuthUser | null): ProfileSummary {
+function buildSummary(session: AuthorizedBackendAuthSession): ProfileSummary {
+  const { access, user } = session;
+  const isOrgAdmin = isOrgAdminBackendAuthSession(session);
   const badges: ProfileBadge[] = [
     {
-      label: "Authenticated session",
+      label: "Authorized session",
       tone: "success",
     },
-    user?.email_verified
+    {
+      label: isOrgAdmin ? "Organization admin" : "Club manager",
+      tone: isOrgAdmin ? "success" : "secondary",
+    },
+    user.email_verified
       ? {
           label: "Email verified",
           tone: "success",
@@ -62,7 +69,7 @@ function buildSummary(user: BackendAuthUser | null): ProfileSummary {
           label: "Email unverified",
           tone: "warning",
         },
-    user?.picture
+    user.picture
       ? {
           label: "Picture stored",
           tone: "secondary",
@@ -71,56 +78,86 @@ function buildSummary(user: BackendAuthUser | null): ProfileSummary {
           label: "No picture stored",
           tone: "warning",
         },
+    ...(isOrgAdmin
+      ? []
+      : [
+          {
+            label: `${access.managedClubIds.length} managed club${access.managedClubIds.length === 1 ? "" : "s"}`,
+            tone: "secondary" as const,
+          },
+        ]),
   ];
 
   return {
     name: getDisplayName(user),
-    email: user?.email ?? "No email returned by the provider",
+    email: user.email ?? "No email returned by the provider",
     initials: getInitials(user),
     subtitle:
-      "The current MVP stores user-facing identity data in the backend auth session. This page shows that stored payload and the web request context used to validate it.",
+      "The backend-owned auth session now carries both identity and ClubCRM access context. This page shows the stored payload plus the request details used to validate it.",
     badges,
   };
 }
 
-function buildPersonalFields(user: BackendAuthUser | null): ProfileField[] {
+function buildPersonalFields(session: AuthorizedBackendAuthSession): ProfileField[] {
+  const { access, user } = session;
+
   return [
     {
       label: "Subject",
-      value: user?.sub ?? "Unavailable",
+      value: user.sub,
       helperText: "Stable identity identifier currently stored in the backend auth session.",
       isCode: true,
     },
     {
       label: "Full name",
-      value: user?.name ?? "Not provided",
+      value: user.name ?? "Not provided",
       helperText: "Display name returned by the identity provider for this session.",
     },
     {
       label: "Email address",
-      value: user?.email ?? "Not provided",
+      value: user.email ?? "Not provided",
       helperText: "Email value currently attached to this signed-in session.",
     },
     {
       label: "Email verified",
-      value: user ? (user.email_verified ? "Yes" : "No") : "Unknown",
+      value: user.email_verified ? "Yes" : "No",
       helperText: "Boolean flag provided by the backend auth payload.",
     },
     {
       label: "Picture URL",
-      value: user?.picture ?? "Not provided",
+      value: user.picture ?? "Not provided",
       helperText: "Optional profile image URL if the auth provider supplied one.",
-      isCode: Boolean(user?.picture),
+      isCode: Boolean(user.picture),
+    },
+    {
+      label: "Primary role",
+      value: access.primaryRole === "org_admin" ? "Organization admin" : "Club manager",
+      helperText: "Authorization role currently granted inside ClubCRM.",
+    },
+    {
+      label: "Organization ID",
+      value: access.organizationId,
+      helperText: "Organization scope attached to the current ClubCRM access grant.",
+      isCode: true,
+    },
+    {
+      label: "Managed clubs",
+      value: access.managedClubIds.length ? access.managedClubIds.join("\n") : "None",
+      helperText:
+        "Club identifiers attached to this access grant. Organization admins keep full club access even when this list is empty.",
+      isCode: true,
     },
   ];
 }
 
 function buildSessionChecks({
+  access,
   csrfCookie,
   csrfToken,
   requestSessionCookie,
   sessionEndpoint,
 }: {
+  access: AuthorizedBackendAuthSession["access"];
   csrfCookie: string | null;
   csrfToken: string | null;
   requestSessionCookie: string | null;
@@ -134,7 +171,9 @@ function buildSessionChecks({
       label: "Protected app access",
       value: "Passed",
       description:
-        "This route rendered inside the authenticated admin shell, so the backend session gate already succeeded for the request.",
+        access.primaryRole === "org_admin"
+          ? "This route rendered inside the authorized organization-admin shell, so the backend session gate already succeeded for the request."
+          : "This route rendered inside the authorized club-manager shell, so the backend session gate already succeeded for the request.",
       status: "pass",
     },
     {
@@ -161,6 +200,16 @@ function buildSessionChecks({
       description:
         "The backend session route should return a CSRF token for protected actions such as logout.",
       status: csrfToken ? "pass" : "warn",
+    },
+    {
+      label: "ClubCRM access context",
+      value:
+        access.primaryRole === "org_admin"
+          ? "Full organization access"
+          : `${access.managedClubIds.length} managed club${access.managedClubIds.length === 1 ? "" : "s"}`,
+      description:
+        "The backend session now includes the provisioned role and any club-manager grant scope required for protected routes.",
+      status: "pass",
     },
     {
       label: "CSRF cookie alignment",
@@ -199,7 +248,7 @@ function buildRequestFields({
     {
       label: "Session endpoint",
       value: sessionEndpoint,
-      helperText: "Internal API endpoint that successfully returned the auth session payload.",
+      helperText: "Internal API endpoint used to load the auth session payload.",
       isCode: true,
     },
     {
@@ -253,29 +302,22 @@ function buildRequestFields({
   ];
 }
 
-export async function getProfileViewModel(): Promise<ProfileViewModel> {
-  const sessionResult = await getBackendAuthSession();
+export async function getProfileViewModel(
+  session: AuthorizedBackendAuthSession
+): Promise<ProfileViewModel> {
   const cookieStore = await cookies();
   const requestHeaders = await headers();
   const renderedAt = new Date().toISOString();
+  const sessionEndpoint = `${getInternalApiBaseUrls()[0] ?? "http://localhost:8000"}/auth/session`;
 
   const requestSessionCookie = cookieStore.get(env.authSessionCookieName)?.value ?? null;
   const csrfCookie = cookieStore.get(env.authCsrfCookieName)?.value ?? null;
-  const session =
-    sessionResult.status === "available"
-      ? sessionResult.session
-      : {
-          authenticated: false,
-          csrfToken: null,
-          user: null,
-        };
-
-  const sessionEndpoint = sessionResult.endpoint;
 
   return {
-    summary: buildSummary(session.user),
-    personalFields: buildPersonalFields(session.user),
+    summary: buildSummary(session),
+    personalFields: buildPersonalFields(session),
     sessionChecks: buildSessionChecks({
+      access: session.access,
       csrfCookie,
       csrfToken: session.csrfToken,
       requestSessionCookie,
@@ -296,6 +338,8 @@ export async function getProfileViewModel(): Promise<ProfileViewModel> {
         publicApiBaseUrl: getPublicApiBaseUrl(),
         internalApiTargets: getInternalApiBaseUrls(),
         authenticated: session.authenticated,
+        authorized: session.authorized,
+        access: session.access,
         user: session.user,
         csrfTokenPreview: maskValue(session.csrfToken),
         cookies: {

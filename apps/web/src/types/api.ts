@@ -112,6 +112,18 @@ export type BackendMembershipRecord = {
   role: string;
   status: string;
   joined_at: string | null;
+  club_name?: string | null;
+  member_name?: string | null;
+};
+
+export type BackendClubManagerGrantRecord = {
+  id: string;
+  club_id: string;
+  member_id: string;
+  role_name: string;
+  assigned_at: string;
+  member_email: string;
+  member_name: string;
 };
 
 export type BackendJoinRequestRecord = {

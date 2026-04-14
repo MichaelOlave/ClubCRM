@@ -1,5 +1,8 @@
+import { cookies, headers } from "next/headers";
+
 import { apiFetch } from "@/lib/api/client";
 import { buildApiUrl, getInternalApiBaseUrls } from "@/lib/api/server";
+import { env } from "@/lib/env/server";
 
 type ApiJsonResponse<T> = {
   data: T;
@@ -50,6 +53,30 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+async function buildForwardedHeaders(init?: RequestInit): Promise<Headers> {
+  const forwardedHeaders = new Headers(init?.headers);
+  const requestHeaders = await headers();
+  const cookieHeader = requestHeaders.get("cookie");
+
+  if (cookieHeader && !forwardedHeaders.has("cookie")) {
+    forwardedHeaders.set("cookie", cookieHeader);
+  }
+
+  const method = (init?.method ?? "GET").toUpperCase();
+  if (
+    !["GET", "HEAD", "OPTIONS"].includes(method) &&
+    !forwardedHeaders.has(env.authCsrfHeaderName)
+  ) {
+    const cookieStore = await cookies();
+    const csrfToken = cookieStore.get(env.authCsrfCookieName)?.value;
+    if (csrfToken) {
+      forwardedHeaders.set(env.authCsrfHeaderName, csrfToken);
+    }
+  }
+
+  return forwardedHeaders;
+}
+
 export async function fetchApiJson<T>(
   path: string,
   init?: RequestInit
@@ -61,6 +88,7 @@ export async function fetchApiJson<T>(
       const response = await apiFetch(endpoint, {
         cache: init?.cache ?? "no-store",
         ...init,
+        headers: await buildForwardedHeaders(init),
       });
 
       if (!response.ok) {

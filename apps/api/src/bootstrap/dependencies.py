@@ -12,6 +12,7 @@ from src.infrastructure.postgres.repositories.announcements import (
     PostgresAnnouncementRepository,
 )
 from src.infrastructure.postgres.repositories.audit import PostgresAuditLogRepository
+from src.infrastructure.postgres.repositories.auth import PostgresAuthorizationRepository
 from src.infrastructure.postgres.repositories.clubs import PostgresClubRepository
 from src.infrastructure.postgres.repositories.dashboard import PostgresDashboardRepository
 from src.infrastructure.postgres.repositories.events import PostgresEventRepository
@@ -28,6 +29,7 @@ from src.modules.announcements.application.ports.announcement_repository import 
 )
 from src.modules.audit.application.ports.audit_log_repository import AuditLogRepository
 from src.modules.auth.application.ports.auth_session_store import AuthSessionStore
+from src.modules.auth.application.ports.authorization_repository import AuthorizationRepository
 from src.modules.auth.application.ports.identity_provider import AuthIdentityProvider
 from src.modules.clubs.application.ports.club_event_publisher import ClubEventPublisher
 from src.modules.clubs.application.ports.club_repository import ClubRepository
@@ -97,6 +99,10 @@ def get_optional_auth_identity_provider() -> AuthIdentityProvider | None:
         client_secret=auth_settings.auth0_client_secret or "",
         scopes=auth_settings.auth0_scopes,
     )
+
+
+def get_authorization_repository() -> AuthorizationRepository:
+    return PostgresAuthorizationRepository(client=get_postgres_client())
 
 
 def get_auth_identity_provider() -> AuthIdentityProvider:

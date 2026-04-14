@@ -4,11 +4,15 @@ from secrets import compare_digest, token_urlsafe
 
 from fastapi import HTTPException, Request, Response, status
 
-from src.bootstrap.dependencies import get_auth_session_store
+from src.bootstrap.dependencies import get_auth_session_store, get_authorization_repository
 from src.config import get_settings
+from src.modules.auth.application.commands.resolve_authorized_access import (
+    ResolveAuthorizedAccess,
+)
 from src.modules.auth.application.ports.auth_session_store import AuthSessionRecord
 from src.modules.auth.application.queries.get_current_user import GetCurrentUser
-from src.modules.auth.domain.entities import CurrentUser
+from src.modules.auth.application.queries.get_session_access import GetSessionAccess
+from src.modules.auth.domain.entities import AppAccess, CurrentUser
 
 
 def build_developer_bypass_user() -> CurrentUser:
@@ -23,11 +27,13 @@ def build_developer_bypass_user() -> CurrentUser:
 def _build_auth_session_record(
     *,
     user: dict[str, object] | None,
+    access: dict[str, object] | None,
     csrf_token: str | None,
     auth_flow_state: str | None,
 ) -> AuthSessionRecord:
     return AuthSessionRecord(
         user=user,
+        access=access,
         csrf_token=csrf_token,
         auth_flow_state=auth_flow_state,
         created_at=datetime.now(UTC).isoformat(),
@@ -74,12 +80,59 @@ def get_session_user(request: Request) -> CurrentUser | None:
         return None
 
 
-def persist_session_user(request: Request, current_user: CurrentUser) -> tuple[str, str]:
+def _serialize_session_access(access: AppAccess | None) -> dict[str, object] | None:
+    if access is None:
+        return None
+
+    return {
+        "primary_role": access.primary_role,
+        "organization_id": access.organization_id,
+        "managed_club_ids": list(access.managed_club_ids),
+    }
+
+
+def serialize_access_for_response(access: AppAccess | None) -> dict[str, object] | None:
+    if access is None:
+        return None
+
+    return {
+        "primaryRole": access.primary_role,
+        "organizationId": access.organization_id,
+        "managedClubIds": list(access.managed_club_ids),
+    }
+
+
+def get_session_access(request: Request) -> AppAccess | None:
+    auth_session = _get_auth_session(request)
+    if auth_session is None:
+        return None
+
+    session_id, session_record = auth_session
+    session_payload = session_record.access
+    if session_payload is None:
+        return None
+    if not isinstance(session_payload, dict):
+        get_auth_session_store().save(session_id, replace(session_record, access=None))
+        return None
+
+    try:
+        return GetSessionAccess().execute(session_payload)
+    except ValueError:
+        get_auth_session_store().save(session_id, replace(session_record, access=None))
+        return None
+
+
+def persist_session_user(
+    request: Request,
+    current_user: CurrentUser,
+    access: AppAccess | None = None,
+) -> tuple[str, str]:
     clear_auth_session(request)
     csrf_token = token_urlsafe(32)
     session_id = get_auth_session_store().create(
         _build_auth_session_record(
             user=asdict(current_user),
+            access=_serialize_session_access(access),
             csrf_token=csrf_token,
             auth_flow_state=None,
         )
@@ -121,6 +174,7 @@ def begin_auth_flow(request: Request) -> tuple[str, str]:
     session_id = get_auth_session_store().create(
         _build_auth_session_record(
             user=None,
+            access=None,
             csrf_token=None,
             auth_flow_state=auth_flow_state,
         )
@@ -201,6 +255,29 @@ def clear_csrf_cookie(response: Response) -> None:
     )
 
 
+def refresh_session_access(request: Request) -> AppAccess | None:
+    auth_session = _get_auth_session(request)
+    if auth_session is None:
+        return None
+
+    session_id, session_record = auth_session
+    current_user = get_session_user(request)
+    if current_user is None:
+        return None
+
+    resolved_access = ResolveAuthorizedAccess(repository=get_authorization_repository()).execute(
+        current_user
+    )
+    next_access_payload = _serialize_session_access(resolved_access.access)
+    if session_record.access != next_access_payload:
+        get_auth_session_store().save(
+            session_id,
+            replace(session_record, access=next_access_payload),
+        )
+
+    return resolved_access.access
+
+
 def require_authenticated_user(request: Request) -> CurrentUser:
     current_user = get_session_user(request)
     if current_user is None:
@@ -210,6 +287,40 @@ def require_authenticated_user(request: Request) -> CurrentUser:
         )
 
     return current_user
+
+
+def require_authorized_access(request: Request) -> AppAccess:
+    require_authenticated_user(request)
+    access = refresh_session_access(request)
+    if access is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="ClubCRM access is not provisioned for this account.",
+        )
+
+    return access
+
+
+def require_org_admin_access(request: Request) -> AppAccess:
+    access = require_authorized_access(request)
+    if access.primary_role != "org_admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Organization admin access is required for this action.",
+        )
+
+    return access
+
+
+def ensure_club_access(access: AppAccess, club_id: str) -> None:
+    if access.primary_role == "org_admin":
+        return
+
+    if club_id not in access.managed_club_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account does not have access to the requested club.",
+        )
 
 
 def require_csrf(request: Request) -> None:

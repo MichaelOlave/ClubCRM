@@ -10,6 +10,11 @@ from src.bootstrap.dependencies import (
 )
 from src.modules.audit.application.ports.audit_log_repository import AuditLogRepository
 from src.modules.audit.presentation.http.helpers import record_audit_action
+from src.modules.auth.domain.entities import AppAccess
+from src.modules.auth.presentation.http.dependencies import (
+    ensure_club_access,
+    require_authorized_access,
+)
 from src.modules.forms.application.commands.approve_join_request import ApproveJoinRequest
 from src.modules.forms.application.commands.deny_join_request import DenyJoinRequest
 from src.modules.forms.application.commands.submit_join_request import SubmitJoinRequest
@@ -23,7 +28,6 @@ from src.modules.members.application.ports.member_repository import MemberReposi
 from src.modules.memberships.application.ports.membership_repository import MembershipRepository
 from src.presentation.http.request_context import (
     AuthenticatedRequestContext,
-    get_authenticated_request_context,
     get_authenticated_write_context,
 )
 
@@ -127,9 +131,10 @@ def create_join_request(
 @router.get("/join-requests/{club_id}/pending", response_model=list[JoinRequestResponse])
 def list_pending_join_requests(
     club_id: str,
-    _context: AuthenticatedRequestContext = Depends(get_authenticated_request_context),  # noqa: B008
+    access: AppAccess = Depends(require_authorized_access),  # noqa: B008
     store: JoinRequestStore = Depends(get_join_request_store),  # noqa: B008
 ) -> list[JoinRequestResponse]:
+    ensure_club_access(access, club_id)
     results = ListPendingJoinRequests(store=store).execute(club_id)
     return [_to_response(r) for r in results]
 
@@ -142,11 +147,17 @@ def approve_join_request(
     join_request_id: str,
     body: ApproveBody,
     context: AuthenticatedRequestContext = Depends(get_authenticated_write_context),  # noqa: B008
+    access: AppAccess = Depends(require_authorized_access),  # noqa: B008
     store: JoinRequestStore = Depends(get_join_request_store),  # noqa: B008
     member_repository: MemberRepository = Depends(get_member_repository),  # noqa: B008
     membership_repository: MembershipRepository = Depends(get_membership_repository),  # noqa: B008
     audit_repository: AuditLogRepository = Depends(get_audit_log_repository),  # noqa: B008
 ) -> ApprovalResponse:
+    join_request = store.get(join_request_id)
+    if join_request is None:
+        raise HTTPException(status_code=404, detail="Join request not found.")
+
+    ensure_club_access(access, join_request.club_id)
     try:
         result = ApproveJoinRequest(
             join_request_store=store,
@@ -191,9 +202,15 @@ def approve_join_request(
 def deny_join_request(
     join_request_id: str,
     context: AuthenticatedRequestContext = Depends(get_authenticated_write_context),  # noqa: B008
+    access: AppAccess = Depends(require_authorized_access),  # noqa: B008
     store: JoinRequestStore = Depends(get_join_request_store),  # noqa: B008
     audit_repository: AuditLogRepository = Depends(get_audit_log_repository),  # noqa: B008
 ) -> ReviewResponse:
+    join_request = store.get(join_request_id)
+    if join_request is None:
+        raise HTTPException(status_code=404, detail="Join request not found.")
+
+    ensure_club_access(access, join_request.club_id)
     try:
         result = DenyJoinRequest(join_request_store=store).execute(join_request_id)
     except ValueError as exc:

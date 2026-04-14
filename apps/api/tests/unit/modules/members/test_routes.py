@@ -2,7 +2,7 @@
 import unittest
 from datetime import UTC, datetime
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from fastapi.testclient import TestClient
 
 from helpers import add_api_root_to_path
@@ -10,12 +10,23 @@ from helpers import add_api_root_to_path
 add_api_root_to_path()
 
 from src.bootstrap.dependencies import get_audit_log_repository, get_member_repository
+from src.modules.auth.domain.entities import AppAccess
+from src.modules.auth.presentation.http.dependencies import require_org_admin_access
 from src.modules.members.application.models import CreateMemberInput, UpdateMemberInput
 from src.modules.members.application.ports.member_repository import MemberRepository
 from src.modules.members.domain.entities import Member
 from src.modules.members.presentation.http.routes import router
 from src.presentation.http.request_context import get_authenticated_write_context
+
 from tests.audit_fakes import FakeAuditLogRepository, build_authenticated_request_context
+
+
+def build_org_admin_access() -> AppAccess:
+    return AppAccess(
+        primary_role="org_admin",
+        organization_id="org-1",
+        managed_club_ids=(),
+    )
 
 
 class FakeMemberRepository(MemberRepository):
@@ -99,6 +110,7 @@ class MemberRouteTests(unittest.TestCase):
         self.app.dependency_overrides[get_authenticated_write_context] = (
             lambda: build_authenticated_request_context()
         )
+        self.app.dependency_overrides[require_org_admin_access] = build_org_admin_access
         self.client = TestClient(self.app)
 
     def tearDown(self) -> None:
@@ -153,3 +165,16 @@ class MemberRouteTests(unittest.TestCase):
         response = self.client.get("/members/does-not-exist")
 
         self.assertEqual(response.status_code, 404)
+
+    def test_club_manager_is_rejected_from_member_directory_routes(self) -> None:
+        def reject_org_admin_access() -> AppAccess:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Organization admin access is required for this action.",
+            )
+
+        self.app.dependency_overrides[require_org_admin_access] = reject_org_admin_access
+
+        response = self.client.get("/members/", params={"organization_id": "org-1"})
+
+        self.assertEqual(response.status_code, 403)
