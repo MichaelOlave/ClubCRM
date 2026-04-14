@@ -46,8 +46,9 @@ The homepage currently redirects authenticated users to `/dashboard` and everyon
 - The web service waits for the API health check before it starts.
 - Most frontend data is currently provided by server-side view-model modules under `src/features/*/server`; `/system/health`, `/login`, and the protected admin route group now call into the FastAPI backend.
 - `API_BASE_URL` is the web server's preferred internal API target.
-- `WEB_API_PUBLIC_BASE_URL` should stay pointed at the browser-reachable API origin for auth redirects, and it also acts as a server-side fallback when the web app cannot reach the Docker hostname directly.
-- The admin shell now redirects unauthenticated requests to `/login` after checking the backend-owned session.
+- `WEB_API_PUBLIC_BASE_URL` should stay pointed at the browser-reachable API origin for direct API links and as a server-side fallback when the web app cannot reach the Docker hostname directly.
+- The web app proxies both auth start (`/api/auth/login`) and callback (`/auth/callback`) through the current browser origin so backend auth cookies stay aligned even when the devcontainer remaps ports or the browser host differs from `localhost`.
+- The admin shell now redirects unauthenticated requests to `/login` and authenticated-but-unprovisioned requests to `/not-provisioned` after checking the backend-owned session.
 - If you need to restart or validate the web app manually, use the root scripts from the workspace terminal.
 
 ## shadcn/ui

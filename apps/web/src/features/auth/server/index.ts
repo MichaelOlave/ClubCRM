@@ -3,10 +3,20 @@ import { redirect } from "next/navigation";
 import type {
   AuthorizedBackendAuthSession,
   BackendAuthSession,
+  BackendAuthUser,
   LoginViewModel,
   OrgAdminBackendAuthSession,
 } from "@/features/auth/types";
 import { getBackendAuthSession } from "@/features/auth/server/authApi";
+
+export function isAuthenticatedBackendAuthSession(
+  session: BackendAuthSession
+): session is BackendAuthSession & {
+  authenticated: true;
+  user: BackendAuthUser;
+} {
+  return session.authenticated && session.user !== null;
+}
 
 export function isAuthorizedBackendAuthSession(
   session: BackendAuthSession
@@ -31,11 +41,14 @@ export function canAccessClub(session: AuthorizedBackendAuthSession, clubId: str
 export async function requireAuthorizedBackendSession(): Promise<AuthorizedBackendAuthSession> {
   const sessionResult = await getBackendAuthSession();
 
-  if (
-    sessionResult.status !== "available" ||
-    !isAuthorizedBackendAuthSession(sessionResult.session)
-  ) {
+  if (sessionResult.status !== "available") {
     redirect("/login");
+  }
+
+  if (!isAuthorizedBackendAuthSession(sessionResult.session)) {
+    redirect(
+      isAuthenticatedBackendAuthSession(sessionResult.session) ? "/not-provisioned" : "/login"
+    );
   }
 
   return sessionResult.session;
