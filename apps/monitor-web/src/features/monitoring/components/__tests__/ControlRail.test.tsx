@@ -16,7 +16,7 @@ describe("ControlRail", () => {
         onContainerAction={onContainerAction}
         onPodRecycle={onPodRecycle}
         onVmPowerAction={onVmPowerAction}
-      />,
+      />
     );
 
     fireEvent.click(screen.getByRole("button", { name: "stop vm1" }));
@@ -38,7 +38,7 @@ describe("ControlRail", () => {
         onContainerAction={vi.fn()}
         onPodRecycle={vi.fn()}
         onVmPowerAction={vi.fn()}
-      />,
+      />
     );
 
     expect(screen.getByRole("button", { name: "stop vm1" })).toBeDisabled();

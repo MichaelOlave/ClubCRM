@@ -17,21 +17,21 @@ export function LatencyChart({ history, targetUrl }: Props) {
   const [activePointIndex, setActivePointIndex] = useState<number | null>(null);
   const strokeGradientId = `${useId().replaceAll(":", "")}-latencyStroke`;
   const visibleHistory = history.slice(-MAX_VISIBLE_POINTS);
-  const values = visibleHistory.flatMap((point) => (point.latency_ms == null ? [] : [point.latency_ms]));
+  const values = visibleHistory.flatMap((point) =>
+    point.latency_ms == null ? [] : [point.latency_ms]
+  );
   const scaleMaxValue = values.length > 0 ? Math.max(...values) : 0;
   const maxValue = Math.max(1, scaleMaxValue);
   const latestLatency = history.at(-1)?.latency_ms ?? null;
-  const averageLatency = values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+  const averageLatency =
+    values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
   const peakLatency = values.length > 0 ? Math.max(...values) : null;
   const chartPoints = visibleHistory.map((point, index) => {
     const x =
       visibleHistory.length <= 1
         ? WIDTH / 2
         : PADDING + (index / (visibleHistory.length - 1)) * (WIDTH - PADDING * 2);
-    const y =
-      HEIGHT -
-      PADDING -
-      ((point.latency_ms ?? 0) / maxValue) * (HEIGHT - PADDING * 2);
+    const y = HEIGHT - PADDING - ((point.latency_ms ?? 0) / maxValue) * (HEIGHT - PADDING * 2);
     return {
       x,
       y,
@@ -48,7 +48,7 @@ export function LatencyChart({ history, targetUrl }: Props) {
       value: Math.round(scaleMaxValue * ratio),
     };
   });
-  const activePoint = activePointIndex == null ? null : chartPoints[activePointIndex] ?? null;
+  const activePoint = activePointIndex == null ? null : (chartPoints[activePointIndex] ?? null);
   const firstSample = history[0]?.checked_at ?? null;
   const lastSample = history.at(-1)?.checked_at ?? null;
   const plottedSampleCount = visibleHistory.length;
@@ -95,11 +95,7 @@ export function LatencyChart({ history, targetUrl }: Props) {
       </div>
       <div className="relative mt-6 overflow-hidden rounded-[2rem] border border-border/70 bg-[linear-gradient(180deg,rgba(62,173,214,0.18),rgba(8,14,30,0.08))] p-4">
         {activePoint ? (
-          <ChartTooltip
-            point={activePoint.point}
-            x={activePoint.x}
-            y={activePoint.y}
-          />
+          <ChartTooltip point={activePoint.point} x={activePoint.x} y={activePoint.y} />
         ) : null}
         <svg
           aria-label="Latency chart"
@@ -124,12 +120,7 @@ export function LatencyChart({ history, targetUrl }: Props) {
                   stroke="rgba(210, 219, 234, 0.12)"
                   strokeDasharray="6 8"
                 />
-                <text
-                  fill="rgba(222, 230, 240, 0.72)"
-                  fontSize="11"
-                  x={2}
-                  y={tick.y + 4}
-                >
+                <text fill="rgba(222, 230, 240, 0.72)" fontSize="11" x={2} y={tick.y + 4}>
                   {tick.value} ms
                 </text>
               </g>
@@ -156,10 +147,14 @@ export function LatencyChart({ history, targetUrl }: Props) {
                   focusable="true"
                   r="12"
                   tabIndex={0}
-                  onBlur={() => setActivePointIndex((current) => (current === index ? null : current))}
+                  onBlur={() =>
+                    setActivePointIndex((current) => (current === index ? null : current))
+                  }
                   onFocus={() => setActivePointIndex(index)}
                   onMouseEnter={() => setActivePointIndex(index)}
-                  onMouseLeave={() => setActivePointIndex((current) => (current === index ? null : current))}
+                  onMouseLeave={() =>
+                    setActivePointIndex((current) => (current === index ? null : current))
+                  }
                 >
                   <title>{formatTooltipSummary(point)}</title>
                 </circle>
@@ -204,22 +199,15 @@ function LegendBadge({ children, label }: { children: React.ReactNode; label: st
   );
 }
 
-function ChartTooltip({
-  point,
-  x,
-  y,
-}: {
-  point: ServiceHistoryPoint;
-  x: number;
-  y: number;
-}) {
+function ChartTooltip({ point, x, y }: { point: ServiceHistoryPoint; x: number; y: number }) {
   const horizontalShift = x < WIDTH * 0.18 ? "0" : x > WIDTH * 0.82 ? "-100%" : "-50%";
   const verticalShift = y < HEIGHT * 0.25 ? "12px" : "calc(-100% - 12px)";
   const statusSummary = point.available
     ? point.status_code != null
       ? `HTTP ${point.status_code}`
       : "Successful check"
-    : point.error ?? (point.status_code != null ? `HTTP ${point.status_code}` : "Service unavailable");
+    : (point.error ??
+      (point.status_code != null ? `HTTP ${point.status_code}` : "Service unavailable"));
 
   return (
     <div
@@ -235,9 +223,7 @@ function ChartTooltip({
       <div className="mt-1 text-xs text-muted-foreground">{formatTimestamp(point.checked_at)}</div>
       <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
         <span
-          className={`h-2.5 w-2.5 rounded-full ${
-            point.available ? "bg-success" : "bg-critical"
-          }`}
+          className={`h-2.5 w-2.5 rounded-full ${point.available ? "bg-success" : "bg-critical"}`}
         />
         <span>{statusSummary}</span>
       </div>

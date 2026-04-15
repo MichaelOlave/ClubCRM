@@ -20,7 +20,7 @@ describe("VmPanel", () => {
           },
         ]}
         onVmPowerAction={vi.fn()}
-      />,
+      />
     );
 
     expect(screen.getByText("running")).toBeInTheDocument();

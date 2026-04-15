@@ -271,7 +271,10 @@ export function MonitoringDashboardClient({ initialSnapshot, streamUrl, demoUrl 
             role="tabpanel"
           >
             <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr] xl:items-start">
-              <LatencyChart history={snapshot.service.history} targetUrl={snapshot.service.target_url} />
+              <LatencyChart
+                history={snapshot.service.history}
+                targetUrl={snapshot.service.target_url}
+              />
               <VmPanel
                 pendingActions={pendingActions}
                 variant="compact"

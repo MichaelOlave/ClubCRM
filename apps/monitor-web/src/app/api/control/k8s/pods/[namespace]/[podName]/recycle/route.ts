@@ -3,7 +3,7 @@ import { getMonitorAdminToken, getMonitorApiBaseUrl } from "@/lib/env";
 
 export async function POST(
   _request: Request,
-  { params }: { params: Promise<{ namespace: string; podName: string }> },
+  { params }: { params: Promise<{ namespace: string; podName: string }> }
 ) {
   const { namespace, podName } = await params;
   const response = await fetch(
@@ -16,7 +16,7 @@ export async function POST(
       },
       body: JSON.stringify({ action: "recycle" }),
       cache: "no-store",
-    },
+    }
   );
 
   return NextResponse.json(await response.json(), { status: response.status });

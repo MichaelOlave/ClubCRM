@@ -1,7 +1,4 @@
-import {
-  getDashboardRedisAnalyticsApi,
-  getDashboardSummaryApi,
-} from "@/lib/api/clubcrm";
+import { getDashboardRedisAnalyticsApi, getDashboardSummaryApi } from "@/lib/api/clubcrm";
 import { apiFetch } from "@/lib/api/client";
 import { buildApiUrl, getInternalApiBaseUrls } from "@/lib/api/server";
 import type { AuthorizedBackendAuthSession } from "@/features/auth/types";

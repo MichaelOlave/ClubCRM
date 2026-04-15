@@ -3,7 +3,7 @@ import { getMonitorAdminToken, getMonitorApiBaseUrl } from "@/lib/env";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ vmId: string }> },
+  { params }: { params: Promise<{ vmId: string }> }
 ) {
   const { vmId } = await params;
   const body = await request.json();

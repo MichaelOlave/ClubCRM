@@ -165,8 +165,7 @@ export function TestingGuidePage() {
               </Badge>
               <CardTitle className="text-2xl">Bug report essentials</CardTitle>
               <CardDescription className="text-sm leading-6">
-                A short, specific report helps the team fix issues much faster than a vague
-                summary.
+                A short, specific report helps the team fix issues much faster than a vague summary.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">

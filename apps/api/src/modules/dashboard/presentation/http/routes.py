@@ -55,9 +55,7 @@ class DashboardRedisAnalyticsResponse(BaseModel):
     error: str | None = None
 
     @classmethod
-    def from_domain(
-        cls, analytics: DashboardRedisAnalytics
-    ) -> "DashboardRedisAnalyticsResponse":
+    def from_domain(cls, analytics: DashboardRedisAnalytics) -> "DashboardRedisAnalyticsResponse":
         return cls(
             club_id=analytics.club_id,
             cache_key=analytics.cache_key,

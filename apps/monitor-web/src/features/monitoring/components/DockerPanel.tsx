@@ -18,12 +18,17 @@ export function DockerPanel({ containers }: Props) {
       </div>
       <div className="mt-6 space-y-4">
         {entries.map(([vmId, vmContainers]) => (
-          <article key={vmId} className="rounded-[1.75rem] border border-border/70 bg-accent/75 p-4">
+          <article
+            key={vmId}
+            className="rounded-[1.75rem] border border-border/70 bg-accent/75 p-4"
+          >
             <div className="mb-3 flex items-center justify-between gap-3">
               <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 {vmId}
               </h3>
-              <span className="text-xs text-muted-foreground">{vmContainers.length} containers</span>
+              <span className="text-xs text-muted-foreground">
+                {vmContainers.length} containers
+              </span>
             </div>
             <div className="grid gap-2">
               {vmContainers.length > 0 ? (
@@ -34,7 +39,9 @@ export function DockerPanel({ containers }: Props) {
                   >
                     <div>
                       <div className="font-medium">{container.name}</div>
-                      <div className="text-xs text-muted-foreground">{container.image ?? "image unknown"}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {container.image ?? "image unknown"}
+                      </div>
                     </div>
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-semibold ${
