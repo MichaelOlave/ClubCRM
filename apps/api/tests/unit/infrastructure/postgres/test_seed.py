@@ -7,7 +7,12 @@ from helpers import add_api_root_to_path
 add_api_root_to_path()
 
 from src.infrastructure.postgres.client import PostgresClient
-from src.infrastructure.postgres.models.tables import AdminUserModel
+from src.infrastructure.postgres.models.tables import (
+    AdminUserModel,
+    ClubManagerRoleModel,
+    MemberModel,
+    MembershipModel,
+)
 from src.infrastructure.postgres.seed import DEFAULT_ADMIN_EMAILS, seed
 
 
@@ -38,6 +43,29 @@ class PostgresSeedTests(unittest.TestCase):
             if isinstance(model, AdminUserModel)
         ]
         self.assertCountEqual(seeded_admin_emails, DEFAULT_ADMIN_EMAILS)
+        seeded_member_emails = [
+            model.email
+            for call in session.add_all.call_args_list
+            for model in call.args[0]
+            if isinstance(model, MemberModel)
+        ]
+        self.assertIn("club-manager@clubcrm.local", seeded_member_emails)
+        seeded_manager_grants = [
+            model
+            for call in session.add_all.call_args_list
+            for model in call.args[0]
+            if isinstance(model, ClubManagerRoleModel)
+        ]
+        self.assertEqual(len(seeded_manager_grants), 1)
+        seeded_club_manager_memberships = [
+            model
+            for call in session.add_all.call_args_list
+            for model in call.args[0]
+            if isinstance(model, MembershipModel)
+            and model.member_id == seeded_manager_grants[0].member_id
+            and model.club_id == seeded_manager_grants[0].club_id
+        ]
+        self.assertEqual(len(seeded_club_manager_memberships), 1)
 
     def test_seed_backfills_default_admin_users_for_existing_champlain_org(self) -> None:
         client, session = self._build_client_and_session()

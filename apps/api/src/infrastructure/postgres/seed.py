@@ -9,6 +9,7 @@ from src.infrastructure.postgres.client import PostgresClient
 from src.infrastructure.postgres.models.tables import (
     AdminUserModel,
     AnnouncementModel,
+    ClubManagerRoleModel,
     ClubModel,
     EventModel,
     MemberModel,
@@ -118,7 +119,15 @@ def seed(client: PostgresClient | None = None) -> bool:
             email="bob@champlain.edu",
             student_id="S002",
         )
-        session.add_all([member1, member2])
+        local_club_manager = MemberModel(
+            id=str(uuid.uuid4()),
+            organization_id=org.id,
+            first_name="Local",
+            last_name="Club Manager",
+            email="club-manager@clubcrm.local",
+            student_id="S003",
+        )
+        session.add_all([member1, member2, local_club_manager])
         session.flush()
 
         session.add_all(
@@ -136,6 +145,19 @@ def seed(client: PostgresClient | None = None) -> bool:
                     member_id=member2.id,
                     role="member",
                     status="active",
+                ),
+                MembershipModel(
+                    id=str(uuid.uuid4()),
+                    club_id=club.id,
+                    member_id=local_club_manager.id,
+                    role="member",
+                    status="active",
+                ),
+                ClubManagerRoleModel(
+                    id=str(uuid.uuid4()),
+                    club_id=club.id,
+                    member_id=local_club_manager.id,
+                    role_name="club_manager",
                 ),
             ]
         )
