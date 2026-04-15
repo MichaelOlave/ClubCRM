@@ -3,6 +3,7 @@ from pydantic import BaseModel, EmailStr
 
 from src.bootstrap.dependencies import (
     get_audit_log_repository,
+    get_club_repository,
     get_dashboard_summary_cache,
     get_form_submission_publisher,
     get_join_request_store,
@@ -16,6 +17,7 @@ from src.modules.auth.presentation.http.dependencies import (
     ensure_club_access,
     require_authorized_access,
 )
+from src.modules.clubs.application.ports.club_repository import ClubRepository
 from src.modules.dashboard.application.ports.dashboard_summary_cache import (
     DashboardSummaryCache,
 )
@@ -40,7 +42,6 @@ router = APIRouter(prefix="/forms", tags=["forms"])
 
 
 class JoinRequestBody(BaseModel):
-    organization_id: str
     submitter_name: str
     submitter_email: EmailStr
     student_id: str | None = None
@@ -108,7 +109,12 @@ def create_join_request(
     body: JoinRequestBody,
     store: JoinRequestStore = Depends(get_join_request_store),  # noqa: B008
     publisher: FormSubmissionPublisher = Depends(get_form_submission_publisher),  # noqa: B008
+    club_repository: ClubRepository = Depends(get_club_repository),  # noqa: B008
 ) -> JoinRequestResponse:
+    club = club_repository.get_club(club_id)
+    if club is None:
+        raise HTTPException(status_code=404, detail="Club not found")
+
     payload: dict[str, str] = {}
 
     for key, value in (
@@ -121,7 +127,7 @@ def create_join_request(
             payload[key] = normalized
 
     join_request = JoinRequest(
-        organization_id=body.organization_id,
+        organization_id=club.organization_id,
         club_id=club_id,
         submitter_name=body.submitter_name,
         submitter_email=str(body.submitter_email),
