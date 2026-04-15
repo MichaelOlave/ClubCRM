@@ -38,7 +38,6 @@ export async function submitJoinRequest(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          organization_id: context.organizationId,
           submitter_name: submitterName,
           submitter_email: submitterEmail,
           student_id: studentId,
