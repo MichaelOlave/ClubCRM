@@ -24,7 +24,7 @@ export function VmPanel({ vms, pendingActions, variant = "default", onVmPowerAct
       <div className={`mt-6 grid gap-4 ${isCompact ? "grid-cols-1" : "xl:grid-cols-3"}`}>
         {vms.map((vm) => {
           const isVmActionPending = (["start", "stop", "restart"] as const).some(
-            (action) => pendingActions[`vm:${vm.id}:${action}`],
+            (action) => pendingActions[`vm:${vm.id}:${action}`]
           );
 
           return (
@@ -32,9 +32,7 @@ export function VmPanel({ vms, pendingActions, variant = "default", onVmPowerAct
               key={vm.id}
               className={`rounded-[1.75rem] border border-border/70 bg-accent/75 ${
                 isCompact ? "p-4" : "p-5"
-              } ${
-                isVmActionPending ? "ring-1 ring-primary/50" : ""
-              }`}
+              } ${isVmActionPending ? "ring-1 ring-primary/50" : ""}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -140,13 +138,7 @@ function MetricBar({
   );
 }
 
-function StatusPill({
-  label,
-  tone,
-}: {
-  label: string;
-  tone: "success" | "warning" | "critical";
-}) {
+function StatusPill({ label, tone }: { label: string; tone: "success" | "warning" | "critical" }) {
   const toneClass =
     tone === "success"
       ? "bg-success/15 text-success"
@@ -155,14 +147,18 @@ function StatusPill({
         : "bg-critical/15 text-critical";
 
   return (
-    <div className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${toneClass}`}>
+    <div
+      className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${toneClass}`}
+    >
       {label}
     </div>
   );
 }
 
 function StatusRing() {
-  return <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary/25 border-t-primary" />;
+  return (
+    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary/25 border-t-primary" />
+  );
 }
 
 function toActionProgressLabel(action: "start" | "stop" | "restart") {

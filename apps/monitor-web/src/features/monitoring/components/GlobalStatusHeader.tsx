@@ -22,8 +22,12 @@ function formatTimestamp(value: string) {
 
 export function GlobalStatusHeader({ actionError, generatedAt, service, streamStatus }: Props) {
   const statusTone =
-    service.status === "up" ? "text-success border-success/35 bg-success/12" : "text-critical border-critical/35 bg-critical/12";
-  const latestLatency = service.latest?.latency_ms ? `${service.latest.latency_ms.toFixed(0)} ms` : "No sample";
+    service.status === "up"
+      ? "text-success border-success/35 bg-success/12"
+      : "text-critical border-critical/35 bg-critical/12";
+  const latestLatency = service.latest?.latency_ms
+    ? `${service.latest.latency_ms.toFixed(0)} ms`
+    : "No sample";
 
   return (
     <section className="monitor-card overflow-hidden">

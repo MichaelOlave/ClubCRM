@@ -40,7 +40,7 @@ The homepage currently checks the backend auth session, then redirects authorize
 - [`src/app/(app)/clubs/[clubId]/page.tsx`](<src/app/(app)/clubs/[clubId]/page.tsx>) for the shared club detail surface that shows memberships, events, and announcements
 - [`src/app/(app)/system/audit/page.tsx`](<src/app/(app)/system/audit/page.tsx>) for the admin audit log surface
 - [`src/app/(app)/system/health/page.tsx`](<src/app/(app)/system/health/page.tsx>) for the API diagnostics surface
-- [`src/app/demo/failover/page.tsx`](<src/app/demo/failover/page.tsx>) for the public failover monitor used in the networking demo
+- [`src/app/demo/failover/page.tsx`](src/app/demo/failover/page.tsx) for the public failover monitor used in the networking demo
 - [`src/app/(public)/login/page.tsx`](<src/app/(public)/login/page.tsx>), [`src/app/(public)/not-provisioned/page.tsx`](<src/app/(public)/not-provisioned/page.tsx>), or [`src/app/(public)/join/[clubId]/page.tsx`](<src/app/(public)/join/[clubId]/page.tsx>) for public entry points
 
 ## Notes

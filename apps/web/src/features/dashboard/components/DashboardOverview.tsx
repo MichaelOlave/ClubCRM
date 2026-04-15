@@ -104,7 +104,9 @@ export function DashboardOverview({ viewModel }: Props) {
               <p className="text-sm font-medium uppercase tracking-[0.22em] text-brand">
                 Next steps
               </p>
-              <h2 className="text-2xl font-semibold text-foreground">Move through the admin flow</h2>
+              <h2 className="text-2xl font-semibold text-foreground">
+                Move through the admin flow
+              </h2>
               <p className="text-sm leading-6 text-muted-foreground">
                 The highest-signal routes for managing clubs, members, and public join entry points.
               </p>

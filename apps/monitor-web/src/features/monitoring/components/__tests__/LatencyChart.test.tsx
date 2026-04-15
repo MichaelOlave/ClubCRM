@@ -29,7 +29,7 @@ describe("LatencyChart", () => {
           },
         ]}
         targetUrl="https://monitor.clubcrm.local/health"
-      />,
+      />
     );
 
     expect(screen.getByText("Latency trend")).toBeInTheDocument();
@@ -55,7 +55,7 @@ describe("LatencyChart", () => {
           error: null,
         }))}
         targetUrl="https://monitor.clubcrm.local/health"
-      />,
+      />
     );
 
     expect(screen.getByText("48 shown on chart")).toBeInTheDocument();

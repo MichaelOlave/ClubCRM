@@ -50,9 +50,7 @@ export function KubernetesPanel({ kubernetes }: Props) {
         <article className="rounded-[1.75rem] border border-border/70 bg-accent/75 p-4">
           <div className="flex items-center justify-between gap-3">
             <h3 className="monitor-label">Pods</h3>
-            <div className="text-xs text-muted-foreground">
-              {visiblePods.length} shown
-            </div>
+            <div className="text-xs text-muted-foreground">{visiblePods.length} shown</div>
           </div>
           <div className="mt-3 space-y-2">
             {visiblePods.length > 0 ? (

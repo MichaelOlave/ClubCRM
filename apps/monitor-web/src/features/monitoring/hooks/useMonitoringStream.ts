@@ -9,7 +9,7 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1"]);
 
 export function resolveMonitoringStreamUrl(
   streamUrl: string,
-  currentLocation?: string | URL,
+  currentLocation?: string | URL
 ): string {
   if (!streamUrl) {
     return streamUrl;
@@ -43,7 +43,7 @@ export function resolveMonitoringStreamUrl(
 
 export function useMonitoringStream(
   initialSnapshot: MonitoringSnapshot,
-  streamUrl: string,
+  streamUrl: string
 ): {
   snapshot: MonitoringSnapshot;
   streamStatus: StreamStatus;
@@ -51,7 +51,7 @@ export function useMonitoringStream(
 } {
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [streamStatus, setStreamStatus] = useState<StreamStatus>(
-    streamUrl ? "connecting" : "offline",
+    streamUrl ? "connecting" : "offline"
   );
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<number | null>(null);

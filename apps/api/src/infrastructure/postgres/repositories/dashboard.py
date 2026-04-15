@@ -28,9 +28,7 @@ class PostgresDashboardRepository(DashboardRepository):
                 select(func.count(EventModel.id)).where(EventModel.club_id == club_id)
             )
             total_announcements = session.scalar(
-                select(func.count(AnnouncementModel.id)).where(
-                    AnnouncementModel.club_id == club_id
-                )
+                select(func.count(AnnouncementModel.id)).where(AnnouncementModel.club_id == club_id)
             )
 
             return DashboardSummary(
