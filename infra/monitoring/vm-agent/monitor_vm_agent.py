@@ -164,7 +164,11 @@ def collect_containers() -> list[dict[str, Any]]:
     if docker is None:
         return _collect_containers_from_docker_cli()
 
-    client = docker.from_env()
+    try:
+        client = docker.from_env()
+    except Exception:
+        return _collect_containers_from_docker_cli()
+
     containers = []
     for container in client.containers.list(all=True):
         containers.append(
@@ -181,7 +185,11 @@ def execute_commands(commands: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if docker is None:
         return _execute_commands_with_docker_cli(commands)
 
-    client = docker.from_env()
+    try:
+        client = docker.from_env()
+    except Exception:
+        return _execute_commands_with_docker_cli(commands)
+
     results: list[dict[str, Any]] = []
     for command in commands:
         target = command["container_name"]

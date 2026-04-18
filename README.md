@@ -18,6 +18,13 @@ Current implementation status:
 - the repo also includes a public `/demo/failover` route plus a companion monitoring stack under `apps/monitor-api` and `apps/monitor-web` for the networking demo, kept intentionally outside the main ClubCRM app pair
 - the local data and app stack is wired up through the repository devcontainer
 
+Current networking-demo deployment as of April 18, 2026:
+
+- replacement cluster nodes: `Server1` -> `100.122.118.85`, `Server2` -> `100.67.65.5`,
+  `Server3` -> `100.99.187.90`
+- monitoring host VM: `DemoControlPlaneServer` -> `192.168.139.213`
+- shared ingress hosts: `clubcrm.local`, `kubero.local`
+
 ## Development Environment
 
 All development is expected to happen inside the repository devcontainer.

@@ -56,8 +56,17 @@ These commands are intentionally separate from the default ClubCRM `pnpm dev`, `
 The preferred live-demo shape is:
 
 - one separate monitoring host for `monitor-api` and `monitor-web`
-- one Mac host running OrbStack for `vm1`, `vm2`, and `vm3`
+- one Mac host running OrbStack for `Server1`, `Server2`, and `Server3`
 - optional live kubeconfig on the monitoring host for cluster visibility
+
+Current live deployment as of April 18, 2026:
+
+- monitoring host VM: `DemoControlPlaneServer` at `192.168.139.213`
+- dashboard URL: `http://192.168.139.213:3001`
+- direct `monitor-web` container URL: `http://192.168.139.213:3002`
+- `monitor-api`: `http://192.168.139.213:8010`
+- VM-agent reachable monitoring API address from the replacement cluster nodes:
+  `http://100.95.238.93:8010`
 
 The monitoring host needs:
 
@@ -103,7 +112,10 @@ NEXT_PUBLIC_CLUBCRM_DEMO_URL=http://clubcrm.local/demo/failover
 Add matching host entries on the monitoring host and the presenter machine:
 
 ```text
-<vm1-private-ip> clubcrm.local kubero.local
+100.122.118.85 clubcrm.local kubero.local
+100.122.118.85 Server1 server1
+100.67.65.5 Server2 server2
+100.99.187.90 Server3 server3
 ```
 
 With that iframe target in place, the monitoring dashboard can keep the ClubCRM diagnostics page
@@ -149,10 +161,14 @@ The agent:
   and falls back to the Docker CLI when only the CLI is present
 - reports command results on the next heartbeat
 
-Install optional dependencies for richer Docker and system telemetry:
+Create a dedicated virtual environment for the VM agent and install the optional
+dependencies there. This avoids Ubuntu 24.04 `externally-managed-environment`
+errors and keeps the service runtime isolated from the base image Python:
 
 ```bash
-python3 -m pip install -r infra/monitoring/vm-agent/requirements.txt
+python3 -m venv /opt/clubcrm/infra/monitoring/vm-agent/.venv
+/opt/clubcrm/infra/monitoring/vm-agent/.venv/bin/pip install --upgrade pip
+/opt/clubcrm/infra/monitoring/vm-agent/.venv/bin/pip install -r infra/monitoring/vm-agent/requirements.txt
 ```
 
 Install the sample `systemd` unit:
@@ -165,15 +181,25 @@ sudo systemctl enable --now monitor-vm-agent
 
 The sample service expects an environment file at `/etc/clubcrm-monitor-agent.env`.
 
-Example for `vm1`:
+Example for `Server1`:
 
 ```bash
 MONITOR_API_BASE_URL=http://<monitor-host>:8010
-MONITOR_AGENT_VM_ID=vm1
-MONITOR_AGENT_TOKEN=monitor-agent-vm1
+MONITOR_AGENT_VM_ID=Server1
+MONITOR_AGENT_TOKEN=monitor-agent-server1
 MONITOR_AGENT_INTERVAL_SECONDS=1
 MONITOR_AGENT_TIMEOUT_SECONDS=2
 ```
+
+Equivalent live values for the replacement cluster:
+
+```bash
+MONITOR_API_BASE_URL=http://100.95.238.93:8010
+MONITOR_AGENT_VM_ID=Server1
+MONITOR_AGENT_TOKEN=monitor-agent-server1
+```
+
+Use the same shape for `Server2` and `Server3` with their matching IDs and tokens.
 
 For local OrbStack rehearsals where the guest VM needs to reach the Mac host directly, this usually
 becomes:
@@ -181,6 +207,9 @@ becomes:
 ```bash
 MONITOR_API_BASE_URL=http://host.internal:8010
 ```
+
+If the guest VM cannot route to `host.internal`, set `MONITOR_API_BASE_URL` to a
+directly reachable address for the monitoring host instead.
 
 ## Kubernetes Inputs
 
@@ -213,10 +242,17 @@ curl http://localhost:8010/api/snapshot
 curl http://localhost:3001/api/snapshot
 ```
 
+For the live OrbStack control-plane VM:
+
+```bash
+curl http://192.168.139.213:8010/health
+curl http://192.168.139.213:3001/api/snapshot
+```
+
 In the browser, confirm:
 
 - the dashboard loads without WebSocket errors
-- VM telemetry appears for `vm1`, `vm2`, and `vm3`
+- VM telemetry appears for `Server1`, `Server2`, and `Server3`
 - Kubernetes panels show either live data or snapshot data
 - the embedded ClubCRM iframe reaches the expected public route
 - a guarded action updates the event timeline

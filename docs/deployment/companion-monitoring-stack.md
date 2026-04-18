@@ -52,11 +52,19 @@ monitor-api -----------------------------> synthetic HTTP check target
     |
     +--> OrbStack local CLI or SSH wrapper
     |
-    +<-- VM agent heartbeats from vm1/vm2/vm3
+    +<-- VM agent heartbeats from Server1/Server2/Server3
 ```
 
 The monitoring stack keeps a single in-memory view of the demo environment and rebroadcasts that
 view to connected browsers once per second.
+
+Current live deployment note:
+
+- the dashboard host is `DemoControlPlaneServer` at `192.168.139.213`
+- `monitor-api` is live on `:8010`
+- the dashboard is served on `:3001`
+- the direct `monitor-web` container is exposed on `:3002`
+- live VM agent IDs are `Server1`, `Server2`, and `Server3`
 
 ## `monitor-api` Responsibilities
 
@@ -116,6 +124,15 @@ On every loop, the agent:
 
 This is how container-level actions are kept narrow and auditable: the control plane queues a named
 action, and the agent executes only the command type it already understands.
+
+In the current live deployment, the replacement cluster nodes post to:
+
+```text
+http://100.95.238.93:8010
+```
+
+That address is used because the replacement servers could not route to `host.internal` in the
+live environment.
 
 ### 2. Synthetic Health Checks
 
@@ -248,6 +265,11 @@ Use this when live kubeconfig is not ready yet.
 - VM tiles never update:
   Check the guest-agent environment file, `MONITOR_AGENT_VM_ID`, `MONITOR_AGENT_TOKEN`, and reachability
   to `MONITOR_API_BASE_URL`.
+
+- The dashboard shows fresh VM heartbeats but the embedded ClubCRM page still points at the retired
+  cluster:
+  Update `/etc/hosts` on `DemoControlPlaneServer` so `clubcrm.local` and `kubero.local` point to
+  `100.122.118.85`.
 
 - Power controls fail:
   Check whether the monitoring host has local `orbctl` access or a valid SSH path to the wrapper.
