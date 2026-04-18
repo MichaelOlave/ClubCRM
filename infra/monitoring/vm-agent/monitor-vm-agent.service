@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=simple
 EnvironmentFile=/etc/clubcrm-monitor-agent.env
 WorkingDirectory=/opt/clubcrm/infra/monitoring/vm-agent
-ExecStart=/usr/bin/env python3 /opt/clubcrm/infra/monitoring/vm-agent/monitor_vm_agent.py
+ExecStart=/opt/clubcrm/infra/monitoring/vm-agent/.venv/bin/python /opt/clubcrm/infra/monitoring/vm-agent/monitor_vm_agent.py
 Restart=always
 RestartSec=3
 

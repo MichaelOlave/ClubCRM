@@ -8,11 +8,18 @@ For the off-cluster observer and control plane that sits beside this cluster, se
 
 It assumes:
 
-- `vm1` is the single `k3s` server
-- `vm2` and `vm3` are `k3s` agents
+- `Server1` is the single `k3s` server
+- `Server2` and `Server3` are `k3s` agents
 - the companion monitoring stack stays off-cluster on its own monitoring host
 - `Kubero` deploys only `clubcrm-web` and `clubcrm-api`
 - PostgreSQL and Redis stay repo-managed Kubernetes resources with Longhorn-backed PVCs
+
+Current live mapping as of April 18, 2026:
+
+- `Server1` -> `100.122.118.85` -> `k3s` control plane
+- `Server2` -> `100.67.65.5` -> `k3s` worker
+- `Server3` -> `100.99.187.90` -> `k3s` worker
+- `DemoControlPlaneServer` -> `192.168.139.213` -> monitoring host and dashboard VM
 
 ## Topology And Ownership
 
@@ -79,6 +86,14 @@ fallback path, the `orbstack-demo` overlay provides them.
 
 Set stable hostnames and confirm each VM has a stable private IP.
 
+For the current live environment, the target hostnames and addresses are:
+
+```text
+100.122.118.85 Server1 server1
+100.67.65.5 Server2 server2
+100.99.187.90 Server3 server3
+```
+
 Install the required packages on all three VMs:
 
 ```bash
@@ -90,32 +105,52 @@ sudo systemctl enable --now iscsid
 Install the monitoring guest agent on all three VMs:
 
 ```bash
-python3 -m pip install -r infra/monitoring/vm-agent/requirements.txt
+python3 -m venv /opt/clubcrm/infra/monitoring/vm-agent/.venv
+/opt/clubcrm/infra/monitoring/vm-agent/.venv/bin/pip install --upgrade pip
+/opt/clubcrm/infra/monitoring/vm-agent/.venv/bin/pip install -r infra/monitoring/vm-agent/requirements.txt
 sudo cp infra/monitoring/vm-agent/monitor-vm-agent.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now monitor-vm-agent
 ```
 
+Recreate the expected admin users before the cluster rollout:
+
+- `champuser` for initial access
+- `michaelolave`
+- `lily`
+
+`lily` should have:
+
+- her public key in `/home/lily/.ssh/authorized_keys`
+- membership in `sudo`
+- passwordless sudo through `/etc/sudoers.d/90-lily-nopasswd`
+
+Example sudoers entry:
+
+```text
+lily ALL=(ALL) NOPASSWD:ALL
+```
+
 Open the ports needed for:
 
-- `6443/tcp` for the `k3s` API on `vm1`
+- `6443/tcp` for the `k3s` API on `Server1`
 - Flannel VXLAN traffic between nodes
 - ingress traffic on `80/tcp`
 - Longhorn replica traffic between nodes
 
 ## 2. Bootstrap k3s
 
-Install the server on `vm1`:
+Install the server on `Server1`:
 
 ```bash
 curl -sfL https://get.k3s.io | sh -
 sudo cat /var/lib/rancher/k3s/server/node-token
 ```
 
-Join `vm2` and `vm3` as agents using the token from `vm1`:
+Join `Server2` and `Server3` as agents using the token from `Server1`:
 
 ```bash
-curl -sfL https://get.k3s.io | K3S_URL=https://vm1:6443 K3S_TOKEN=<node-token> sh -
+curl -sfL https://get.k3s.io | K3S_URL=https://Server1:6443 K3S_TOKEN=<node-token> sh -
 ```
 
 Verify the cluster:
@@ -198,6 +233,21 @@ Because Kubero installation details can vary by release, treat this repo's contr
 - Kubero must create routable `clubcrm-web` and `clubcrm-api` Services in namespace `clubcrm`
 - the service names must match the base ingress expectations
 - if Kubero uses different service names or ports, adjust the ingress files before the demo
+
+Current live deployment note:
+
+- Kubero itself is installed in namespace `kubero`
+- `kubero.local` routes to the Kubero service on port `2000`
+- Kubero needed a writable PVC; in the current live cluster that PVC is backed by Longhorn
+- the live ClubCRM app pair is currently served by `clubcrm-api` and `clubcrm-web` Deployments in
+  namespace `clubcrm`, with replicas spread across `Server2` and `Server3`
+
+Current Kubero access:
+
+- URL: `http://kubero.local`
+- direct ingress IP path for testing: `http://100.122.118.85` with `Host: kubero.local`
+- bootstrap admin username: `admin`
+- rotate the bootstrap admin password after install
 
 ## 5. Publish ClubCRM Images
 
@@ -308,7 +358,15 @@ On the monitoring host:
 - install `kubectl` with access to the live `k3s` cluster
 - set `MONITOR_SYNTHETIC_TARGET_URL=http://clubcrm.local/system/health`
 - keep the existing VM power path pointing at OrbStack
-- keep the guest agents on `vm1`, `vm2`, and `vm3`
+- keep the guest agents on `Server1`, `Server2`, and `Server3`
+
+For the current live environment:
+
+- the monitoring host is `DemoControlPlaneServer` at `192.168.139.213`
+- the dashboard UI is served on `http://192.168.139.213:3001`
+- the direct `monitor-web` container is reachable on `http://192.168.139.213:3002`
+- `monitor-api` is reachable from the cluster nodes at `http://100.95.238.93:8010`
+- the VM agents use `Server1`, `Server2`, and `Server3` as their `MONITOR_AGENT_VM_ID` values
 
 The monitoring dashboard will then show:
 
@@ -321,10 +379,13 @@ The monitoring dashboard will then show:
 
 ## 9. Add Host Entries For The Demo
 
-On the presenter machine and the monitoring host, map the shared ingress hosts to `vm1`:
+On the presenter machine and the monitoring host, map the shared ingress hosts to `Server1`:
 
 ```text
-<vm1-private-ip> clubcrm.local kubero.local
+100.122.118.85 clubcrm.local kubero.local
+100.122.118.85 Server1 server1
+100.67.65.5 Server2 server2
+100.99.187.90 Server3 server3
 ```
 
 ## 10. Final Verification Checklist
@@ -376,3 +437,7 @@ Demo goals:
 
 - Monitoring shows VM data but no cluster data:
   Check the monitoring host kubeconfig or set `MONITOR_K8S_SNAPSHOT_FILE` for a fallback view.
+
+- The monitoring dashboard reaches the old cluster instead of the replacement servers:
+  Update `/etc/hosts` on the presenter machine and `DemoControlPlaneServer` so `clubcrm.local` and
+  `kubero.local` point to `100.122.118.85` instead of the retired `192.168.139.x` nodes.
