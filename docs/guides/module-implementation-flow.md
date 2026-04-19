@@ -248,7 +248,7 @@ Routes should stay thin. They compose feature exports rather than owning busines
 Reference pages:
 
 - `apps/web/src/app/(app)/clubs/page.tsx`
-- `apps/web/src/app/(app)/system/health/page.tsx`
+- `apps/web/src/app/system/health/page.tsx`
 
 ### 4.2 Put business-facing code in the feature folder
 

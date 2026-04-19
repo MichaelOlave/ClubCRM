@@ -9,7 +9,7 @@ type Props = {
 
 export function PageHeader({ actions, description, eyebrow, title }: Props) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start xl:gap-8">
       <div className="space-y-3">
         {eyebrow ? (
           <p className="text-sm font-medium uppercase tracking-[0.24em] text-brand">{eyebrow}</p>
@@ -24,7 +24,11 @@ export function PageHeader({ actions, description, eyebrow, title }: Props) {
         </div>
       </div>
 
-      {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
+      {actions ? (
+        <div className="xl:flex xl:justify-end">
+          <div className="w-full xl:max-w-[34rem]">{actions}</div>
+        </div>
+      ) : null}
     </div>
   );
 }

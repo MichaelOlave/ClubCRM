@@ -1,0 +1,4 @@
+# Optional extras for richer telemetry when the VM image supports them.
+docker==7.1.0
+httpx==0.28.1
+psutil==7.0.0

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: clubcrm-app-env
+  namespace: clubcrm
+data:
+  API_BASE_URL: http://clubcrm-api.clubcrm.svc.cluster.local:8000
+  WEB_API_PUBLIC_BASE_URL: http://clubcrm.local/api
+  DATABASE_URL: postgresql://clubcrm:replace-me@postgres.clubcrm-data.svc.cluster.local:5432/clubcrm
+  REDIS_URL: redis://redis.clubcrm-data.svc.cluster.local:6379/0
+  IS_AUTH_BYPASS: "true"
+  AUTH_LOGIN_SUCCESS_URL: http://clubcrm.local/dashboard
+  AUTH_LOGOUT_REDIRECT_URL: http://clubcrm.local/login
+  AUTH_COOKIE_SECURE: "false"

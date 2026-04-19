@@ -102,4 +102,9 @@ class ApproveJoinRequest:
             existing = self.membership_repository.list_memberships(
                 club_id=club_id, member_id=member_id
             )
-            return existing[0], False
+            if existing:
+                return existing[0], False
+
+        raise ValueError(
+            "Join request could not be approved because the membership could not be created."
+        )

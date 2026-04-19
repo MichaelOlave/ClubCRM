@@ -1,0 +1,15 @@
+[Unit]
+Description=ClubCRM monitoring VM agent
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/clubcrm-monitor-agent.env
+WorkingDirectory=/opt/clubcrm/infra/monitoring/vm-agent
+ExecStart=/opt/clubcrm/infra/monitoring/vm-agent/.venv/bin/python /opt/clubcrm/infra/monitoring/vm-agent/monitor_vm_agent.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

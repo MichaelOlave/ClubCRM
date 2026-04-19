@@ -38,7 +38,6 @@ export async function submitJoinRequest(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          organization_id: context.organizationId,
           submitter_name: submitterName,
           submitter_email: submitterEmail,
           student_id: studentId,
@@ -89,7 +88,10 @@ export async function approveJoinRequestAction(formData: FormData) {
       joinRequestId,
       { role },
       {
-        headers: await getJoinRequestApiAuthHeaders({ includeCsrf: true }),
+        headers: await getJoinRequestApiAuthHeaders({
+          includeCsrf: true,
+          originPath: redirectPath,
+        }),
       }
     );
 
@@ -124,7 +126,10 @@ export async function denyJoinRequestAction(formData: FormData) {
 
   try {
     await denyJoinRequestApi(joinRequestId, {
-      headers: await getJoinRequestApiAuthHeaders({ includeCsrf: true }),
+      headers: await getJoinRequestApiAuthHeaders({
+        includeCsrf: true,
+        originPath: redirectPath,
+      }),
     });
 
     revalidatePath(redirectPath);

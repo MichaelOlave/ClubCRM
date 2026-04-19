@@ -11,6 +11,8 @@ from src.infrastructure.postgres.client import PostgresClient
 from src.infrastructure.postgres.repositories.announcements import (
     PostgresAnnouncementRepository,
 )
+from src.infrastructure.postgres.repositories.audit import PostgresAuditLogRepository
+from src.infrastructure.postgres.repositories.auth import PostgresAuthorizationRepository
 from src.infrastructure.postgres.repositories.clubs import PostgresClubRepository
 from src.infrastructure.postgres.repositories.dashboard import PostgresDashboardRepository
 from src.infrastructure.postgres.repositories.events import PostgresEventRepository
@@ -20,17 +22,23 @@ from src.infrastructure.postgres.repositories.memberships import (
 )
 from src.infrastructure.postgres.unit_of_work import DefaultPostgresUnitOfWork
 from src.infrastructure.redis.caches.clubs import RedisClubSummaryCache
+from src.infrastructure.redis.caches.dashboard import RedisDashboardSummaryCache
 from src.infrastructure.redis.client import RedisClient
 from src.infrastructure.redis.sessions.session_store import RedisAuthSessionStore
 from src.modules.announcements.application.ports.announcement_repository import (
     AnnouncementRepository,
 )
+from src.modules.audit.application.ports.audit_log_repository import AuditLogRepository
 from src.modules.auth.application.ports.auth_session_store import AuthSessionStore
+from src.modules.auth.application.ports.authorization_repository import AuthorizationRepository
 from src.modules.auth.application.ports.identity_provider import AuthIdentityProvider
 from src.modules.clubs.application.ports.club_event_publisher import ClubEventPublisher
 from src.modules.clubs.application.ports.club_repository import ClubRepository
 from src.modules.clubs.application.ports.club_summary_cache import ClubSummaryCache
 from src.modules.dashboard.application.ports.dashboard_repository import DashboardRepository
+from src.modules.dashboard.application.ports.dashboard_summary_cache import (
+    DashboardSummaryCache,
+)
 from src.modules.events.application.ports.event_repository import EventRepository
 from src.modules.forms.application.ports.form_submission_publisher import (
     FormSubmissionPublisher,
@@ -97,6 +105,10 @@ def get_optional_auth_identity_provider() -> AuthIdentityProvider | None:
     )
 
 
+def get_authorization_repository() -> AuthorizationRepository:
+    return PostgresAuthorizationRepository(client=get_postgres_client())
+
+
 def get_auth_identity_provider() -> AuthIdentityProvider:
     provider = get_optional_auth_identity_provider()
     if provider is None:
@@ -111,6 +123,10 @@ def get_club_repository() -> ClubRepository:
 
 def get_club_summary_cache() -> ClubSummaryCache:
     return RedisClubSummaryCache(client=get_redis_client())
+
+
+def get_audit_log_repository() -> AuditLogRepository:
+    return PostgresAuditLogRepository(client=get_postgres_client())
 
 
 def get_club_event_publisher() -> ClubEventPublisher:
@@ -147,3 +163,7 @@ def get_form_submission_publisher() -> FormSubmissionPublisher:
 
 def get_dashboard_repository() -> DashboardRepository:
     return PostgresDashboardRepository(client=get_postgres_client())
+
+
+def get_dashboard_summary_cache() -> DashboardSummaryCache:
+    return RedisDashboardSummaryCache(client=get_redis_client())

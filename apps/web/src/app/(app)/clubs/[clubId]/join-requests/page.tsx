@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/shadcn/button";
 import { Card } from "@/components/shadcn/card";
 import { ActionNotice } from "@/components/ui/ActionNotice";
+import { requireAuthorizedBackendSession } from "@/features/auth/server";
 import { JoinRequestReviewList } from "@/features/forms/join-request";
 import { getJoinRequestReview } from "@/features/forms/join-request/server";
 import {
@@ -25,7 +26,8 @@ type Props = {
 
 export default async function ClubJoinRequestsPage({ params, searchParams }: Props) {
   const { clubId } = await params;
-  const [review, query] = await Promise.all([getJoinRequestReview(clubId), searchParams]);
+  const session = await requireAuthorizedBackendSession();
+  const [review, query] = await Promise.all([getJoinRequestReview(clubId, session), searchParams]);
 
   if (!review) {
     notFound();
@@ -46,7 +48,7 @@ export default async function ClubJoinRequestsPage({ params, searchParams }: Pro
             </Button>
           </>
         }
-        description="Review the pending public join request forms for this club without leaving the current admin shell."
+        description="Review the pending public join request forms for this club without leaving the protected club workspace."
         eyebrow="Join requests"
         title={`${review.clubName} join requests`}
       />

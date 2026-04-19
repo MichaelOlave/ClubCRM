@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import cast
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -6,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from src.infrastructure.postgres.client import PostgresClient
 from src.infrastructure.postgres.models.tables import AnnouncementModel
 from src.modules.announcements.application.ports.announcement_repository import (
+    UNSET,
     AnnouncementConflictError,
     AnnouncementRepository,
 )
@@ -84,7 +86,7 @@ class PostgresAnnouncementRepository(AnnouncementRepository):
         title: str | None = None,
         body: str | None = None,
         published_at: datetime | None = None,
-        created_by: str | None = None,
+        created_by: str | None | object = UNSET,
     ) -> Announcement:
         with self.client.create_session() as session:
             row = session.get(AnnouncementModel, announcement_id)
@@ -97,8 +99,8 @@ class PostgresAnnouncementRepository(AnnouncementRepository):
                 row.body = body
             if published_at is not None:
                 row.published_at = published_at
-            if created_by is not None:
-                row.created_by = created_by
+            if created_by is not UNSET:
+                row.created_by = cast("str | None", created_by)
 
             try:
                 session.commit()

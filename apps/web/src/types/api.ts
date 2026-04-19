@@ -5,6 +5,14 @@ export type EventStatus = "upcoming" | "draft";
 export type AnnouncementStatus = "published" | "scheduled";
 export type JoinRequestStatus = "pending" | "approved" | "denied";
 export type ActivityType = "club" | "member" | "form" | "event" | "announcement";
+export type AuditAction = "create" | "update" | "delete" | "approve" | "deny";
+export type AuditResourceType =
+  | "club"
+  | "member"
+  | "membership"
+  | "event"
+  | "announcement"
+  | "join_request";
 
 export type ClubRecord = {
   id: string;
@@ -21,16 +29,19 @@ export type ClubRecord = {
 export type EventRecord = {
   id: string;
   title: string;
-  location: string;
+  description: string;
+  location: string | null;
   startsAt: string;
+  endsAt: string | null;
   status: EventStatus;
 };
 
 export type AnnouncementRecord = {
   id: string;
   title: string;
-  excerpt: string;
+  body: string;
   publishedAt: string;
+  createdBy: string | null;
   status: AnnouncementStatus;
 };
 
@@ -104,6 +115,18 @@ export type BackendMembershipRecord = {
   role: string;
   status: string;
   joined_at: string | null;
+  club_name?: string | null;
+  member_name?: string | null;
+};
+
+export type BackendClubManagerGrantRecord = {
+  id: string;
+  club_id: string;
+  member_id: string;
+  role_name: string;
+  assigned_at: string;
+  member_email: string;
+  member_name: string;
 };
 
 export type BackendJoinRequestRecord = {
@@ -147,4 +170,48 @@ export type BackendAnnouncementRecord = {
   body: string;
   published_at: string;
   created_by: string | null;
+};
+
+export type BackendDashboardSummaryRecord = {
+  club_id: string;
+  total_members: number;
+  total_events: number;
+  total_announcements: number;
+};
+
+export type BackendDashboardRedisAnalyticsRecord = {
+  club_id: string;
+  cache_key: string;
+  available: boolean;
+  cache_present: boolean;
+  ttl_seconds: number | null;
+  request_count: number;
+  hit_count: number;
+  miss_count: number;
+  refresh_count: number;
+  invalidation_count: number;
+  hit_rate: number;
+  status: string;
+  error: string | null;
+};
+
+export type BackendAuditLogRecord = {
+  id: string;
+  occurred_at: string;
+  action: AuditAction;
+  actor: {
+    sub: string;
+    email: string | null;
+    name: string | null;
+  };
+  resource: {
+    type: AuditResourceType;
+    id: string;
+    label: string | null;
+  };
+  api_route: string;
+  http_method: string;
+  origin_path: string | null;
+  request_id: string;
+  summary_json: Record<string, unknown>;
 };

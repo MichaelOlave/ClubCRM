@@ -22,16 +22,18 @@ ClubCRM is a devcontainer-first monorepo with:
 - CI checks and a production deployment path for SSH-managed Docker Compose
 
 The repo is still structurally ahead of its runtime behavior, but the gap is narrower than it used
-to be. The frontend remains a UI-first MVP and only the health-check flow performs live web-to-api
-integration. The backend, however, is no longer just a single-route scaffold. It now has bootstrap,
-config, presentation, module, infrastructure, and test layers that encode the intended
-modular-monolith direction in code.
+to be. The frontend remains a UI-first MVP, yet it now performs several live web-to-api
+integrations: backend-owned auth, health diagnostics, club and member administration, membership
+assignment, and activity reads for events and announcements. The backend, meanwhile, is no longer
+just a single-route scaffold. It now has bootstrap, config, presentation, module, infrastructure,
+and test layers that encode the intended modular-monolith direction in code.
 
 The main strength of the repo is that its architecture is no longer only documented. It is starting
-to be exercised through folder boundaries, port interfaces, adapter contracts, and tests. The main
-weakness is that much of this structure is still preparatory: most backend routes are not live,
-most frontend data is still local view-model data, and the multi-database footprint is only lightly
-used by real product behavior.
+to be exercised through folder boundaries, port interfaces, adapter contracts, routes, and tests.
+The main weakness is that much of this structure is still preparatory: some frontend composition is
+still local view-model logic, the forms HTTP surface has not gone live, the dashboard module is
+still placeholder-heavy, and the multi-database footprint is only lightly used by real product
+behavior.
 
 ## What Exists Today
 
@@ -69,21 +71,23 @@ deployment path, CI pipeline, and internal documentation map.
 
 Today the system behaves like this:
 
-- `/` redirects to `/dashboard`
-- the web app has admin routes for dashboard, clubs, members, and `/system/health`
+- `/` checks the backend auth session and redirects authenticated requests to `/dashboard` and everyone else to `/login`
+- the web app has admin routes for dashboard, profile, clubs, members, and `/system/health`
 - the web app has public routes for `/login` and `/join/[clubId]`
 - most frontend feature data still comes from server-side modules under
   `apps/web/src/features/*/server`
-- the diagnostics page on `/system/health` performs a real server-side health probe against the API
-- the API registers routers for `system`, `clubs`, and `forms`, but only `GET /health` currently
-  has a concrete handler
+- the login, profile, health, club, member, and membership admin flows all perform real server-side API calls
+- club detail pages also read events and announcements from the API while the join preview still stays web-side
+- the API registers routers for `system`, `auth`, `announcements`, `clubs`, `events`, `forms`,
+  `dashboard`, `members`, and `memberships`
+- the API exposes live health, auth-session, club, member, membership, event, announcement, and placeholder dashboard-summary routes, while the forms router still has no HTTP handlers
 - FastAPI's generated `/docs`, `/redoc`, and `/openapi.json` remain available by framework default
 - the local stack still starts `web`, `api`, `postgres`, `mongodb`, `redis`, and `kafka` together
 
 That makes the repo best understood as:
 
 - a UI-first frontend MVP
-- a modular backend skeleton with one live endpoint
+- a modular backend with a growing but still incomplete HTTP surface
 - an operational platform that is already prepared for deeper feature slices
 
 ## Decision 1: Use a Monorepo With Root-Level Workflow Contracts
@@ -193,8 +197,8 @@ services are not just speculative anymore. They are structurally represented in 
 
 ### Current costs
 
-- The runtime product still does not expose real HTTP features backed by PostgreSQL, MongoDB,
-  Redis, or Kafka.
+- The runtime product still does not expose the full set of HTTP features the folder structure
+  implies, especially around forms and richer dashboard flows.
 - Some adapters are still placeholders or lightweight in-memory stand-ins rather than live I/O
   integrations.
 - Kafka and the extra data stores still create more local operational weight than the current route
@@ -229,7 +233,7 @@ scripted deployment story, not just a local dev story.
 ### Why it is still a tradeoff
 
 - The deployment surface is more mature than the feature surface.
-- The production stack still mainly serves a UI-first MVP and a health-check endpoint.
+- The production stack still mainly serves a UI-first MVP plus a growing but incomplete admin API.
 - Operational maturity can outpace product maturity if the team is not careful.
 
 ### Net assessment
@@ -371,8 +375,8 @@ to graduate from local view-model logic into real backend-backed slices.
 
 ## Decision 8: Preserve the Dedicated Diagnostics Route
 
-The health check is no longer on the homepage. It lives on `/system/health`, while `/` redirects to
-`/dashboard`.
+The health check is no longer on the homepage. It lives on `/system/health`, while `/` now checks
+the backend auth session before redirecting to `/dashboard` or `/login`.
 
 This is still one of the best concrete structural choices in the repo.
 
@@ -387,10 +391,10 @@ This is still one of the best concrete structural choices in the repo.
 ### Current costs
 
 - The fallback logic is still tied to current environment assumptions.
-- The health feature is the only live cross-app flow, so it carries more architectural significance
-  than a simple status page normally would.
+- The health feature is one of several live cross-app flows, but it still carries outsized
+  architectural significance because it is the most explicit diagnostics reference slice.
 - The dedicated diagnostics slice is now stable, which also makes the absence of other
-  backend-backed slices more visible.
+  backend-backed slices in areas like forms and richer dashboards more visible.
 
 ### Net assessment
 
@@ -415,6 +419,7 @@ apps/api/src
     exception_handlers.py
   modules/
     system/
+    dashboard/
     clubs/
     forms/
     announcements/
@@ -443,8 +448,9 @@ There are also meaningful tests under `apps/api/tests/`.
 ### Why this still has limits
 
 - Most modules are placeholders or partial slices.
-- Only `system` exposes a real HTTP route today.
-- The current structure proves architectural intent more than product capability.
+- Some modules, especially `forms` and `dashboard`, are still placeholders or partial slices.
+- The current structure now proves both architectural intent and a meaningful amount of product
+  capability, but it still stops short of the full UI surface the frontend advertises.
 
 ### Net assessment
 
@@ -473,11 +479,13 @@ Those interfaces live in module-specific application layers, while concrete adap
 
 ### What is still not fully realized
 
-- The adapters are mostly boundary anchors, not full implementations.
-- `PostgresClubRepository` explicitly raises `NotImplementedError`.
-- The MongoDB, Redis, and Kafka adapters currently use lightweight in-process behavior that proves
-  contracts more than real infrastructure I/O.
-- The API routes do not yet inject and exercise most of these dependencies.
+- Some adapters are still mostly boundary anchors rather than full infrastructure integrations.
+- PostgreSQL-backed repositories now power real club, member, membership, event, and announcement
+  routes, but the dashboard repository is still placeholder-heavy.
+- The MongoDB, Redis, and Kafka adapters currently mix real clients with lightweight behavior that
+  proves contracts more than complete production-style I/O.
+- The API routes now inject and exercise several of these dependencies, but not yet the full set of
+  planned multi-database responsibilities.
 
 ### Net assessment
 
@@ -518,36 +526,48 @@ turn some of its architectural rules into executable checks.
 This is a very healthy sign. The backend architecture is not just aspirational anymore. It is
 beginning to be defended by tests.
 
-## Decision 12: Keep the Live API Surface Much Smaller Than the Internal Backend Structure
+## Decision 12: Keep the Live API Surface Smaller Than the Internal Backend Structure
 
-`apps/api/src/presentation/http/router.py` includes routers for:
+`apps/api/src/presentation/http/router.py` now includes routers for:
 
 - `system`
+- `auth`
+- `announcements`
 - `clubs`
+- `events`
 - `forms`
+- `dashboard`
+- `members`
+- `memberships`
 
-But only one route handler is actually declared today:
+Those routers no longer point to just one live endpoint. The backend now exposes:
 
-- `GET /health`
+- `GET /health` for diagnostics
+- the backend-owned auth flow under `/auth`
+- CRUD or read endpoints under `/clubs`, `/members`, `/memberships`, `/events`, and `/announcements`
+- `GET /dashboard/summary/{club_id}` as a placeholder dashboard summary route
 
-This distinction is one of the most important things to understand about the current repo.
+The important distinction now is not "one route versus many folders." It is "some real product
+routes versus a still larger amount of prepared structure."
 
 ### Why this matters
 
 The backend now has three different layers of maturity:
 
 - the folder structure is fairly mature
-- a few application and infrastructure slices are partially implemented
-- the live HTTP contract is still minimal
+- several application and infrastructure slices are implemented and routed
+- the live HTTP contract is still meaningfully smaller than the product ambition and still contains placeholder areas such as `/forms` and the dashboard summary
 
 That is not inherently bad, but it changes how the project should be evaluated. The repo is not
-backend-empty anymore. It is backend-structured but route-light.
+backend-empty anymore. It is backend-structured with a real admin and auth surface, but it still
+has unfinished modules and route families.
 
 ### Net assessment
 
-This is the biggest structural truth the analysis has to capture. The backend should not be
-described as a one-file scaffold, and it should not be described as a feature-complete API either.
-It is an intentionally prepared module system with very limited exposed behavior.
+This is still one of the biggest structural truths the analysis has to capture. The backend should
+not be described as a one-file scaffold, and it should not be described as a feature-complete API
+either. It is an intentionally prepared module system with a meaningful but still incomplete set of
+exposed behaviors.
 
 ## Decision 13: Keep Multi-Database Responsibilities Explicit Even Before Full Usage
 
@@ -589,8 +609,8 @@ yet either.
 - The frontend still presents more product surface area than the backend contract supports.
 - The operational footprint remains heavy relative to the amount of live business behavior.
 - Several infrastructure adapters are still placeholders or contract-oriented stand-ins.
-- Most end-to-end product flows do not yet prove the database and event responsibilities the repo
-  has prepared for.
+- The forms slice and richer dashboard behavior still do not prove the database and event
+  responsibilities the repo has prepared for.
 
 ## Overall Judgment
 
@@ -607,7 +627,7 @@ The repo is now well ahead on:
 
 The repo is still behind on:
 
-- live backend routes
+- complete live backend route coverage
 - real end-to-end feature slices
 - proving the multi-database design through user-visible behavior
 
@@ -617,5 +637,5 @@ is that the architecture is no longer only theoretical. The backend now contains
 adapter, and test scaffolding that makes the intended design visible in code.
 
 The next challenge is not to redesign the structure. It is to cash it in. The project needs more
-routes and feature slices that make the existing architecture earn its weight in real runtime
-behavior.
+routes and feature slices, especially around forms and deeper dashboard behavior, that make the
+existing architecture earn its weight in real runtime behavior.

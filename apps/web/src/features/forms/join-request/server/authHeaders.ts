@@ -1,30 +1,13 @@
-import { cookies, headers } from "next/headers";
-
-import { env } from "@/lib/env/server";
+import { getAdminApiHeaders } from "@/lib/api/adminAuthHeaders";
 
 type Options = {
   includeCsrf?: boolean;
+  originPath?: string;
 };
 
 export async function getJoinRequestApiAuthHeaders({
   includeCsrf = false,
+  originPath,
 }: Options = {}): Promise<Headers> {
-  const requestHeaders = await headers();
-  const forwardedHeaders = new Headers();
-  const cookieHeader = requestHeaders.get("cookie");
-
-  if (cookieHeader) {
-    forwardedHeaders.set("cookie", cookieHeader);
-  }
-
-  if (includeCsrf) {
-    const cookieStore = await cookies();
-    const csrfToken = cookieStore.get(env.authCsrfCookieName)?.value;
-
-    if (csrfToken) {
-      forwardedHeaders.set(env.authCsrfHeaderName, csrfToken);
-    }
-  }
-
-  return forwardedHeaders;
+  return getAdminApiHeaders({ includeCsrf, originPath });
 }

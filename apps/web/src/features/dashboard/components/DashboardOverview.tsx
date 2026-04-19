@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { Alert, AlertDescription } from "@/components/shadcn/alert";
 import { Badge } from "@/components/shadcn/badge";
 import { Button } from "@/components/shadcn/button";
 import { Card } from "@/components/shadcn/card";
@@ -42,14 +41,7 @@ function getActivityLabel(type: DashboardViewModel["activity"][number]["type"]) 
 
 export function DashboardOverview({ viewModel }: Props) {
   return (
-    <div className="space-y-6">
-      <Alert variant="info">
-        <AlertDescription>
-          This dashboard now reads live club, member, event, and announcement data from the backend
-          API.
-        </AlertDescription>
-      </Alert>
-
+    <div className="space-y-8">
       <div className="grid gap-4 lg:grid-cols-3">
         {viewModel.metrics.map((metric) => (
           <Card
@@ -75,6 +67,9 @@ export function DashboardOverview({ viewModel }: Props) {
                 Recent activity
               </p>
               <h2 className="text-2xl font-semibold text-foreground">What changed lately</h2>
+              <p className="text-sm leading-6 text-muted-foreground">
+                A rolling snapshot of club announcements and scheduled events from the live API.
+              </p>
             </div>
 
             {viewModel.activity.length ? (
@@ -107,9 +102,14 @@ export function DashboardOverview({ viewModel }: Props) {
           <div className="space-y-5">
             <div className="space-y-2">
               <p className="text-sm font-medium uppercase tracking-[0.22em] text-brand">
-                Quick actions
+                Next steps
               </p>
-              <h2 className="text-2xl font-semibold text-foreground">Jump into the MVP routes</h2>
+              <h2 className="text-2xl font-semibold text-foreground">
+                Move through the admin flow
+              </h2>
+              <p className="text-sm leading-6 text-muted-foreground">
+                The highest-signal routes for managing clubs, members, and public join entry points.
+              </p>
             </div>
 
             <div className="space-y-4">

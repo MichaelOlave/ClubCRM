@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: smoke-writer
+  namespace: clubcrm-longhorn-smoke
+spec:
+  restartPolicy: Always
+  containers:
+    - name: smoke-writer
+      image: busybox:1.36
+      imagePullPolicy: IfNotPresent
+      command:
+        - sh
+        - -c
+        - |
+          date > /data/attached-at.txt
+          touch /data/healthy
+          sleep 3600
+      volumeMounts:
+        - name: smoke-data
+          mountPath: /data
+  volumes:
+    - name: smoke-data
+      persistentVolumeClaim:
+        claimName: smoke-data

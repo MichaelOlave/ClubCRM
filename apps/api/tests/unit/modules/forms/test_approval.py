@@ -237,6 +237,15 @@ class ApproveJoinRequestTests(unittest.TestCase):
         self.assertEqual(result.membership.id, "ms-1")
         self.assertFalse(result.membership_created)
 
+    def test_raises_controlled_error_when_membership_conflict_has_no_fallback_record(self):
+        existing_member = _make_member(id="m-1")
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Join request could not be approved because the membership could not be created.",
+        ):
+            self._command(member=existing_member, raise_on_create=True).execute("jr-1")
+
     def test_raises_when_join_request_not_found(self):
         store = FakeJoinRequestStore(_make_join_request())
         cmd = ApproveJoinRequest(

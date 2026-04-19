@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/shadcn/alert";
 import { Button } from "@/components/shadcn/button";
 import { Card } from "@/components/shadcn/card";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { requireOrgAdminBackendSession } from "@/features/auth/server";
 import { getClubList } from "@/features/clubs/server";
 import { CreateMemberDialog, MemberDirectory } from "@/features/members";
 import { createMemberAction, getMemberList } from "@/features/members/server";
@@ -18,7 +19,12 @@ type Props = {
 };
 
 export default async function MembersPage({ searchParams }: Props) {
-  const [members, clubs, query] = await Promise.all([getMemberList(), getClubList(), searchParams]);
+  const session = await requireOrgAdminBackendSession();
+  const [members, clubs, query] = await Promise.all([
+    getMemberList(),
+    getClubList(session),
+    searchParams,
+  ]);
   const memberNotice = getActionNotice(query.memberCreated, query.memberError);
   const defaultOrganizationId = members[0]?.organizationId ?? clubs[0]?.organizationId ?? "";
   const memberSuccessNotice = memberNotice?.kind === "success" ? memberNotice : null;

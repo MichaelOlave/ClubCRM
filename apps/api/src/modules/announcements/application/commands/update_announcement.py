@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from src.modules.announcements.application.ports.announcement_repository import (
+    UNSET,
     AnnouncementRepository,
 )
 from src.modules.announcements.domain.entities import Announcement
@@ -18,7 +19,7 @@ class UpdateAnnouncement:
         title: str | None = None,
         body: str | None = None,
         published_at: datetime | None = None,
-        created_by: str | None = None,
+        created_by: str | None | object = UNSET,
     ) -> Announcement:
         return self.repository.update_announcement(
             announcement_id,

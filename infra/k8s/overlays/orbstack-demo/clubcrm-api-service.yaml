@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: clubcrm-api
+  namespace: clubcrm
+spec:
+  selector:
+    app.kubernetes.io/name: clubcrm-api
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

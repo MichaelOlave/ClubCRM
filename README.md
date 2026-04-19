@@ -11,11 +11,19 @@ ClubCRM is a devcontainer-first monorepo for a club management platform with:
 
 Current implementation status:
 
-- `apps/web` now provides a UI-first MVP: `/` sends authenticated users to `/dashboard` and everyone else to `/login`, admin pages live under `src/app/(app)`, and public entry points live under `src/app/(public)`
-- the frontend currently includes dashboard, profile, club and member directory/detail pages, club and member creation and update flows, roster assignment from club detail, a `/login` route that hands off to backend-owned auth, join-form previews, and a dedicated `/system/health` diagnostics route
-- `apps/api` now includes bootstrap, config, infrastructure, module, and test layers, plus live `GET /health` and backend-owned auth session routes under `/auth`; the rest of the frontend still stays ahead of the broader backend contract
-- the admin route group now checks the backend session before rendering and redirects unauthenticated requests to `/login`
+- `apps/web` now provides a UI-first MVP: `/` sends authorized users to `/dashboard`, authenticated-but-unprovisioned users to `/not-provisioned`, and everyone else to `/login`; admin pages live under `src/app/(app)`, public entry points live under `src/app/(public)`, and auth proxy handlers live at `/api/auth/login` and `/auth/callback`
+- the frontend currently includes dashboard, profile, audit, club and member directory/detail pages, club and member creation and update flows, roster assignment plus event and announcement management from club detail, public join-request submission plus club-level join-request review, a `/login` route that hands off to backend-owned auth, and a dedicated `/system/health` diagnostics route
+- `apps/api` now includes bootstrap, config, infrastructure, module, and test layers, with live routes for system health, backend-owned auth, audit logs, dashboard summaries, clubs, members, memberships, announcements, events, and join-request flows
+- the admin route group now checks the backend session before rendering and serves a role-aware shell for organization admins and club managers
+- the repo also includes a public `/demo/failover` route plus a companion monitoring stack under `apps/monitor-api` and `apps/monitor-web` for the networking demo, kept intentionally outside the main ClubCRM app pair
 - the local data and app stack is wired up through the repository devcontainer
+
+Current networking-demo deployment as of April 18, 2026:
+
+- replacement cluster nodes: `Server1` -> `100.122.118.85`, `Server2` -> `100.67.65.5`,
+  `Server3` -> `100.99.187.90`
+- monitoring host VM: `DemoControlPlaneServer` -> `192.168.139.213`
+- shared ingress hosts: `clubcrm.local`, `kubero.local`
 
 ## Development Environment
 
@@ -133,12 +141,16 @@ Before opening a pull request, run the narrowest relevant checks from the reposi
 
 ## Docs
 
+- `AGENTS.md` for repo-wide agent and contributor guardrails
 - `docs/README.md` for a categorized map of the project documentation
+- `apps/web/README.md` for frontend-specific runtime and environment notes
+- `apps/api/README.md` for backend structure and route notes
 - `docs/contributing.md` for contribution workflow and code standards
 - `docs/architecture.md` for system structure and local environment rules
 - `docs/schema.md` for data modeling notes
 - `docs/decisions.md` for architecture decisions
 - `docs/guides/module-implementation-flow.md` for step-by-step guidance on growing a module or feature slice
+- `docs/guides/live-site-testing.md` for manual smoke testing on the live production site
 - `docs/guides/postgresql-implementation-flow.md` for relational system-of-record implementation guidance
 - `docs/guides/mongodb-implementation-flow.md` for document-store implementation guidance
 - `docs/guides/redis-implementation-flow.md` for caching and short-lived data implementation guidance
@@ -146,5 +158,9 @@ Before opening a pull request, run the narrowest relevant checks from the reposi
 - `docs/plans/team-execution-plan.md` for scope and ownership guidance
 - `docs/plans/networking-team-execution-plan.md` for the companion networking workstream
 - `docs/deployment/ssh-docker-deploy.md` for the current SSH-based VM deployment path
+- `docs/deployment/companion-monitoring-stack.md` for the companion monitoring app architecture and data flow
+- `docs/deployment/current-longhorn-implementation.md` for the current Longhorn implementation, live-cluster status, and broken pieces
+- `docs/deployment/monitoring-stack.md` for the separate networking-demo monitoring stack
+- `docs/deployment/k3s-kubero-longhorn.md` for the networking-final cluster rollout
 - `docs/analysis/current-project-structure-analysis.md` for a detailed review of the repo's current shape
-- `docs/proposals/` for course proposal drafts
+- `docs/plans/` and `docs/proposals/` for historical course-planning context
