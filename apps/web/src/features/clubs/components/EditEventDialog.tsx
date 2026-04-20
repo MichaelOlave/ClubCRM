@@ -17,10 +17,12 @@ import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
 import type { ClubDetailViewModel } from "@/features/clubs/types";
 import type { ActionNotice as ActionNoticeModel } from "@/lib/forms";
+import { TEXT_LIMITS } from "@/lib/textLimits";
 
 type Props = {
   action: (formData: FormData) => Promise<void>;
   clubId: string;
+  clubSlug: string;
   event: ClubDetailViewModel["events"][number];
   notice: ActionNoticeModel | null;
 };
@@ -32,7 +34,7 @@ function toDateTimeLocalValue(value: string): string {
   return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
 }
 
-export function EditEventDialog({ action, clubId, event, notice }: Props) {
+export function EditEventDialog({ action, clubId, clubSlug, event, notice }: Props) {
   const [open, setOpen] = useState(Boolean(notice && notice.kind === "error"));
 
   return (
@@ -55,11 +57,17 @@ export function EditEventDialog({ action, clubId, event, notice }: Props) {
 
         <form action={action} className="grid gap-4 lg:grid-cols-2">
           <input name="clubId" type="hidden" value={clubId} />
+          <input name="clubSlug" type="hidden" value={clubSlug} />
           <input name="eventId" type="hidden" value={event.id} />
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90 lg:col-span-2">
             <span>Event title</span>
-            <Input defaultValue={event.title} name="title" required />
+            <Input
+              defaultValue={event.title}
+              maxLength={TEXT_LIMITS.eventTitle}
+              name="title"
+              required
+            />
           </label>
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
@@ -85,6 +93,7 @@ export function EditEventDialog({ action, clubId, event, notice }: Props) {
             <span>Location</span>
             <Input
               defaultValue={event.location ?? ""}
+              maxLength={TEXT_LIMITS.eventLocation}
               name="location"
               placeholder="Student Center, Room 204"
             />
@@ -94,10 +103,14 @@ export function EditEventDialog({ action, clubId, event, notice }: Props) {
             <span>Description</span>
             <Textarea
               defaultValue={event.description}
+              maxLength={TEXT_LIMITS.eventDescription}
               name="description"
               placeholder="What should members expect, and what do they need to bring?"
               required
             />
+            <span className="text-xs font-normal leading-5 text-muted-foreground">
+              Up to {TEXT_LIMITS.eventDescription} characters.
+            </span>
           </label>
 
           <DialogFooter className="lg:col-span-2">

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 
 import { approveJoinRequestApi, denyJoinRequestApi } from "@/lib/api/clubcrm";
 import { getApiErrorMessage } from "@/lib/api/server-data";
-import { buildPathWithSearchParams, getRequiredString } from "@/lib/forms";
+import { buildPathWithSearchParams, getOptionalString, getRequiredString } from "@/lib/forms";
 import type { JoinRequestContext } from "@/features/forms/join-request/types";
 import { getJoinRequestApiAuthHeaders } from "./authHeaders";
 
@@ -78,9 +78,10 @@ function buildJoinRequestSuccessMessage(result: {
 
 export async function approveJoinRequestAction(formData: FormData) {
   const clubId = getRequiredString(formData, "clubId", "Club");
+  const clubSlug = getOptionalString(formData, "clubSlug") ?? clubId;
   const joinRequestId = getRequiredString(formData, "joinRequestId", "Join request");
   const role = getRequiredString(formData, "role", "Role");
-  const redirectPath = `/clubs/${clubId}/join-requests`;
+  const redirectPath = `/clubs/${clubSlug}/join-requests`;
   let successRedirectPath = redirectPath;
 
   try {
@@ -96,7 +97,7 @@ export async function approveJoinRequestAction(formData: FormData) {
     );
 
     revalidatePath("/clubs");
-    revalidatePath(`/clubs/${clubId}`);
+    revalidatePath(`/clubs/${clubSlug}`);
     revalidatePath(redirectPath);
     revalidatePath("/members");
     revalidatePath(`/members/${result.member_id}`);
@@ -120,8 +121,9 @@ export async function approveJoinRequestAction(formData: FormData) {
 
 export async function denyJoinRequestAction(formData: FormData) {
   const clubId = getRequiredString(formData, "clubId", "Club");
+  const clubSlug = getOptionalString(formData, "clubSlug") ?? clubId;
   const joinRequestId = getRequiredString(formData, "joinRequestId", "Join request");
-  const redirectPath = `/clubs/${clubId}/join-requests`;
+  const redirectPath = `/clubs/${clubSlug}/join-requests`;
   let successRedirectPath = redirectPath;
 
   try {

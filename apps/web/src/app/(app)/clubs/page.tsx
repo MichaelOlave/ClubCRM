@@ -36,11 +36,7 @@ export default async function ClubsPage({ searchParams }: Props) {
         actions={
           <>
             {isOrgAdmin ? (
-              <CreateClubDialog
-                action={createClubAction}
-                defaultOrganizationId={clubs[0]?.organizationId ?? ""}
-                notice={clubErrorNotice}
-              />
+              <CreateClubDialog action={createClubAction} notice={clubErrorNotice} />
             ) : null}
             {isOrgAdmin ? (
               <Button asChild variant="secondary">

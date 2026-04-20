@@ -19,11 +19,12 @@ import type { ActionNotice as ActionNoticeModel } from "@/lib/forms";
 
 type Props = {
   action: (formData: FormData) => Promise<void>;
+  clubSlug: string;
   membership: MembershipRecord;
   notice: ActionNoticeModel | null;
 };
 
-export function EditMembershipRoleDialog({ action, membership, notice }: Props) {
+export function EditMembershipRoleDialog({ action, clubSlug, membership, notice }: Props) {
   const [open, setOpen] = useState(Boolean(notice && notice.kind === "error"));
 
   return (
@@ -47,6 +48,7 @@ export function EditMembershipRoleDialog({ action, membership, notice }: Props) 
 
         <form action={action} className="grid gap-4">
           <input name="clubId" type="hidden" value={membership.clubId} />
+          <input name="clubSlug" type="hidden" value={clubSlug} />
           <input name="memberId" type="hidden" value={membership.memberId} />
           <input name="membershipId" type="hidden" value={membership.id} />
 

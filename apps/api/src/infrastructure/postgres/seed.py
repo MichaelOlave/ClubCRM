@@ -18,6 +18,7 @@ from src.infrastructure.postgres.models.tables import (
     MembershipModel,
     OrganizationModel,
 )
+from src.modules.clubs.domain.slug import slugify_club_name
 
 DEFAULT_ORGANIZATION_NAME = "Champlain College"
 DEFAULT_ADMIN_EMAILS = (
@@ -178,6 +179,7 @@ def seed(client: PostgresClient | None = None) -> bool:
         club = ClubModel(
             id=str(uuid.uuid4()),
             organization_id=org.id,
+            slug=slugify_club_name("Computer Science Club"),
             name="Computer Science Club",
             description="A club for CS enthusiasts.",
             status="active",

@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/shadcn/input";
 import type { MemberDetailViewModel } from "@/features/members/types";
 import type { ActionNotice as ActionNoticeModel } from "@/lib/forms";
+import { TEXT_LIMITS } from "@/lib/textLimits";
 
 type Props = {
   action: (formData: FormData) => Promise<void>;
@@ -47,22 +48,43 @@ export function EditMemberDialog({ action, member, notice }: Props) {
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
             <span>First name</span>
-            <Input defaultValue={member.firstName} name="firstName" required />
+            <Input
+              defaultValue={member.firstName}
+              maxLength={TEXT_LIMITS.memberName}
+              name="firstName"
+              required
+            />
           </label>
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
             <span>Last name</span>
-            <Input defaultValue={member.lastName} name="lastName" required />
+            <Input
+              defaultValue={member.lastName}
+              maxLength={TEXT_LIMITS.memberName}
+              name="lastName"
+              required
+            />
           </label>
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
             <span>Email address</span>
-            <Input defaultValue={member.email} name="email" required type="email" />
+            <Input
+              defaultValue={member.email}
+              maxLength={TEXT_LIMITS.email}
+              name="email"
+              required
+              type="email"
+            />
           </label>
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
             <span>Student ID</span>
-            <Input defaultValue={member.studentId ?? ""} name="studentId" placeholder="Optional" />
+            <Input
+              defaultValue={member.studentId ?? ""}
+              maxLength={TEXT_LIMITS.studentId}
+              name="studentId"
+              placeholder="Optional"
+            />
           </label>
 
           <DialogFooter className="lg:col-span-2">

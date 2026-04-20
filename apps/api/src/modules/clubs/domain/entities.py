@@ -5,6 +5,7 @@ from dataclasses import dataclass
 class Club:
     id: str
     organization_id: str
+    slug: str
     name: str
     description: str
     status: str

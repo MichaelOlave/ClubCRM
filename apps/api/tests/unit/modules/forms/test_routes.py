@@ -98,6 +98,17 @@ class FakeClubRepository(ClubRepository):
     def get_club(self, club_id: str) -> Club | None:
         return self._clubs.get(club_id)
 
+    def get_club_by_slug(self, organization_id: str | None, club_slug: str) -> Club | None:
+        return next(
+            (
+                club
+                for club in self._clubs.values()
+                if club.slug == club_slug
+                and (organization_id is None or club.organization_id == organization_id)
+            ),
+            None,
+        )
+
     def create_club(
         self,
         organization_id: str,
@@ -108,6 +119,7 @@ class FakeClubRepository(ClubRepository):
         created = Club(
             id=f"club-{len(self._clubs) + 1}",
             organization_id=organization_id,
+            slug="new-club",
             name=name,
             description=description,
             status=status,
@@ -284,6 +296,7 @@ class JoinRequestRouteTests(unittest.TestCase):
                 Club(
                     id="club-1",
                     organization_id="org-1",
+                    slug="chess-club",
                     name="Chess Club",
                     description="Board games and matches.",
                     status="active",
@@ -291,6 +304,7 @@ class JoinRequestRouteTests(unittest.TestCase):
                 Club(
                     id="club-99",
                     organization_id="org-99",
+                    slug="robotics-club",
                     name="Robotics Club",
                     description="Build and compete.",
                     status="active",

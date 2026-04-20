@@ -4,12 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getAdminApiHeaders } from "@/lib/api/adminAuthHeaders";
+import { requireOrgAdminBackendSession } from "@/features/auth/server";
 import { createMemberApi, updateMemberApi } from "@/lib/api/clubcrm";
 import { getApiErrorMessage } from "@/lib/api/server-data";
 import { buildPathWithSearchParams, getOptionalString, getRequiredString } from "@/lib/forms";
 
 export async function createMemberAction(formData: FormData) {
-  const organizationId = getRequiredString(formData, "organizationId", "Organization ID");
+  const session = await requireOrgAdminBackendSession("/members");
   const firstName = getRequiredString(formData, "firstName", "First name");
   const lastName = getRequiredString(formData, "lastName", "Last name");
   const email = getRequiredString(formData, "email", "Email address");
@@ -19,7 +20,7 @@ export async function createMemberAction(formData: FormData) {
   try {
     const member = await createMemberApi(
       {
-        organization_id: organizationId,
+        organization_id: session.access.organizationId,
         first_name: firstName,
         last_name: lastName,
         email,

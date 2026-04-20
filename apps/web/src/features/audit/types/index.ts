@@ -5,6 +5,7 @@ export type AuditLogFilterValues = {
   actorQuery: string;
   from: string;
   limit: string;
+  page: string;
   resourceId: string;
   resourceType: string;
   to: string;
@@ -32,5 +33,11 @@ export type AuditLogViewModel = {
   errorMessage?: string;
   filters: AuditLogFilterValues;
   logs: AuditLogEntryViewModel[];
+  pagination: {
+    hasNext: boolean;
+    hasPrevious: boolean;
+    page: number;
+    pageSize: number;
+  };
   status: "available" | "error";
 };

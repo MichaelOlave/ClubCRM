@@ -6,14 +6,15 @@ import { redirect } from "next/navigation";
 import { getAdminApiHeaders } from "@/lib/api/adminAuthHeaders";
 import { createMembershipApi, updateMembershipApi } from "@/lib/api/clubcrm";
 import { getApiErrorMessage } from "@/lib/api/server-data";
-import { buildPathWithSearchParams, getRequiredString } from "@/lib/forms";
+import { buildPathWithSearchParams, getOptionalString, getRequiredString } from "@/lib/forms";
 
 export async function createMembershipAction(formData: FormData) {
   const clubId = getRequiredString(formData, "clubId", "Club");
+  const clubSlug = getOptionalString(formData, "clubSlug") ?? clubId;
   const memberId = getRequiredString(formData, "memberId", "Member");
   const role = getRequiredString(formData, "role", "Role");
   const status = getRequiredString(formData, "status", "Membership status");
-  const redirectPath = `/clubs/${clubId}`;
+  const redirectPath = `/clubs/${clubSlug}`;
   let successRedirectPath = redirectPath;
 
   try {
@@ -54,10 +55,11 @@ export async function createMembershipAction(formData: FormData) {
 
 export async function updateMembershipRoleAction(formData: FormData) {
   const clubId = getRequiredString(formData, "clubId", "Club");
+  const clubSlug = getOptionalString(formData, "clubSlug") ?? clubId;
   const memberId = getRequiredString(formData, "memberId", "Member");
   const membershipId = getRequiredString(formData, "membershipId", "Membership");
   const role = getRequiredString(formData, "role", "Role");
-  const redirectPath = `/clubs/${clubId}`;
+  const redirectPath = `/clubs/${clubSlug}`;
   let successRedirectPath = redirectPath;
 
   try {

@@ -73,20 +73,20 @@ type Props = {
 };
 
 export default async function ClubDetailPage({ params, searchParams }: Props) {
-  const { clubId } = await params;
+  const { clubId: clubIdentifier } = await params;
   const session = await requireAuthorizedBackendSession();
   const isOrgAdmin = isOrgAdminBackendAuthSession(session);
-  const [detail, memberships, assignableMembers, managerGrants, query] = await Promise.all([
-    getClubDetail(clubId, session),
-    getMembershipsForClub(clubId, session),
-    isOrgAdmin ? getAssignableMembersForClub(clubId) : Promise.resolve([]),
-    getClubManagerGrants(clubId, session),
-    searchParams,
-  ]);
+  const [detail, query] = await Promise.all([getClubDetail(clubIdentifier, session), searchParams]);
 
   if (!detail) {
     notFound();
   }
+
+  const [memberships, assignableMembers, managerGrants] = await Promise.all([
+    getMembershipsForClub(detail.club.id, session),
+    isOrgAdmin ? getAssignableMembersForClub(detail.club.id) : Promise.resolve([]),
+    getClubManagerGrants(detail.club.id, session),
+  ]);
 
   const assignmentNotice = getActionNotice(query.membershipCreated, query.membershipError);
   const clubUpdateNotice = getActionNotice(query.clubUpdated, query.clubUpdateError);
@@ -171,6 +171,7 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
                         <AddMemberToClubDialog
                           action={createMembershipAction}
                           clubId={detail.club.id}
+                          clubSlug={detail.club.slug}
                           members={assignableMembers}
                           notice={assignmentErrorNotice}
                         />
@@ -183,6 +184,7 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
                       {isOrgAdmin ? (
                         <ClubManagerAccessCard
                           clubId={detail.club.id}
+                          clubSlug={detail.club.slug}
                           createAction={createClubManagerGrantAction}
                           currentGrants={managerGrants}
                           deleteAction={deleteClubManagerGrantAction}
@@ -200,18 +202,22 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
                       <CreateEventDialog
                         action={createEventAction}
                         clubId={detail.club.id}
+                        clubSlug={detail.club.slug}
                         notice={eventCreateErrorNotice}
                       />
                       <CreateAnnouncementDialog
                         action={createAnnouncementAction}
                         clubId={detail.club.id}
+                        clubSlug={detail.club.slug}
                         notice={announcementCreateErrorNotice}
                       />
                       <Button asChild size="sm" variant="outline">
-                        <Link href={`/clubs/${clubId}/join-requests`}>Review join requests</Link>
+                        <Link href={`/clubs/${detail.club.slug}/join-requests`}>
+                          Review join requests
+                        </Link>
                       </Button>
                       <Button asChild size="sm" variant="ghost">
-                        <Link href={`/join/${clubId}`}>Open public form</Link>
+                        <Link href={`/join/${detail.club.slug}`}>Open public form</Link>
                       </Button>
                     </>
                   ),
@@ -243,6 +249,7 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
               action={updateAnnouncementAction}
               announcement={announcement}
               clubId={detail.club.id}
+              clubSlug={detail.club.slug}
               notice={
                 announcementEditTarget === announcement.id ? announcementUpdateErrorNotice : null
               }
@@ -250,6 +257,7 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
             <form action={deleteAnnouncementAction}>
               <input name="announcementId" type="hidden" value={announcement.id} />
               <input name="clubId" type="hidden" value={detail.club.id} />
+              <input name="clubSlug" type="hidden" value={detail.club.slug} />
               <Button size="sm" type="submit" variant="destructive">
                 Delete
               </Button>
@@ -262,11 +270,13 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
             <EditEventDialog
               action={updateEventAction}
               clubId={detail.club.id}
+              clubSlug={detail.club.slug}
               event={event}
               notice={eventEditTarget === event.id ? eventUpdateErrorNotice : null}
             />
             <form action={deleteEventAction}>
               <input name="clubId" type="hidden" value={detail.club.id} />
+              <input name="clubSlug" type="hidden" value={detail.club.slug} />
               <input name="eventId" type="hidden" value={event.id} />
               <Button size="sm" type="submit" variant="destructive">
                 Delete
@@ -277,6 +287,7 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
         membershipActions={(membership) => (
           <EditMembershipRoleDialog
             action={updateMembershipRoleAction}
+            clubSlug={detail.club.slug}
             membership={membership}
             notice={membershipUpdateTarget === membership.id ? membershipUpdateErrorNotice : null}
           />

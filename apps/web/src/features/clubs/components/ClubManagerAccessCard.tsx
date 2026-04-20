@@ -17,10 +17,12 @@ import {
 import { EmptyState } from "@/components/shadcn/empty-state";
 import { formatDateTime } from "@/lib/utils/formatters";
 import type { ActionNotice as ActionNoticeModel } from "@/lib/forms";
+import { TEXT_LIMITS } from "@/lib/textLimits";
 import type { MembershipRecord, BackendClubManagerGrantRecord } from "@/types/api";
 
 type Props = {
   clubId: string;
+  clubSlug: string;
   createAction: (formData: FormData) => Promise<void>;
   currentGrants: BackendClubManagerGrantRecord[];
   deleteAction: (formData: FormData) => Promise<void>;
@@ -55,6 +57,7 @@ function getEligibleCandidates(
 
 export function ClubManagerAccessCard({
   clubId,
+  clubSlug,
   createAction,
   currentGrants,
   deleteAction,
@@ -103,6 +106,7 @@ export function ClubManagerAccessCard({
 
                   <form action={deleteAction}>
                     <input name="clubId" type="hidden" value={clubId} />
+                    <input name="clubSlug" type="hidden" value={clubSlug} />
                     <input name="grantId" type="hidden" value={grant.id} />
                     <Button type="submit" variant="outline">
                       Revoke access
@@ -124,6 +128,7 @@ export function ClubManagerAccessCard({
               className="grid gap-4 rounded-[1.25rem] border border-border bg-brand-surface p-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto]"
             >
               <input name="clubId" type="hidden" value={clubId} />
+              <input name="clubSlug" type="hidden" value={clubSlug} />
 
               <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
                 <span>Roster member</span>
@@ -145,6 +150,7 @@ export function ClubManagerAccessCard({
                 <input
                   className={inputClassName}
                   defaultValue="Club Manager"
+                  maxLength={TEXT_LIMITS.clubManagerTitle}
                   name="roleName"
                   placeholder="Club Manager"
                   type="text"

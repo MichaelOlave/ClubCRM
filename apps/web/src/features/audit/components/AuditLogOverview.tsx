@@ -16,10 +16,39 @@ import {
 } from "@/components/shadcn/table";
 import { formatDateTime } from "@/lib/utils/formatters";
 import type { AuditLogViewModel } from "@/features/audit/types";
+import { TEXT_LIMITS } from "@/lib/textLimits";
 
 type Props = {
   viewModel: AuditLogViewModel;
 };
+
+function buildAuditLogHref(filters: AuditLogViewModel["filters"], page: number): string {
+  const params = new URLSearchParams();
+
+  if (filters.action) {
+    params.set("action", filters.action);
+  }
+  if (filters.resourceType) {
+    params.set("resourceType", filters.resourceType);
+  }
+  if (filters.actorQuery) {
+    params.set("actorQuery", filters.actorQuery);
+  }
+  if (filters.resourceId) {
+    params.set("resourceId", filters.resourceId);
+  }
+  if (filters.from) {
+    params.set("from", filters.from);
+  }
+  if (filters.to) {
+    params.set("to", filters.to);
+  }
+  params.set("limit", filters.limit);
+  params.set("page", `${page}`);
+
+  const query = params.toString();
+  return query ? `/system/audit?${query}` : "/system/audit";
+}
 
 function getActionVariant(action: string) {
   switch (action) {
@@ -46,6 +75,7 @@ export function AuditLogOverview({ viewModel }: Props) {
         </div>
 
         <form className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" method="get">
+          <input name="page" type="hidden" value="1" />
           <label className="space-y-2 text-sm font-medium text-foreground">
             <span>Action</span>
             <select
@@ -82,6 +112,7 @@ export function AuditLogOverview({ viewModel }: Props) {
             <span>Actor</span>
             <Input
               defaultValue={viewModel.filters.actorQuery}
+              maxLength={TEXT_LIMITS.auditFilter}
               name="actorQuery"
               placeholder="email, name, or subject"
             />
@@ -91,6 +122,7 @@ export function AuditLogOverview({ viewModel }: Props) {
             <span>Resource ID</span>
             <Input
               defaultValue={viewModel.filters.resourceId}
+              maxLength={TEXT_LIMITS.resourceId}
               name="resourceId"
               placeholder="club-123 or request id"
             />
@@ -100,6 +132,7 @@ export function AuditLogOverview({ viewModel }: Props) {
             <span>From</span>
             <Input
               defaultValue={viewModel.filters.from}
+              maxLength={TEXT_LIMITS.isoDateTimeFilter}
               name="from"
               placeholder="2026-04-14T00:00:00Z"
             />
@@ -109,6 +142,7 @@ export function AuditLogOverview({ viewModel }: Props) {
             <span>To</span>
             <Input
               defaultValue={viewModel.filters.to}
+              maxLength={TEXT_LIMITS.isoDateTimeFilter}
               name="to"
               placeholder="2026-04-14T23:59:59Z"
             />
@@ -147,6 +181,9 @@ export function AuditLogOverview({ viewModel }: Props) {
           <p className="text-sm leading-6 text-muted-foreground">
             Newest entries first, with actor, target, request path, and a safe summary of the
             change.
+          </p>
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            Page {viewModel.pagination.page} • {viewModel.pagination.pageSize} per page
           </p>
         </div>
 
@@ -223,6 +260,41 @@ export function AuditLogOverview({ viewModel }: Props) {
             title="No audit entries match the current filters"
           />
         )}
+
+        <div className="flex items-center justify-between gap-3 border-t pt-4">
+          <Button
+            asChild={viewModel.pagination.hasPrevious}
+            disabled={!viewModel.pagination.hasPrevious}
+            type="button"
+            variant="outline"
+          >
+            {viewModel.pagination.hasPrevious ? (
+              <Link href={buildAuditLogHref(viewModel.filters, viewModel.pagination.page - 1)}>
+                Previous page
+              </Link>
+            ) : (
+              <span>Previous page</span>
+            )}
+          </Button>
+          <p className="text-sm text-muted-foreground">
+            Showing page {viewModel.pagination.page}
+            {viewModel.pagination.hasNext ? " with more results available." : "."}
+          </p>
+          <Button
+            asChild={viewModel.pagination.hasNext}
+            disabled={!viewModel.pagination.hasNext}
+            type="button"
+            variant="outline"
+          >
+            {viewModel.pagination.hasNext ? (
+              <Link href={buildAuditLogHref(viewModel.filters, viewModel.pagination.page + 1)}>
+                Next page
+              </Link>
+            ) : (
+              <span>Next page</span>
+            )}
+          </Button>
+        </div>
       </Card>
     </div>
   );

@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.bootstrap.dependencies import (
     get_audit_log_repository,
@@ -43,11 +43,13 @@ from src.presentation.http.request_context import (
 )
 
 router = APIRouter(prefix="/clubs", tags=["clubs"])
+DESCRIPTION_MAX_LENGTH = 500
 
 
 class ClubResponse(BaseModel):
     id: str
     organization_id: str
+    slug: str
     name: str
     description: str
     status: str
@@ -57,6 +59,7 @@ class ClubResponse(BaseModel):
         return cls(
             id=club.id,
             organization_id=club.organization_id,
+            slug=club.slug,
             name=club.name,
             description=club.description,
             status=club.status,
@@ -66,13 +69,13 @@ class ClubResponse(BaseModel):
 class CreateClubRequest(BaseModel):
     organization_id: str
     name: str
-    description: str = ""
+    description: str = Field(default="", max_length=DESCRIPTION_MAX_LENGTH)
     status: str = "active"
 
 
 class UpdateClubRequest(BaseModel):
     name: str | None = None
-    description: str | None = None
+    description: str | None = Field(default=None, max_length=DESCRIPTION_MAX_LENGTH)
     status: str | None = None
 
 
@@ -130,6 +133,23 @@ def get_club(
     repository: Annotated[ClubRepository, Depends(get_club_repository)],
 ) -> ClubResponse:
     club = GetClub(repository=repository).execute(club_id)
+    if club is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Club not found.")
+
+    ensure_club_access(access, club.id)
+    return ClubResponse.from_domain(club)
+
+
+@router.get("/slug/{club_slug}", response_model=ClubResponse)
+def get_club_by_slug(
+    club_slug: str,
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
+    repository: Annotated[ClubRepository, Depends(get_club_repository)],
+) -> ClubResponse:
+    effective_organization_id = (
+        None if access.primary_role == "org_admin" else access.organization_id
+    )
+    club = repository.get_club_by_slug(effective_organization_id, club_slug)
     if club is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Club not found.")
 

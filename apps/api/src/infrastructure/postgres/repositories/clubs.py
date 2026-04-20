@@ -8,6 +8,7 @@ from src.modules.clubs.application.ports.club_repository import (
     ClubRepository,
 )
 from src.modules.clubs.domain.entities import Club
+from src.modules.clubs.domain.slug import slugify_club_name
 
 
 class PostgresClubRepository(ClubRepository):
@@ -31,6 +32,22 @@ class PostgresClubRepository(ClubRepository):
 
             return self._to_domain(row)
 
+    def get_club_by_slug(
+        self,
+        organization_id: str | None,
+        club_slug: str,
+    ) -> Club | None:
+        with self.client.create_session() as session:
+            statement = select(ClubModel).where(ClubModel.slug == club_slug)
+            if organization_id is not None:
+                statement = statement.where(ClubModel.organization_id == organization_id)
+
+            row = session.execute(statement).scalar_one_or_none()
+            if row is None:
+                return None
+
+            return self._to_domain(row)
+
     def create_club(
         self,
         organization_id: str,
@@ -41,12 +58,13 @@ class PostgresClubRepository(ClubRepository):
         with self.client.create_session() as session:
             row = ClubModel(
                 organization_id=organization_id,
+                slug=slugify_club_name(name),
                 name=name,
                 description=description,
                 status=status,
             )
             session.add(row)
-            self._commit(session, "Could not create club with the provided data.")
+            self._commit(session)
             session.refresh(row)
             return self._to_domain(row)
 
@@ -65,12 +83,13 @@ class PostgresClubRepository(ClubRepository):
 
             if name is not None:
                 row.name = name
+                row.slug = slugify_club_name(name)
             if description is not None:
                 row.description = description
             if status is not None:
                 row.status = status
 
-            self._commit(session, "Could not update club with the provided data.")
+            self._commit(session)
             session.refresh(row)
             return self._to_domain(row)
 
@@ -84,17 +103,18 @@ class PostgresClubRepository(ClubRepository):
             session.commit()
             return True
 
-    def _commit(self, session, message: str) -> None:
+    def _commit(self, session) -> None:
         try:
             session.commit()
         except IntegrityError as exc:
             session.rollback()
-            raise ClubConflictError(message) from exc
+            raise ClubConflictError("Club names must be unique within an organization.") from exc
 
     def _to_domain(self, row: ClubModel) -> Club:
         return Club(
             id=row.id,
             organization_id=row.organization_id,
+            slug=row.slug,
             name=row.name,
             description=row.description,
             status=row.status,

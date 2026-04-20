@@ -7,6 +7,7 @@ import type { JoinRequestRecord } from "@/types/api";
 
 type Props = {
   approveAction: (formData: FormData) => Promise<void>;
+  clubSlug: string;
   denyAction: (formData: FormData) => Promise<void>;
   requests: JoinRequestRecord[];
 };
@@ -22,7 +23,7 @@ function getStatusVariant(status: JoinRequestRecord["status"]) {
   }
 }
 
-export function JoinRequestReviewList({ approveAction, denyAction, requests }: Props) {
+export function JoinRequestReviewList({ approveAction, clubSlug, denyAction, requests }: Props) {
   if (!requests.length) {
     return (
       <EmptyState
@@ -92,6 +93,7 @@ export function JoinRequestReviewList({ approveAction, denyAction, requests }: P
 
             <form action={approveAction} className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
               <input name="clubId" type="hidden" value={request.clubId} />
+              <input name="clubSlug" type="hidden" value={clubSlug} />
               <input name="joinRequestId" type="hidden" value={request.id} />
 
               <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
@@ -108,6 +110,7 @@ export function JoinRequestReviewList({ approveAction, denyAction, requests }: P
 
             <form action={denyAction} className="flex justify-end">
               <input name="clubId" type="hidden" value={request.clubId} />
+              <input name="clubSlug" type="hidden" value={clubSlug} />
               <input name="joinRequestId" type="hidden" value={request.id} />
               <Button size="sm" type="submit" variant="destructive">
                 Deny request

@@ -6,7 +6,6 @@ import { Button } from "@/components/shadcn/button";
 import { Card } from "@/components/shadcn/card";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { requireOrgAdminBackendSession } from "@/features/auth/server";
-import { getClubList } from "@/features/clubs/server";
 import { CreateMemberDialog, MemberDirectory } from "@/features/members";
 import { createMemberAction, getMemberList } from "@/features/members/server";
 import { getActionNotice } from "@/lib/forms";
@@ -19,14 +18,9 @@ type Props = {
 };
 
 export default async function MembersPage({ searchParams }: Props) {
-  const session = await requireOrgAdminBackendSession();
-  const [members, clubs, query] = await Promise.all([
-    getMemberList(),
-    getClubList(session),
-    searchParams,
-  ]);
+  await requireOrgAdminBackendSession();
+  const [members, query] = await Promise.all([getMemberList(), searchParams]);
   const memberNotice = getActionNotice(query.memberCreated, query.memberError);
-  const defaultOrganizationId = members[0]?.organizationId ?? clubs[0]?.organizationId ?? "";
   const memberSuccessNotice = memberNotice?.kind === "success" ? memberNotice : null;
   const memberErrorNotice = memberNotice?.kind === "error" ? memberNotice : null;
 
@@ -35,11 +29,7 @@ export default async function MembersPage({ searchParams }: Props) {
       <PageHeader
         actions={
           <>
-            <CreateMemberDialog
-              action={createMemberAction}
-              defaultOrganizationId={defaultOrganizationId}
-              notice={memberErrorNotice}
-            />
+            <CreateMemberDialog action={createMemberAction} notice={memberErrorNotice} />
             <Button asChild variant="secondary">
               <Link href="/clubs">View clubs</Link>
             </Button>

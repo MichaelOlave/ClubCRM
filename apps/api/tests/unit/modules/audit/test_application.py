@@ -63,5 +63,29 @@ class AuditApplicationTests(unittest.TestCase):
             AuditLogFilters(limit=999, action="update")
         )
 
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0].id, "audit-2")
+        self.assertEqual(len(results.items), 1)
+        self.assertEqual(results.items[0].id, "audit-2")
+        self.assertEqual(results.page, 1)
+        self.assertFalse(results.has_next)
+
+    def test_list_audit_logs_returns_has_next_for_following_page(self) -> None:
+        repository = FakeAuditLogRepository()
+        repository.audit_logs = [
+            build_audit_log(
+                audit_id="audit-1",
+                occurred_at=datetime(2026, 4, 14, 9, 0, tzinfo=UTC),
+            ),
+            build_audit_log(
+                audit_id="audit-2",
+                occurred_at=datetime(2026, 4, 14, 10, 0, tzinfo=UTC),
+            ),
+            build_audit_log(
+                audit_id="audit-3",
+                occurred_at=datetime(2026, 4, 14, 11, 0, tzinfo=UTC),
+            ),
+        ]
+
+        results = ListAuditLogs(repository=repository).execute(AuditLogFilters(limit=2))
+
+        self.assertEqual([audit_log.id for audit_log in results.items], ["audit-3", "audit-2"])
+        self.assertTrue(results.has_next)

@@ -51,6 +51,8 @@ The homepage currently checks the backend auth session, then redirects authorize
 - The web service waits for the API health check before it starts.
 - Most frontend data is currently provided by server-side view-model modules under `src/features/*/server`; `/system/health`, `/system/audit`, `/profile`, `/login`, and the protected admin route group now call into the FastAPI backend.
 - Club detail pages also read memberships, upcoming events, and announcements from the backend so the admin shell can stay compact without adding more top-level routes yet.
+- Club and public join URLs now prefer backend-provided club slugs, while write actions still post
+  the internal club ID back to the API.
 - The public `/demo/failover` route also consumes the health feature's live-routing snapshot so the networking demo can watch pod changes without requiring a login.
 - `API_BASE_URL` is the web server's preferred internal API target.
 - `WEB_API_PUBLIC_BASE_URL` should stay pointed at the browser-reachable API origin for direct API links and as a server-side fallback when the web app cannot reach the Docker hostname directly.

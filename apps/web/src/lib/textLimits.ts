@@ -1,0 +1,16 @@
+export const TEXT_LIMITS = {
+  auditFilter: 120,
+  clubDescription: 500,
+  clubManagerTitle: 80,
+  clubName: 120,
+  email: 254,
+  eventDescription: 500,
+  eventLocation: 160,
+  eventTitle: 120,
+  isoDateTimeFilter: 32,
+  joinRequestMessage: 500,
+  memberName: 80,
+  resourceId: 120,
+  studentId: 32,
+  summaryText: 500,
+} as const;

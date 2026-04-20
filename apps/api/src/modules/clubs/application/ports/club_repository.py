@@ -17,6 +17,14 @@ class ClubRepository(ABC):
         """Return one club when it exists."""
 
     @abstractmethod
+    def get_club_by_slug(
+        self,
+        organization_id: str | None,
+        club_slug: str,
+    ) -> Club | None:
+        """Return one club by slug when it exists."""
+
+    @abstractmethod
     def create_club(
         self,
         organization_id: str,

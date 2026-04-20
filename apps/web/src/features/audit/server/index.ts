@@ -31,11 +31,21 @@ function normalizeLimit(value: string): string {
   return `${Math.min(parsed, 100)}`;
 }
 
+function normalizePage(value: string): string {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return "1";
+  }
+
+  return `${parsed}`;
+}
+
 function normalizeFilters(query: {
   action?: string | string[];
   actorQuery?: string | string[];
   from?: string | string[];
   limit?: string | string[];
+  page?: string | string[];
   resourceId?: string | string[];
   resourceType?: string | string[];
   to?: string | string[];
@@ -45,6 +55,7 @@ function normalizeFilters(query: {
     actorQuery: getQueryValue(query.actorQuery),
     from: getQueryValue(query.from),
     limit: normalizeLimit(getQueryValue(query.limit)),
+    page: normalizePage(getQueryValue(query.page)),
     resourceId: getQueryValue(query.resourceId),
     resourceType: getQueryValue(query.resourceType),
     to: getQueryValue(query.to),
@@ -102,6 +113,7 @@ export async function getAuditLogViewModel(query: {
   actorQuery?: string | string[];
   from?: string | string[];
   limit?: string | string[];
+  page?: string | string[];
   resourceId?: string | string[];
   resourceType?: string | string[];
   to?: string | string[];
@@ -118,6 +130,7 @@ export async function getAuditLogViewModel(query: {
         from: filters.from || undefined,
         to: filters.to || undefined,
         limit: Number.parseInt(filters.limit, 10),
+        page: Number.parseInt(filters.page, 10),
       },
       {
         headers: await getAdminApiHeaders({ originPath: "/system/audit" }),
@@ -127,7 +140,13 @@ export async function getAuditLogViewModel(query: {
     return {
       status: "available",
       filters,
-      logs: auditLogs.map(mapAuditLogRecord),
+      logs: auditLogs.items.map(mapAuditLogRecord),
+      pagination: {
+        page: auditLogs.pagination.page,
+        pageSize: auditLogs.pagination.page_size,
+        hasNext: auditLogs.pagination.has_next,
+        hasPrevious: auditLogs.pagination.has_previous,
+      },
       availableActions: AVAILABLE_ACTIONS,
       availableResourceTypes: AVAILABLE_RESOURCE_TYPES,
     };
@@ -140,6 +159,12 @@ export async function getAuditLogViewModel(query: {
       ),
       filters,
       logs: [],
+      pagination: {
+        page: Number.parseInt(filters.page, 10),
+        pageSize: Number.parseInt(filters.limit, 10),
+        hasNext: false,
+        hasPrevious: Number.parseInt(filters.page, 10) > 1,
+      },
       availableActions: AVAILABLE_ACTIONS,
       availableResourceTypes: AVAILABLE_RESOURCE_TYPES,
     };

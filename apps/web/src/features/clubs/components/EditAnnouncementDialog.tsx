@@ -17,11 +17,13 @@ import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
 import type { ClubDetailViewModel } from "@/features/clubs/types";
 import type { ActionNotice as ActionNoticeModel } from "@/lib/forms";
+import { TEXT_LIMITS } from "@/lib/textLimits";
 
 type Props = {
   action: (formData: FormData) => Promise<void>;
   announcement: ClubDetailViewModel["announcements"][number];
   clubId: string;
+  clubSlug: string;
   notice: ActionNoticeModel | null;
 };
 
@@ -32,7 +34,7 @@ function toDateTimeLocalValue(value: string): string {
   return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
 }
 
-export function EditAnnouncementDialog({ action, announcement, clubId, notice }: Props) {
+export function EditAnnouncementDialog({ action, announcement, clubId, clubSlug, notice }: Props) {
   const [open, setOpen] = useState(Boolean(notice && notice.kind === "error"));
 
   return (
@@ -55,11 +57,17 @@ export function EditAnnouncementDialog({ action, announcement, clubId, notice }:
 
         <form action={action} className="grid gap-4 lg:grid-cols-2">
           <input name="clubId" type="hidden" value={clubId} />
+          <input name="clubSlug" type="hidden" value={clubSlug} />
           <input name="announcementId" type="hidden" value={announcement.id} />
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90 lg:col-span-2">
             <span>Announcement title</span>
-            <Input defaultValue={announcement.title} name="title" required />
+            <Input
+              defaultValue={announcement.title}
+              maxLength={TEXT_LIMITS.eventTitle}
+              name="title"
+              required
+            />
           </label>
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
@@ -76,6 +84,7 @@ export function EditAnnouncementDialog({ action, announcement, clubId, notice }:
             <span>Created by</span>
             <Input
               defaultValue={announcement.createdBy ?? ""}
+              maxLength={TEXT_LIMITS.memberName}
               name="createdBy"
               placeholder="Alex Morgan"
               type="text"
@@ -86,10 +95,14 @@ export function EditAnnouncementDialog({ action, announcement, clubId, notice }:
             <span>Message</span>
             <Textarea
               defaultValue={announcement.body}
+              maxLength={TEXT_LIMITS.summaryText}
               name="body"
               placeholder="Share the latest update, reminder, or recap with members."
               required
             />
+            <span className="text-xs font-normal leading-5 text-muted-foreground">
+              Up to {TEXT_LIMITS.summaryText} characters.
+            </span>
           </label>
 
           <DialogFooter className="lg:col-span-2">

@@ -125,7 +125,8 @@ port if `8000` is already in use. The resolved binding is written to
 - `GET /audit-logs` returns the protected admin audit trail used by `/system/audit`
 - `GET /dashboard/summary/{club_id}` returns dashboard summary data for an authorized club
 - `/forms/*` owns public join-request submission plus protected pending, approve, and deny flows
-- `/clubs/*` includes CRUD plus club-manager grant management
+- `/clubs/*` includes CRUD plus club-manager grant management, now exposing stable club `slug`
+  values alongside internal IDs and enforcing per-organization uniqueness for club names
 - `/members/*` and `/memberships/*` provide the current roster-management surface
 - `/events/*` and `/announcements/*` provide the current club activity surface
 

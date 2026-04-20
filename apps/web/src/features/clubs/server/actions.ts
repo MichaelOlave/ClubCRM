@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getAdminApiHeaders } from "@/lib/api/adminAuthHeaders";
+import { requireOrgAdminBackendSession } from "@/features/auth/server";
 import {
   createAnnouncementApi,
   createClubApi,
@@ -19,25 +20,63 @@ import {
 import { getApiErrorMessage } from "@/lib/api/server-data";
 import { buildPathWithSearchParams, getOptionalString, getRequiredString } from "@/lib/forms";
 
-function getClubDetailPath(clubId: string): string {
-  return `/clubs/${clubId}`;
+const DESCRIPTION_MAX_LENGTH = 500;
+
+function getClubDetailPath(clubSlugOrId: string): string {
+  return `/clubs/${clubSlugOrId}`;
+}
+
+function getClubRouteSlug(formData: FormData, clubId: string): string {
+  return getOptionalString(formData, "clubSlug") ?? clubId;
 }
 
 function hasInvalidEventRange(startsAt: string, endsAt: string | null): boolean {
   return Boolean(endsAt && startsAt >= endsAt);
 }
 
+function validateDescriptionLength(
+  description: string,
+  {
+    fieldLabel,
+    errorSearchParam,
+    redirectPath,
+    extraSearchParams,
+  }: {
+    fieldLabel: string;
+    errorSearchParam: string;
+    redirectPath: string;
+    extraSearchParams?: Record<string, string>;
+  }
+): void {
+  if (description.length <= DESCRIPTION_MAX_LENGTH) {
+    return;
+  }
+
+  redirect(
+    buildPathWithSearchParams(redirectPath, {
+      ...extraSearchParams,
+      [errorSearchParam]: `${fieldLabel} must be ${DESCRIPTION_MAX_LENGTH} characters or fewer.`,
+    })
+  );
+}
+
 export async function createClubAction(formData: FormData) {
-  const organizationId = getRequiredString(formData, "organizationId", "Organization ID");
+  const session = await requireOrgAdminBackendSession("/clubs");
   const name = getRequiredString(formData, "name", "Club name");
   const status = getRequiredString(formData, "status", "Club status");
   const description = getOptionalString(formData, "description") ?? "";
   let successRedirectPath = "/clubs";
 
+  validateDescriptionLength(description, {
+    fieldLabel: "Club description",
+    errorSearchParam: "clubError",
+    redirectPath: "/clubs",
+  });
+
   try {
     const club = await createClubApi(
       {
-        organization_id: organizationId,
+        organization_id: session.access.organizationId,
         name,
         description,
         status,
@@ -66,11 +105,18 @@ export async function createClubAction(formData: FormData) {
 
 export async function updateClubAction(formData: FormData) {
   const clubId = getRequiredString(formData, "clubId", "Club");
+  const clubSlug = getClubRouteSlug(formData, clubId);
   const name = getRequiredString(formData, "name", "Club name");
   const status = getRequiredString(formData, "status", "Club status");
   const description = getOptionalString(formData, "description") ?? "";
-  const detailPath = `/clubs/${clubId}`;
-  let successRedirectPath = detailPath;
+  const currentDetailPath = getClubDetailPath(clubSlug);
+  let successRedirectPath = currentDetailPath;
+
+  validateDescriptionLength(description, {
+    fieldLabel: "Club description",
+    errorSearchParam: "clubUpdateError",
+    redirectPath: currentDetailPath,
+  });
 
   try {
     const club = await updateClubApi(
@@ -81,20 +127,22 @@ export async function updateClubAction(formData: FormData) {
         status,
       },
       {
-        headers: await getAdminApiHeaders({ includeCsrf: true, originPath: detailPath }),
+        headers: await getAdminApiHeaders({ includeCsrf: true, originPath: currentDetailPath }),
       }
     );
 
+    const nextDetailPath = getClubDetailPath(club.slug);
     revalidatePath("/clubs");
-    revalidatePath(detailPath);
+    revalidatePath(currentDetailPath);
+    revalidatePath(nextDetailPath);
     revalidatePath("/dashboard");
 
-    successRedirectPath = buildPathWithSearchParams(detailPath, {
+    successRedirectPath = buildPathWithSearchParams(nextDetailPath, {
       clubUpdated: `${club.name} has been updated.`,
     });
   } catch (error) {
     redirect(
-      buildPathWithSearchParams(detailPath, {
+      buildPathWithSearchParams(currentDetailPath, {
         clubUpdateError: getApiErrorMessage(error, "The club could not be updated right now."),
       })
     );
@@ -105,9 +153,10 @@ export async function updateClubAction(formData: FormData) {
 
 export async function createClubManagerGrantAction(formData: FormData) {
   const clubId = getRequiredString(formData, "clubId", "Club");
+  const clubSlug = getClubRouteSlug(formData, clubId);
   const memberId = getRequiredString(formData, "memberId", "Member");
   const roleName = getRequiredString(formData, "roleName", "Manager title");
-  const detailPath = `/clubs/${clubId}`;
+  const detailPath = getClubDetailPath(clubSlug);
   let successRedirectPath = detailPath;
 
   try {
@@ -145,8 +194,9 @@ export async function createClubManagerGrantAction(formData: FormData) {
 
 export async function deleteClubManagerGrantAction(formData: FormData) {
   const clubId = getRequiredString(formData, "clubId", "Club");
+  const clubSlug = getClubRouteSlug(formData, clubId);
   const grantId = getRequiredString(formData, "grantId", "Manager grant");
-  const detailPath = `/clubs/${clubId}`;
+  const detailPath = getClubDetailPath(clubSlug);
   let successRedirectPath = detailPath;
 
   try {
@@ -177,13 +227,20 @@ export async function deleteClubManagerGrantAction(formData: FormData) {
 
 export async function createEventAction(formData: FormData) {
   const clubId = getRequiredString(formData, "clubId", "Club");
+  const clubSlug = getClubRouteSlug(formData, clubId);
   const title = getRequiredString(formData, "title", "Event title");
   const description = getRequiredString(formData, "description", "Description");
   const startsAt = getRequiredString(formData, "startsAt", "Start time");
   const endsAt = getOptionalString(formData, "endsAt");
   const location = getOptionalString(formData, "location");
-  const detailPath = getClubDetailPath(clubId);
+  const detailPath = getClubDetailPath(clubSlug);
   let successRedirectPath = detailPath;
+
+  validateDescriptionLength(description, {
+    fieldLabel: "Event description",
+    errorSearchParam: "eventCreateError",
+    redirectPath: detailPath,
+  });
 
   if (hasInvalidEventRange(startsAt, endsAt)) {
     redirect(
@@ -228,14 +285,22 @@ export async function createEventAction(formData: FormData) {
 
 export async function updateEventAction(formData: FormData) {
   const clubId = getRequiredString(formData, "clubId", "Club");
+  const clubSlug = getClubRouteSlug(formData, clubId);
   const eventId = getRequiredString(formData, "eventId", "Event");
   const title = getRequiredString(formData, "title", "Event title");
   const description = getRequiredString(formData, "description", "Description");
   const startsAt = getRequiredString(formData, "startsAt", "Start time");
   const endsAt = getOptionalString(formData, "endsAt");
   const location = getOptionalString(formData, "location");
-  const detailPath = getClubDetailPath(clubId);
+  const detailPath = getClubDetailPath(clubSlug);
   let successRedirectPath = detailPath;
+
+  validateDescriptionLength(description, {
+    fieldLabel: "Event description",
+    errorSearchParam: "eventUpdateError",
+    redirectPath: detailPath,
+    extraSearchParams: { eventEditTarget: eventId },
+  });
 
   if (hasInvalidEventRange(startsAt, endsAt)) {
     redirect(
@@ -282,8 +347,9 @@ export async function updateEventAction(formData: FormData) {
 
 export async function deleteEventAction(formData: FormData) {
   const clubId = getRequiredString(formData, "clubId", "Club");
+  const clubSlug = getClubRouteSlug(formData, clubId);
   const eventId = getRequiredString(formData, "eventId", "Event");
-  const detailPath = getClubDetailPath(clubId);
+  const detailPath = getClubDetailPath(clubSlug);
   let successRedirectPath = detailPath;
 
   try {
@@ -311,11 +377,12 @@ export async function deleteEventAction(formData: FormData) {
 
 export async function createAnnouncementAction(formData: FormData) {
   const clubId = getRequiredString(formData, "clubId", "Club");
+  const clubSlug = getClubRouteSlug(formData, clubId);
   const title = getRequiredString(formData, "title", "Announcement title");
   const body = getRequiredString(formData, "body", "Message");
   const createdBy = getOptionalString(formData, "createdBy");
   const publishedAt = getOptionalString(formData, "publishedAt");
-  const detailPath = getClubDetailPath(clubId);
+  const detailPath = getClubDetailPath(clubSlug);
   let successRedirectPath = detailPath;
 
   try {
@@ -354,12 +421,13 @@ export async function createAnnouncementAction(formData: FormData) {
 
 export async function updateAnnouncementAction(formData: FormData) {
   const clubId = getRequiredString(formData, "clubId", "Club");
+  const clubSlug = getClubRouteSlug(formData, clubId);
   const announcementId = getRequiredString(formData, "announcementId", "Announcement");
   const title = getRequiredString(formData, "title", "Announcement title");
   const body = getRequiredString(formData, "body", "Message");
   const publishedAt = getRequiredString(formData, "publishedAt", "Publish time");
   const createdBy = getOptionalString(formData, "createdBy");
-  const detailPath = getClubDetailPath(clubId);
+  const detailPath = getClubDetailPath(clubSlug);
   let successRedirectPath = detailPath;
 
   try {
@@ -399,8 +467,9 @@ export async function updateAnnouncementAction(formData: FormData) {
 
 export async function deleteAnnouncementAction(formData: FormData) {
   const clubId = getRequiredString(formData, "clubId", "Club");
+  const clubSlug = getClubRouteSlug(formData, clubId);
   const announcementId = getRequiredString(formData, "announcementId", "Announcement");
-  const detailPath = getClubDetailPath(clubId);
+  const detailPath = getClubDetailPath(clubSlug);
   let successRedirectPath = detailPath;
 
   try {

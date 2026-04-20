@@ -29,6 +29,7 @@ class RedisAdapterContractTests(unittest.TestCase):
         club = Club(
             id="club-1",
             organization_id="org-1",
+            slug="chess-club",
             name="Chess Club",
             description="Strategy and tournaments.",
             status="active",
@@ -38,6 +39,7 @@ class RedisAdapterContractTests(unittest.TestCase):
             {
                 "id": "club-1",
                 "organization_id": "org-1",
+                "slug": "chess-club",
                 "name": "Chess Club",
                 "description": "Strategy and tournaments.",
                 "status": "active",

@@ -167,3 +167,37 @@ class EventCrudTests(unittest.TestCase):
             invalid_update_response.json()["detail"],
             "Event end time must be after the start time.",
         )
+
+    def test_http_routes_reject_descriptions_longer_than_500_characters(self) -> None:
+        repository, tmp_dir = make_repository()
+        self.addCleanup(tmp_dir.cleanup)
+        client = build_client(repository)
+        too_long_description = "x" * 501
+
+        invalid_create_response = client.post(
+            "/events",
+            json={
+                "club_id": "club-1",
+                "title": "Kickoff",
+                "description": too_long_description,
+                "starts_at": "2026-04-10T18:00:00Z",
+            },
+        )
+        self.assertEqual(invalid_create_response.status_code, 422)
+
+        created_response = client.post(
+            "/events",
+            json={
+                "club_id": "club-1",
+                "title": "Kickoff",
+                "description": "Opening meeting",
+                "starts_at": "2026-04-10T18:00:00Z",
+            },
+        )
+        event_id = created_response.json()["id"]
+
+        invalid_update_response = client.patch(
+            f"/events/{event_id}",
+            json={"description": too_long_description},
+        )
+        self.assertEqual(invalid_update_response.status_code, 422)
