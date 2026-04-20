@@ -7,9 +7,11 @@ Incoming HTTP requests to `clubcrm.local` are routed to the web and API services
 running in the `clubcrm` namespace.
 
 ## Traffic Flow
+
 Browser --> Traefik (port 80) --> Kubernetes Service --> Pod
 
 ### Web
+
 - Hostname: `clubcrm.local`
 - Ingress class: `traefik`
 - Service: `clubcrm-web` (ClusterIP, port 3000)
@@ -17,6 +19,7 @@ Browser --> Traefik (port 80) --> Kubernetes Service --> Pod
 - Expected response: `307` redirect to `/login`
 
 ### API
+
 - Hostname: `clubcrm.local`
 - Path prefix: `/api`
 - Service: `clubcrm-api` (ClusterIP, port 8000)
@@ -25,11 +28,11 @@ Browser --> Traefik (port 80) --> Kubernetes Service --> Pod
 
 ## Cluster Node IPs
 
-| Node    | IP            | Role          |
-|---------|---------------|---------------|
-| server1 | 10.10.10.102  | control-plane |
-| server2 | 10.10.10.103  | worker        |
-| server3 | 10.10.10.104  | worker        |
+| Node    | IP           | Role          |
+| ------- | ------------ | ------------- |
+| server1 | 10.10.10.102 | control-plane |
+| server2 | 10.10.10.103 | worker        |
+| server3 | 10.10.10.104 | worker        |
 
 ## Verifying Routing
 
@@ -64,8 +67,8 @@ Expected output for API health:
 
 ## Demo Setup
 
-**To reach `clubcrm.local` from a browser on the demo machine, add this line to `/etc/hosts`:** 
-10.10.10.102  clubcrm.local
+**To reach `clubcrm.local` from a browser on the demo machine, add this line to `/etc/hosts`:**
+10.10.10.102 clubcrm.local
 
 **On Windows the hosts file is at:**
 C:\Windows\System32\drivers\etc\hosts

@@ -106,11 +106,13 @@ pnpm dev:api
 That development entrypoint runs Uvicorn with reload watching limited to `src/` and forces polling
 for file changes so API startup and live reload remain reliable in Windows-hosted devcontainers.
 It also runs `alembic upgrade head` first so the local database-backed routes start against the
-current schema. The PostgreSQL seed flow loads the baseline dataset when the local database is
-still empty and backfills the default Champlain org-admin grants for `developer@clubcrm.local`
-and `michael.olave@mymail.champlain.edu` when that organization already exists. The empty-database
-seed also provisions the local test-login club manager as a seeded member with manager access to
-the baseline club.
+current schema. The PostgreSQL seed flow loads the baseline relational dataset when the local
+database is still empty and backfills the default Champlain org-admin grants for
+`developer@clubcrm.local` and `michael.olave@mymail.champlain.edu` when that organization already
+exists. The empty-database seed also provisions the local test-login club manager as a seeded
+member with manager access to the baseline club. The MongoDB seed flow now adds baseline
+`join_requests` documents when the `clubcrm` database is empty so form-review flows have demo data
+too.
 
 The API defaults to host port `8000` when the devcontainer is running, or the next available host
 port if `8000` is already in use. The resolved binding is written to
