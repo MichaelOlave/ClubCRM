@@ -11,3 +11,15 @@ class JoinRequest:
     payload: dict[str, Any] = field(default_factory=dict)
     id: str | None = None
     status: str = "pending"
+
+
+@dataclass(frozen=True)
+class ClubApplication:
+    organization_id: str
+    applicant_name: str
+    applicant_email: str
+    proposed_club_name: str
+    description: str
+    payload: dict[str, Any] = field(default_factory=dict)
+    id: str | None = None
+    status: str = "pending"

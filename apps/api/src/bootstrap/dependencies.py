@@ -6,6 +6,7 @@ from src.infrastructure.kafka.client import KafkaClient
 from src.infrastructure.kafka.publishers.clubs import KafkaClubEventPublisher
 from src.infrastructure.kafka.publishers.forms import KafkaFormSubmissionPublisher
 from src.infrastructure.mongodb.client import MongoDBClient
+from src.infrastructure.mongodb.stores.club_applications import MongoDBClubApplicationStore
 from src.infrastructure.mongodb.stores.forms import MongoDBJoinRequestStore
 from src.infrastructure.postgres.client import PostgresClient
 from src.infrastructure.postgres.repositories.announcements import (
@@ -40,6 +41,7 @@ from src.modules.dashboard.application.ports.dashboard_summary_cache import (
     DashboardSummaryCache,
 )
 from src.modules.events.application.ports.event_repository import EventRepository
+from src.modules.forms.application.ports.club_application_store import ClubApplicationStore
 from src.modules.forms.application.ports.form_submission_publisher import (
     FormSubmissionPublisher,
 )
@@ -155,6 +157,10 @@ def get_postgres_unit_of_work() -> DefaultPostgresUnitOfWork:
 
 def get_join_request_store() -> JoinRequestStore:
     return MongoDBJoinRequestStore(client=get_mongodb_client())
+
+
+def get_club_application_store() -> ClubApplicationStore:
+    return MongoDBClubApplicationStore(client=get_mongodb_client())
 
 
 def get_form_submission_publisher() -> FormSubmissionPublisher:

@@ -3,6 +3,7 @@ from pydantic import BaseModel, EmailStr
 
 from src.bootstrap.dependencies import (
     get_audit_log_repository,
+    get_club_application_store,
     get_club_repository,
     get_dashboard_summary_cache,
     get_form_submission_publisher,
@@ -22,15 +23,23 @@ from src.modules.dashboard.application.ports.dashboard_summary_cache import (
     DashboardSummaryCache,
 )
 from src.modules.dashboard.presentation.http.cache import invalidate_dashboard_cache
+from src.modules.forms.application.commands.approve_club_application import (
+    ApproveClubApplication,
+)
 from src.modules.forms.application.commands.approve_join_request import ApproveJoinRequest
 from src.modules.forms.application.commands.deny_join_request import DenyJoinRequest
+from src.modules.forms.application.commands.submit_club_application import SubmitClubApplication
 from src.modules.forms.application.commands.submit_join_request import SubmitJoinRequest
+from src.modules.forms.application.ports.club_application_store import ClubApplicationStore
 from src.modules.forms.application.ports.form_submission_publisher import FormSubmissionPublisher
 from src.modules.forms.application.ports.join_request_store import JoinRequestStore
+from src.modules.forms.application.queries.list_pending_club_applications import (
+    ListPendingClubApplications,
+)
 from src.modules.forms.application.queries.list_pending_join_requests import (
     ListPendingJoinRequests,
 )
-from src.modules.forms.domain.entities import JoinRequest
+from src.modules.forms.domain.entities import ClubApplication, JoinRequest
 from src.modules.members.application.ports.member_repository import MemberRepository
 from src.modules.memberships.application.ports.membership_repository import MembershipRepository
 from src.presentation.http.request_context import (
@@ -245,4 +254,108 @@ def deny_join_request(
     return ReviewResponse(
         join_request_id=result.id or "",
         status=result.status,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Club application endpoints
+# ---------------------------------------------------------------------------
+
+
+class ClubApplicationBody(BaseModel):
+    applicant_name: str
+    applicant_email: EmailStr
+    proposed_club_name: str
+    description: str
+    message: str | None = None
+
+
+class ClubApplicationResponse(BaseModel):
+    id: str
+    organization_id: str
+    applicant_name: str
+    applicant_email: str
+    proposed_club_name: str
+    description: str
+    status: str
+
+
+class ClubApprovalResponse(BaseModel):
+    application_id: str
+    status: str
+    club_id: str
+    club_created: bool
+
+
+def _to_application_response(application: ClubApplication) -> ClubApplicationResponse:
+    return ClubApplicationResponse(
+        id=application.id or "",
+        organization_id=application.organization_id,
+        applicant_name=application.applicant_name,
+        applicant_email=application.applicant_email,
+        proposed_club_name=application.proposed_club_name,
+        description=application.description,
+        status=application.status,
+    )
+
+
+@router.post(
+    "/club-application/{organization_id}",
+    response_model=ClubApplicationResponse,
+    status_code=201,
+)
+def create_club_application(
+    organization_id: str,
+    body: ClubApplicationBody,
+    store: ClubApplicationStore = Depends(get_club_application_store),  # noqa: B008
+) -> ClubApplicationResponse:
+    application = ClubApplication(
+        organization_id=organization_id,
+        applicant_name=body.applicant_name,
+        applicant_email=str(body.applicant_email),
+        proposed_club_name=body.proposed_club_name,
+        description=body.description,
+        payload={"message": body.message} if body.message else {},
+    )
+    result = SubmitClubApplication(store=store).execute(application)
+    if result.id is None:
+        raise RuntimeError("Club application was not persisted.")
+    return _to_application_response(result)
+
+
+@router.get(
+    "/club-applications/{organization_id}/pending",
+    response_model=list[ClubApplicationResponse],
+)
+def list_pending_club_applications(
+    organization_id: str,
+    store: ClubApplicationStore = Depends(get_club_application_store),  # noqa: B008
+) -> list[ClubApplicationResponse]:
+    results = ListPendingClubApplications(store=store).execute(organization_id)
+    return [_to_application_response(r) for r in results]
+
+
+@router.post(
+    "/club-applications/{application_id}/approve",
+    response_model=ClubApprovalResponse,
+)
+def approve_club_application(
+    application_id: str,
+    store: ClubApplicationStore = Depends(get_club_application_store),  # noqa: B008
+    club_repository: ClubRepository = Depends(get_club_repository),  # noqa: B008
+) -> ClubApprovalResponse:
+    try:
+        result = ApproveClubApplication(
+            application_store=store,
+            club_repository=club_repository,
+        ).execute(application_id)
+    except ValueError as exc:
+        status_code = 404 if "not found" in str(exc) else 409
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+
+    return ClubApprovalResponse(
+        application_id=result.application.id or "",
+        status=result.application.status,
+        club_id=result.club.id,
+        club_created=result.club_created,
     )
