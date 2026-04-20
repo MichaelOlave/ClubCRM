@@ -31,28 +31,46 @@ def _slugify(name: str) -> str:
     return slug or "club"
 
 
+def _build_unique_slug(base_slug: str, used_slugs: set[str]) -> str:
+    if base_slug not in used_slugs:
+        used_slugs.add(base_slug)
+        return base_slug
+
+    suffix = 2
+    while True:
+        candidate = f"{base_slug}-{suffix}"
+        if candidate not in used_slugs:
+            used_slugs.add(candidate)
+            return candidate
+        suffix += 1
+
+
 def upgrade() -> None:
     """Upgrade schema."""
     op.add_column("clubs", sa.Column("slug", sa.String(length=255), nullable=True))
 
     connection = op.get_bind()
-    clubs = connection.execute(sa.text("SELECT id, name FROM clubs")).mappings().all()
+    clubs = connection.execute(
+        sa.text("SELECT id, organization_id, name FROM clubs ORDER BY organization_id, created_at, id")
+    ).mappings().all()
+    used_slugs_by_org: dict[str, set[str]] = {}
     for club in clubs:
+        organization_id = club["organization_id"]
+        used_slugs = used_slugs_by_org.setdefault(organization_id, set())
+        slug = _build_unique_slug(_slugify(club["name"]), used_slugs)
         connection.execute(
             sa.text("UPDATE clubs SET slug = :slug WHERE id = :club_id"),
             {
-                "slug": _slugify(club["name"]),
+                "slug": slug,
                 "club_id": club["id"],
             },
         )
 
     op.alter_column("clubs", "slug", existing_type=sa.String(length=255), nullable=False)
-    op.create_unique_constraint("uq_club_name_per_org", "clubs", ["organization_id", "name"])
     op.create_unique_constraint("uq_club_slug_per_org", "clubs", ["organization_id", "slug"])
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     op.drop_constraint("uq_club_slug_per_org", "clubs", type_="unique")
-    op.drop_constraint("uq_club_name_per_org", "clubs", type_="unique")
     op.drop_column("clubs", "slug")

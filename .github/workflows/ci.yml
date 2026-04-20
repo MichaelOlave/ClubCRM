@@ -193,6 +193,16 @@ jobs:
             if [ -f infra/docker-compose.production.host-nginx.yml ]; then
               compose_files="$compose_files -f infra/docker-compose.production.host-nginx.yml"
             fi
+            log_deploy_failure() {
+              if docker info >/dev/null 2>&1; then
+                docker compose $compose_files ps || true
+                docker compose $compose_files logs api --tail=200 || true
+              elif sudo -n docker info >/dev/null 2>&1; then
+                sudo -n docker compose $compose_files ps || true
+                sudo -n docker compose $compose_files logs api --tail=200 || true
+              fi
+            }
+            trap log_deploy_failure ERR
             if docker info >/dev/null 2>&1; then
               docker compose $compose_files up -d --remove-orphans
             elif sudo -n docker info >/dev/null 2>&1; then
