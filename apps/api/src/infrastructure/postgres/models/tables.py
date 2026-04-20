@@ -45,10 +45,7 @@ class OrganizationModel(Base):
 
 class ClubModel(Base):
     __tablename__ = "clubs"
-    __table_args__ = (
-        UniqueConstraint("organization_id", "name", name="uq_club_name_per_org"),
-        UniqueConstraint("organization_id", "slug", name="uq_club_slug_per_org"),
-    )
+    __table_args__ = (UniqueConstraint("organization_id", "slug", name="uq_club_slug_per_org"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     organization_id: Mapped[str] = mapped_column(

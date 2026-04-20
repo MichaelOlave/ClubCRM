@@ -146,10 +146,7 @@ def get_club_by_slug(
     access: Annotated[AppAccess, Depends(require_authorized_access)],
     repository: Annotated[ClubRepository, Depends(get_club_repository)],
 ) -> ClubResponse:
-    effective_organization_id = (
-        None if access.primary_role == "org_admin" else access.organization_id
-    )
-    club = repository.get_club_by_slug(effective_organization_id, club_slug)
+    club = repository.get_club_by_slug(access.organization_id, club_slug)
     if club is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Club not found.")
 

@@ -58,7 +58,7 @@ class PostgresClubRepository(ClubRepository):
         with self.client.create_session() as session:
             row = ClubModel(
                 organization_id=organization_id,
-                slug=slugify_club_name(name),
+                slug=self._build_unique_slug(session, organization_id, slugify_club_name(name)),
                 name=name,
                 description=description,
                 status=status,
@@ -83,7 +83,12 @@ class PostgresClubRepository(ClubRepository):
 
             if name is not None:
                 row.name = name
-                row.slug = slugify_club_name(name)
+                row.slug = self._build_unique_slug(
+                    session,
+                    row.organization_id,
+                    slugify_club_name(name),
+                    excluded_club_id=row.id,
+                )
             if description is not None:
                 row.description = description
             if status is not None:
@@ -108,7 +113,30 @@ class PostgresClubRepository(ClubRepository):
             session.commit()
         except IntegrityError as exc:
             session.rollback()
-            raise ClubConflictError("Club names must be unique within an organization.") from exc
+            raise ClubConflictError("Club URLs must stay unique within an organization.") from exc
+
+    def _build_unique_slug(
+        self,
+        session,
+        organization_id: str,
+        base_slug: str,
+        *,
+        excluded_club_id: str | None = None,
+    ) -> str:
+        statement = select(ClubModel.slug).where(ClubModel.organization_id == organization_id)
+        if excluded_club_id is not None:
+            statement = statement.where(ClubModel.id != excluded_club_id)
+
+        existing_slugs = set(session.execute(statement).scalars().all())
+        if base_slug not in existing_slugs:
+            return base_slug
+
+        suffix = 2
+        while True:
+            candidate = f"{base_slug}-{suffix}"
+            if candidate not in existing_slugs:
+                return candidate
+            suffix += 1
 
     def _to_domain(self, row: ClubModel) -> Club:
         return Club(

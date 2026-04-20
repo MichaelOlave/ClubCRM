@@ -195,6 +195,14 @@ class FakeAuthorizationRepository(AuthorizationRepository):
 class ClubRouteTests(unittest.TestCase):
     def setUp(self) -> None:
         self.repository = FakeClubRepository()
+        self.repository.clubs["club-2-org-2"] = Club(
+            id="club-2-org-2",
+            organization_id="org-2",
+            slug="chess-club",
+            name="Chess Club",
+            description="A different organization with the same slug.",
+            status="active",
+        )
         self.publisher = FakeClubEventPublisher()
         self.audit_repository = FakeAuditLogRepository()
         self.authorization_repository = FakeAuthorizationRepository()
@@ -255,6 +263,14 @@ class ClubRouteTests(unittest.TestCase):
         slug_response = self.client.get("/clubs/slug/robotics-club")
         self.assertEqual(slug_response.status_code, 200)
         self.assertEqual(slug_response.json()["id"], created["id"])
+
+    def test_org_admin_slug_lookup_stays_scoped_to_their_organization(self) -> None:
+        response = self.client.get("/clubs/slug/chess-club")
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["id"], "club-1")
+        self.assertEqual(payload["organization_id"], "org-1")
 
         update_response = self.client.patch(
             f"/clubs/{created['id']}",
