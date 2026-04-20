@@ -20,31 +20,34 @@ const testAreas = [
   {
     title: "Access and sign in",
     description:
-      "Open the login page, confirm the page renders cleanly, and verify sign-in or the test-login bypass behaves the way the team expects.",
+      "Open the login page first, confirm the page renders cleanly, and verify sign-in or the test-login bypass behaves the way the team expects.",
     checks: [
-      "The login experience should load without layout shifts or obvious console-facing errors.",
-      "Successful sign in should route authorized users into the admin workspace.",
-      "Authenticated users without access should land on the not-provisioned screen instead of seeing a broken app state.",
+      "Go to `/login` and confirm the page loads without layout shifts, missing styles, or obvious errors.",
+      "Sign in with the test credentials or approved bypass flow for your test pass.",
+      "Verify authorized users land inside the admin workspace after a successful sign in.",
+      "If you are testing access limits, confirm non-provisioned users land on `/not-provisioned` instead of a broken state.",
     ],
   },
   {
     title: "Admin workspace",
     description:
-      "After sign in, move through the main admin pages and confirm navigation, tables, and page-level actions feel stable.",
+      "After sign in, move through the main admin pages in order and confirm navigation, tables, and page-level actions feel stable.",
     checks: [
-      "Visit Dashboard, Profile, Clubs, Members, Audit, and System Health.",
-      "Open at least one club and member detail flow if test data is available.",
-      "Confirm buttons, dialogs, and badges stay readable on both large and small screens.",
+      "Open Dashboard and confirm the overview loads with no empty or broken sections.",
+      "Open Profile, then Clubs, then Members, then Audit, then System Health.",
+      "If test data is available, open at least one club detail page and one member detail page.",
+      "On each page, check that buttons, dialogs, tables, and badges stay readable on both large and small screens.",
     ],
   },
   {
     title: "Public club flows",
     description:
-      "Use the shared public links from the team to verify the non-admin experience still works for prospective members.",
+      "Use the shared public links from the team after the admin pass so you can verify the non-admin experience still works for prospective members.",
     checks: [
-      "Open at least one `/join/[clubId]` link and confirm the public form can be reached without admin auth.",
-      "Check that public pages keep their visual polish and do not expose internal-only controls.",
-      "Confirm the public pages still feel complete on both desktop and mobile widths.",
+      "Open at least one `/join/[clubId]` link and confirm the public form is reachable without admin auth.",
+      "Check that the public page looks polished and does not expose admin-only controls.",
+      "If the form is interactive in your environment, step through the inputs and confirm labels, validation, and submission affordances make sense.",
+      "Repeat the page check at a narrower browser width to confirm the public flow still feels complete on mobile.",
     ],
   },
   {
@@ -54,9 +57,21 @@ const testAreas = [
     checks: [
       "Open `/demo/failover` only if your test pass includes the networking demo.",
       "Confirm the monitor loads without sign-in and continues updating during the presentation.",
-      "Report demo-specific issues separately from the main app flow so the team can route them correctly.",
+      "If you notice demo issues, report them separately from the main app flow so the team can route them correctly.",
     ],
   },
+];
+
+const walkthroughSteps = [
+  "Open this tester landing page and read the readiness checks before you begin.",
+  "Start at `/login` and complete a normal sign-in or approved test-login flow.",
+  "Verify where you land after sign in: admin users should reach the workspace, while non-provisioned users should reach `/not-provisioned`.",
+  "Inside the admin workspace, visit Dashboard, Profile, Clubs, Members, Audit, and System Health in that order.",
+  "Open at least one club and one member detail screen if the environment has test data.",
+  "Switch to a narrower browser width and quickly repeat the core pages to catch layout issues.",
+  "Open a shared `/join/[clubId]` link and check the public member flow without admin auth.",
+  "Only if assigned, open `/demo/failover` and verify the networking demo monitor keeps updating.",
+  "Report anything unexpected with the URL, exact actions, expected result, and actual result.",
 ];
 
 const reportingChecklist = [
@@ -119,10 +134,33 @@ export function TestingGuidePage() {
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <h2 className="text-2xl font-semibold tracking-tight">Suggested test pass</h2>
+                <h2 className="text-2xl font-semibold tracking-tight">Step-by-step walkthrough</h2>
                 <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-                  Follow these areas in order if you want a compact but meaningful walkthrough of
-                  the current MVP.
+                  Use this sequence if you want explicit instructions for a standard tester pass.
+                </p>
+              </div>
+
+              <ol className="grid gap-4">
+                {walkthroughSteps.map((step, index) => (
+                  <li
+                    key={step}
+                    className="flex gap-4 rounded-3xl border border-border/80 bg-background/80 p-5 shadow-sm"
+                  >
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand text-sm font-semibold text-brand-foreground">
+                      {index + 1}
+                    </div>
+                    <p className="pt-1 text-sm leading-6 text-foreground">{step}</p>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <h2 className="text-2xl font-semibold tracking-tight">Detailed area checklist</h2>
+                <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+                  Use the area-by-area notes below if you want extra coverage after the core
+                  walkthrough.
                 </p>
               </div>
 
