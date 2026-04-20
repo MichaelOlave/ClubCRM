@@ -63,7 +63,19 @@ class AuditLogRead(BaseModel):
         )
 
 
-@router.get("", response_model=list[AuditLogRead])
+class AuditLogPaginationRead(BaseModel):
+    page: int
+    page_size: int
+    has_next: bool
+    has_previous: bool
+
+
+class AuditLogListRead(BaseModel):
+    items: list[AuditLogRead]
+    pagination: AuditLogPaginationRead
+
+
+@router.get("", response_model=AuditLogListRead)
 def list_audit_logs(
     repository: Annotated[AuditLogRepository, Depends(get_audit_log_repository)],
     _access: Annotated[AppAccess, Depends(require_org_admin_access)],
@@ -74,8 +86,9 @@ def list_audit_logs(
     from_: Annotated[datetime | None, Query(alias="from")] = None,
     to: datetime | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
-) -> list[AuditLogRead]:
-    audit_logs = ListAuditLogs(repository=repository).execute(
+    page: Annotated[int, Query(ge=1)] = 1,
+) -> AuditLogListRead:
+    audit_log_page = ListAuditLogs(repository=repository).execute(
         AuditLogFilters(
             action=action,
             resource_type=resource_type,
@@ -84,6 +97,15 @@ def list_audit_logs(
             occurred_from=from_,
             occurred_to=to,
             limit=limit,
+            offset=(page - 1) * limit,
         )
     )
-    return [AuditLogRead.from_domain(audit_log) for audit_log in audit_logs]
+    return AuditLogListRead(
+        items=[AuditLogRead.from_domain(audit_log) for audit_log in audit_log_page.items],
+        pagination=AuditLogPaginationRead(
+            page=audit_log_page.page,
+            page_size=audit_log_page.page_size,
+            has_next=audit_log_page.has_next,
+            has_previous=audit_log_page.page > 1,
+        ),
+    )

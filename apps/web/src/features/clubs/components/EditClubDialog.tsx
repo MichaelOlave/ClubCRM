@@ -17,6 +17,7 @@ import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
 import type { ClubDetailViewModel } from "@/features/clubs/types";
 import type { ActionNotice as ActionNoticeModel } from "@/lib/forms";
+import { TEXT_LIMITS } from "@/lib/textLimits";
 
 type Props = {
   action: (formData: FormData) => Promise<void>;
@@ -48,10 +49,11 @@ export function EditClubDialog({ action, club, notice }: Props) {
 
         <form action={action} className="grid gap-4 lg:grid-cols-2">
           <input name="clubId" type="hidden" value={club.id} />
+          <input name="clubSlug" type="hidden" value={club.slug} />
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
             <span>Club name</span>
-            <Input defaultValue={club.name} name="name" required />
+            <Input defaultValue={club.name} maxLength={TEXT_LIMITS.clubName} name="name" required />
           </label>
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
@@ -65,7 +67,14 @@ export function EditClubDialog({ action, club, notice }: Props) {
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90 lg:col-span-2">
             <span>Description</span>
-            <Textarea defaultValue={club.description} name="description" />
+            <Textarea
+              defaultValue={club.description}
+              maxLength={TEXT_LIMITS.clubDescription}
+              name="description"
+            />
+            <span className="text-xs font-normal leading-5 text-muted-foreground">
+              Up to {TEXT_LIMITS.clubDescription} characters.
+            </span>
           </label>
 
           <DialogFooter className="lg:col-span-2">

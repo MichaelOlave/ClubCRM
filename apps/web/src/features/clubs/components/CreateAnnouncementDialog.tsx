@@ -16,14 +16,16 @@ import {
 import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
 import type { ActionNotice as ActionNoticeModel } from "@/lib/forms";
+import { TEXT_LIMITS } from "@/lib/textLimits";
 
 type Props = {
   action: (formData: FormData) => Promise<void>;
   clubId: string;
+  clubSlug: string;
   notice: ActionNoticeModel | null;
 };
 
-export function CreateAnnouncementDialog({ action, clubId, notice }: Props) {
+export function CreateAnnouncementDialog({ action, clubId, clubSlug, notice }: Props) {
   const [open, setOpen] = useState(Boolean(notice && notice.kind === "error"));
 
   return (
@@ -45,10 +47,16 @@ export function CreateAnnouncementDialog({ action, clubId, notice }: Props) {
 
         <form action={action} className="grid gap-4 lg:grid-cols-2">
           <input name="clubId" type="hidden" value={clubId} />
+          <input name="clubSlug" type="hidden" value={clubSlug} />
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90 lg:col-span-2">
             <span>Announcement title</span>
-            <Input name="title" placeholder="Welcome back, makers" required />
+            <Input
+              maxLength={TEXT_LIMITS.eventTitle}
+              name="title"
+              placeholder="Welcome back, makers"
+              required
+            />
           </label>
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
@@ -61,16 +69,25 @@ export function CreateAnnouncementDialog({ action, clubId, notice }: Props) {
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
             <span>Created by</span>
-            <Input name="createdBy" placeholder="Alex Morgan" type="text" />
+            <Input
+              maxLength={TEXT_LIMITS.memberName}
+              name="createdBy"
+              placeholder="Alex Morgan"
+              type="text"
+            />
           </label>
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90 lg:col-span-2">
             <span>Message</span>
             <Textarea
+              maxLength={TEXT_LIMITS.summaryText}
               name="body"
               placeholder="Share the latest update, reminder, or recap with members."
               required
             />
+            <span className="text-xs font-normal leading-5 text-muted-foreground">
+              Up to {TEXT_LIMITS.summaryText} characters.
+            </span>
           </label>
 
           <DialogFooter className="lg:col-span-2">

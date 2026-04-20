@@ -25,9 +25,12 @@ type Props = {
 };
 
 export default async function ClubJoinRequestsPage({ params, searchParams }: Props) {
-  const { clubId } = await params;
+  const { clubId: clubIdentifier } = await params;
   const session = await requireAuthorizedBackendSession();
-  const [review, query] = await Promise.all([getJoinRequestReview(clubId, session), searchParams]);
+  const [review, query] = await Promise.all([
+    getJoinRequestReview(clubIdentifier, session),
+    searchParams,
+  ]);
 
   if (!review) {
     notFound();
@@ -41,10 +44,10 @@ export default async function ClubJoinRequestsPage({ params, searchParams }: Pro
         actions={
           <>
             <Button asChild variant="secondary">
-              <Link href={`/join/${clubId}`}>Open public form</Link>
+              <Link href={`/join/${review.clubSlug}`}>Open public form</Link>
             </Button>
             <Button asChild variant="ghost">
-              <Link href={`/clubs/${clubId}`}>Back to club</Link>
+              <Link href={`/clubs/${review.clubSlug}`}>Back to club</Link>
             </Button>
           </>
         }
@@ -75,6 +78,7 @@ export default async function ClubJoinRequestsPage({ params, searchParams }: Pro
 
       <JoinRequestReviewList
         approveAction={approveJoinRequestAction}
+        clubSlug={review.clubSlug}
         denyAction={denyJoinRequestAction}
         requests={review.requests}
       />

@@ -1,6 +1,6 @@
 import {
+  resolveClubApi,
   listAnnouncementsApi,
-  getClubApi,
   listClubManagerGrantsApi,
   listClubsApi,
   listEventsApi,
@@ -72,6 +72,7 @@ function mapClubRecord(
   return {
     id: club.id,
     organizationId: club.organization_id,
+    slug: club.slug,
     name: club.name,
     description: club.description,
     status: getClubStatus(club.status),
@@ -133,22 +134,22 @@ export async function getClubList(session: AuthorizedBackendAuthSession): Promis
 }
 
 export async function getClubDetail(
-  clubId: string,
+  clubIdentifier: string,
   session: AuthorizedBackendAuthSession
 ): Promise<ClubDetailViewModel | null> {
-  if (!canAccessClub(session, clubId)) {
-    return null;
-  }
-
-  const club = await getClubApi(clubId);
+  const club = await resolveClubApi(clubIdentifier);
 
   if (!club) {
     return null;
   }
 
+  if (!canAccessClub(session, club.id)) {
+    return null;
+  }
+
   const isOrgAdmin = isOrgAdminBackendAuthSession(session);
   const [memberships, events, announcements, managerGrants] = await Promise.all([
-    listMembershipsApi({ clubId }),
+    listMembershipsApi({ clubId: club.id }),
     listEventsApi(club.id),
     listAnnouncementsApi(club.id),
     isOrgAdmin

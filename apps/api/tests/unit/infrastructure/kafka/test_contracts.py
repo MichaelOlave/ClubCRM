@@ -22,6 +22,7 @@ class KafkaAdapterContractTests(unittest.TestCase):
             Club(
                 id="club-1",
                 organization_id="org-1",
+                slug="chess-club",
                 name="Chess Club",
                 description="Strategy and tournaments.",
                 status="active",

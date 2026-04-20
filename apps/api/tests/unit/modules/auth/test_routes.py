@@ -158,6 +158,7 @@ class FakeClubRepository(ClubRepository):
             Club(
                 id="club-1",
                 organization_id="org-1",
+                slug="computer-science-club",
                 name="Computer Science Club",
                 description="A club for CS enthusiasts.",
                 status="active",
@@ -172,6 +173,17 @@ class FakeClubRepository(ClubRepository):
 
     def get_club(self, club_id: str) -> Club | None:
         return next((club for club in self.seeded if club.id == club_id), None)
+
+    def get_club_by_slug(self, organization_id: str | None, club_slug: str) -> Club | None:
+        return next(
+            (
+                club
+                for club in self.seeded
+                if club.slug == club_slug
+                and (organization_id is None or club.organization_id == organization_id)
+            ),
+            None,
+        )
 
     def create_club(
         self,

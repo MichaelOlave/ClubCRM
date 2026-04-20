@@ -15,14 +15,14 @@ import {
 } from "@/components/shadcn/dialog";
 import { Input } from "@/components/shadcn/input";
 import type { ActionNotice as ActionNoticeModel } from "@/lib/forms";
+import { TEXT_LIMITS } from "@/lib/textLimits";
 
 type Props = {
   action: (formData: FormData) => Promise<void>;
-  defaultOrganizationId: string;
   notice: ActionNoticeModel | null;
 };
 
-export function CreateMemberDialog({ action, defaultOrganizationId, notice }: Props) {
+export function CreateMemberDialog({ action, notice }: Props) {
   const [open, setOpen] = useState(Boolean(notice && notice.kind === "error"));
 
   return (
@@ -43,34 +43,35 @@ export function CreateMemberDialog({ action, defaultOrganizationId, notice }: Pr
         <ActionNotice notice={notice} />
 
         <form action={action} className="grid gap-4 lg:grid-cols-2">
-          <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90 lg:col-span-2">
-            <span>Organization ID</span>
+          <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
+            <span>First name</span>
             <Input
-              defaultValue={defaultOrganizationId}
-              name="organizationId"
-              placeholder="Existing backend organization ID"
+              maxLength={TEXT_LIMITS.memberName}
+              name="firstName"
+              placeholder="Jordan"
               required
             />
           </label>
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
-            <span>First name</span>
-            <Input name="firstName" placeholder="Jordan" required />
-          </label>
-
-          <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
             <span>Last name</span>
-            <Input name="lastName" placeholder="Lee" required />
+            <Input maxLength={TEXT_LIMITS.memberName} name="lastName" placeholder="Lee" required />
           </label>
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
             <span>Email address</span>
-            <Input name="email" placeholder="jordan@champlain.edu" required type="email" />
+            <Input
+              maxLength={TEXT_LIMITS.email}
+              name="email"
+              placeholder="jordan@champlain.edu"
+              required
+              type="email"
+            />
           </label>
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
             <span>Student ID</span>
-            <Input name="studentId" placeholder="Optional" />
+            <Input maxLength={TEXT_LIMITS.studentId} name="studentId" placeholder="Optional" />
           </label>
 
           <DialogFooter className="lg:col-span-2">

@@ -17,6 +17,7 @@ export type AuditResourceType =
 export type ClubRecord = {
   id: string;
   organizationId: string;
+  slug: string;
   name: string;
   description: string;
   status: ClubStatus;
@@ -92,6 +93,7 @@ export type ActivityRecord = {
 export type BackendClubRecord = {
   id: string;
   organization_id: string;
+  slug: string;
   name: string;
   description: string;
   status: string;
@@ -214,4 +216,14 @@ export type BackendAuditLogRecord = {
   origin_path: string | null;
   request_id: string;
   summary_json: Record<string, unknown>;
+};
+
+export type BackendAuditLogListRecord = {
+  items: BackendAuditLogRecord[];
+  pagination: {
+    page: number;
+    page_size: number;
+    has_next: boolean;
+    has_previous: boolean;
+  };
 };

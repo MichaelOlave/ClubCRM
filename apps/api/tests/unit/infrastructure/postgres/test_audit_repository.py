@@ -80,3 +80,6 @@ class PostgresAuditLogRepositoryTests(unittest.TestCase):
 
         newest_first = repository.list_audit_logs(AuditLogFilters(limit=5))
         self.assertEqual([audit_log.action for audit_log in newest_first], ["update", "create"])
+
+        paged = repository.list_audit_logs(AuditLogFilters(limit=1, offset=1))
+        self.assertEqual([audit_log.action for audit_log in paged], ["create"])

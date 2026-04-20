@@ -55,6 +55,7 @@ class FakeClubRepository(ClubRepository):
             "club-1": Club(
                 id="club-1",
                 organization_id="org-1",
+                slug="chess-club",
                 name="Chess Club",
                 description="Strategy and tournaments.",
                 status="active",
@@ -62,6 +63,7 @@ class FakeClubRepository(ClubRepository):
             "club-9": Club(
                 id="club-9",
                 organization_id="org-1",
+                slug="debate-club",
                 name="Debate Club",
                 description="Public speaking and competitions.",
                 status="active",
@@ -78,6 +80,17 @@ class FakeClubRepository(ClubRepository):
     def get_club(self, club_id: str) -> Club | None:
         return self.clubs.get(club_id)
 
+    def get_club_by_slug(self, organization_id: str | None, club_slug: str) -> Club | None:
+        return next(
+            (
+                club
+                for club in self.clubs.values()
+                if club.slug == club_slug
+                and (organization_id is None or club.organization_id == organization_id)
+            ),
+            None,
+        )
+
     def create_club(
         self,
         organization_id: str,
@@ -89,6 +102,7 @@ class FakeClubRepository(ClubRepository):
         club = Club(
             id=club_id,
             organization_id=organization_id,
+            slug="robotics-club",
             name=name,
             description=description,
             status=status,
@@ -111,6 +125,7 @@ class FakeClubRepository(ClubRepository):
         updated_club = Club(
             id=club.id,
             organization_id=club.organization_id,
+            slug="robotics-club" if name else club.slug,
             name=name or club.name,
             description=description or club.description,
             status=status or club.status,
@@ -235,6 +250,11 @@ class ClubRouteTests(unittest.TestCase):
         read_response = self.client.get(f"/clubs/{created['id']}")
         self.assertEqual(read_response.status_code, 200)
         self.assertEqual(read_response.json()["name"], "Robotics Club")
+        self.assertEqual(read_response.json()["slug"], "robotics-club")
+
+        slug_response = self.client.get("/clubs/slug/robotics-club")
+        self.assertEqual(slug_response.status_code, 200)
+        self.assertEqual(slug_response.json()["id"], created["id"])
 
         update_response = self.client.patch(
             f"/clubs/{created['id']}",
@@ -296,3 +316,23 @@ class ClubRouteTests(unittest.TestCase):
 
         delete_response = self.client.delete(f"/clubs/club-1/manager-grants/{created['id']}")
         self.assertEqual(delete_response.status_code, 204)
+
+    def test_club_routes_reject_descriptions_longer_than_500_characters(self) -> None:
+        too_long_description = "x" * 501
+
+        create_response = self.client.post(
+            "/clubs/",
+            json={
+                "organization_id": "org-1",
+                "name": "Robotics Club",
+                "description": too_long_description,
+                "status": "active",
+            },
+        )
+        self.assertEqual(create_response.status_code, 422)
+
+        update_response = self.client.patch(
+            "/clubs/club-1",
+            json={"description": too_long_description},
+        )
+        self.assertEqual(update_response.status_code, 422)

@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.bootstrap.dependencies import (
     get_audit_log_repository,
@@ -38,6 +38,7 @@ from src.presentation.http.request_context import (
 )
 
 router = APIRouter(prefix="/events", tags=["events"])
+DESCRIPTION_MAX_LENGTH = 500
 
 
 class EventRead(BaseModel):
@@ -54,7 +55,7 @@ class EventRead(BaseModel):
 class EventCreateRequest(BaseModel):
     club_id: str
     title: str
-    description: str
+    description: str = Field(max_length=DESCRIPTION_MAX_LENGTH)
     starts_at: datetime
     location: str | None = None
     ends_at: datetime | None = None
@@ -62,7 +63,7 @@ class EventCreateRequest(BaseModel):
 
 class EventUpdateRequest(BaseModel):
     title: str | None = None
-    description: str | None = None
+    description: str | None = Field(default=None, max_length=DESCRIPTION_MAX_LENGTH)
     starts_at: datetime | None = None
     location: str | None = None
     ends_at: datetime | None = None

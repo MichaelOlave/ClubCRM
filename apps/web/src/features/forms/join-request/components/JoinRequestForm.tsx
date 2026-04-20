@@ -18,6 +18,7 @@ import {
   type SubmissionState,
 } from "@/features/forms/join-request/server/actions";
 import type { JoinRequestContext } from "@/features/forms/join-request/types";
+import { TEXT_LIMITS } from "@/lib/textLimits";
 
 type Props = {
   context: JoinRequestContext;
@@ -85,11 +86,17 @@ export function JoinRequestForm({ context }: Props) {
         <form action={action} className="grid gap-4 md:grid-cols-2">
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
             <span>Full name</span>
-            <Input name="submitter_name" placeholder="Student name" required />
+            <Input
+              maxLength={TEXT_LIMITS.memberName}
+              name="submitter_name"
+              placeholder="Student name"
+              required
+            />
           </label>
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
             <span>Email address</span>
             <Input
+              maxLength={TEXT_LIMITS.email}
               name="submitter_email"
               placeholder="student@champlain.edu"
               type="email"
@@ -98,7 +105,11 @@ export function JoinRequestForm({ context }: Props) {
           </label>
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
             <span>Student ID</span>
-            <Input name="student_id" placeholder="Optional for first contact" />
+            <Input
+              maxLength={TEXT_LIMITS.studentId}
+              name="student_id"
+              placeholder="Optional for first contact"
+            />
           </label>
           <div className="flex flex-col gap-2 text-sm font-medium text-foreground/90">
             <span>How would you like to help?</span>
@@ -118,7 +129,14 @@ export function JoinRequestForm({ context }: Props) {
           </div>
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90 md:col-span-2">
             <span>Why this club?</span>
-            <Textarea name="message" placeholder={context.prompt} />
+            <Textarea
+              maxLength={TEXT_LIMITS.joinRequestMessage}
+              name="message"
+              placeholder={context.prompt}
+            />
+            <span className="text-xs font-normal leading-5 text-muted-foreground">
+              Up to {TEXT_LIMITS.joinRequestMessage} characters.
+            </span>
           </label>
           <div className="md:col-span-2">
             <Button type="submit" disabled={isPending}>

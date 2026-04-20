@@ -67,7 +67,7 @@ class FakeAuditLogRepository(AuditLogRepository):
             results,
             key=lambda audit_log: (audit_log.occurred_at, audit_log.id),
             reverse=True,
-        )[: filters.limit]
+        )[filters.offset : filters.offset + filters.limit]
 
 
 def build_authenticated_request_context(

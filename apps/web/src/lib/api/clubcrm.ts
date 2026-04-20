@@ -1,7 +1,7 @@
 import { fetchApiJson, fetchApiJsonOrNull } from "@/lib/api/server-data";
 import type {
   BackendAnnouncementRecord,
-  BackendAuditLogRecord,
+  BackendAuditLogListRecord,
   BackendClubManagerGrantRecord,
   BackendClubRecord,
   BackendDashboardRedisAnalyticsRecord,
@@ -34,6 +34,20 @@ export async function listClubsApi(): Promise<BackendClubRecord[]> {
 
 export async function getClubApi(clubId: string): Promise<BackendClubRecord | null> {
   return fetchApiJsonOrNull<BackendClubRecord>(`/clubs/${clubId}`);
+}
+
+export async function getClubBySlugApi(clubSlug: string): Promise<BackendClubRecord | null> {
+  return fetchApiJsonOrNull<BackendClubRecord>(`/clubs/slug/${clubSlug}`);
+}
+
+export async function resolveClubApi(clubIdentifier: string): Promise<BackendClubRecord | null> {
+  const bySlug = await getClubBySlugApi(clubIdentifier);
+
+  if (bySlug) {
+    return bySlug;
+  }
+
+  return getClubApi(clubIdentifier);
 }
 
 export async function createClubApi(
@@ -439,11 +453,12 @@ export async function listAuditLogsApi(
     from?: string;
     to?: string;
     limit?: number;
+    page?: number;
   },
   init?: RequestInit
-): Promise<BackendAuditLogRecord[]> {
+): Promise<BackendAuditLogListRecord> {
   return (
-    await fetchApiJson<BackendAuditLogRecord[]>(
+    await fetchApiJson<BackendAuditLogListRecord>(
       buildPath("/audit-logs", {
         action: filters?.action,
         resource_type: filters?.resourceType,
@@ -452,6 +467,7 @@ export async function listAuditLogsApi(
         from: filters?.from,
         to: filters?.to,
         limit: filters?.limit,
+        page: filters?.page,
       }),
       init
     )

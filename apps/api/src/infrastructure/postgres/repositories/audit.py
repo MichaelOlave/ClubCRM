@@ -59,9 +59,9 @@ class PostgresAuditLogRepository(AuditLogRepository):
 
             rows = (
                 session.execute(
-                    statement.order_by(
-                        AuditLogModel.occurred_at.desc(), AuditLogModel.id.desc()
-                    ).limit(filters.limit)
+                    statement.order_by(AuditLogModel.occurred_at.desc(), AuditLogModel.id.desc())
+                    .offset(filters.offset)
+                    .limit(filters.limit)
                 )
                 .scalars()
                 .all()

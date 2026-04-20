@@ -12,6 +12,7 @@ type Props = {
     actorQuery?: string | string[];
     from?: string | string[];
     limit?: string | string[];
+    page?: string | string[];
     resourceId?: string | string[];
     resourceType?: string | string[];
     to?: string | string[];

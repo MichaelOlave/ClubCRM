@@ -54,6 +54,7 @@ class FakeClubRepository(ClubRepository):
             "club-1": Club(
                 id="club-1",
                 organization_id="org-1",
+                slug="chess-club",
                 name="Chess Club",
                 description="Strategy and tournaments.",
                 status="active",
@@ -66,6 +67,17 @@ class FakeClubRepository(ClubRepository):
     def get_club(self, club_id: str) -> Club | None:
         return self.clubs.get(club_id)
 
+    def get_club_by_slug(self, organization_id: str | None, club_slug: str) -> Club | None:
+        return next(
+            (
+                club
+                for club in self.clubs.values()
+                if club.slug == club_slug
+                and (organization_id is None or club.organization_id == organization_id)
+            ),
+            None,
+        )
+
     def create_club(
         self,
         organization_id: str,
@@ -76,6 +88,7 @@ class FakeClubRepository(ClubRepository):
         club = Club(
             id=f"club-{len(self.clubs) + 1}",
             organization_id=organization_id,
+            slug="robotics-club",
             name=name,
             description=description,
             status=status,
@@ -98,6 +111,7 @@ class FakeClubRepository(ClubRepository):
         updated = Club(
             id=club.id,
             organization_id=club.organization_id,
+            slug="robotics-club" if name else club.slug,
             name=name or club.name,
             description=description or club.description,
             status=status or club.status,
@@ -246,6 +260,35 @@ class AuditRouteTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
-        self.assertEqual(len(body), 1)
-        self.assertEqual(body[0]["resource"]["type"], "member")
-        self.assertEqual(body[0]["action"], "update")
+        self.assertEqual(len(body["items"]), 1)
+        self.assertEqual(body["items"][0]["resource"]["type"], "member")
+        self.assertEqual(body["items"][0]["action"], "update")
+        self.assertEqual(body["pagination"]["page"], 1)
+        self.assertFalse(body["pagination"]["has_next"])
+
+    def test_audit_log_route_supports_pagination(self) -> None:
+        session_id = self._create_authenticated_session()
+        self.client.cookies.set("clubcrm_session", session_id)
+        self.audit_repository.audit_logs = [
+            build_audit_log(
+                audit_id="audit-1",
+                occurred_at=datetime(2026, 4, 14, 9, 0, tzinfo=UTC),
+            ),
+            build_audit_log(
+                audit_id="audit-2",
+                occurred_at=datetime(2026, 4, 14, 10, 0, tzinfo=UTC),
+            ),
+            build_audit_log(
+                audit_id="audit-3",
+                occurred_at=datetime(2026, 4, 14, 11, 0, tzinfo=UTC),
+            ),
+        ]
+
+        response = self.client.get("/audit-logs", params={"limit": 2, "page": 2})
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual([item["id"] for item in body["items"]], ["audit-1"])
+        self.assertEqual(body["pagination"]["page"], 2)
+        self.assertFalse(body["pagination"]["has_next"])
+        self.assertTrue(body["pagination"]["has_previous"])

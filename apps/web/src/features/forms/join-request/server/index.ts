@@ -1,4 +1,4 @@
-import { getClubApi, listPendingJoinRequestsApi } from "@/lib/api/clubcrm";
+import { listPendingJoinRequestsApi, resolveClubApi } from "@/lib/api/clubcrm";
 import { canAccessClub } from "@/features/auth/server";
 import type { AuthorizedBackendAuthSession } from "@/features/auth/types";
 import type {
@@ -32,8 +32,10 @@ function mapJoinRequestRecord(joinRequest: BackendJoinRequestRecord) {
   };
 }
 
-export async function getJoinRequestContext(clubId: string): Promise<JoinRequestContext | null> {
-  const club = await getClubApi(clubId);
+export async function getJoinRequestContext(
+  clubIdentifier: string
+): Promise<JoinRequestContext | null> {
+  const club = await resolveClubApi(clubIdentifier);
 
   if (!club) {
     return null;
@@ -50,28 +52,29 @@ export async function getJoinRequestContext(clubId: string): Promise<JoinRequest
 }
 
 export async function getJoinRequestReview(
-  clubId: string,
+  clubIdentifier: string,
   session: AuthorizedBackendAuthSession
 ): Promise<JoinRequestReviewViewModel | null> {
-  if (!canAccessClub(session, clubId)) {
-    return null;
-  }
-
-  const club = await getClubApi(clubId);
+  const club = await resolveClubApi(clubIdentifier);
 
   if (!club) {
     return null;
   }
 
-  const requests = await listPendingJoinRequestsApi(clubId, {
+  if (!canAccessClub(session, club.id)) {
+    return null;
+  }
+
+  const requests = await listPendingJoinRequestsApi(club.id, {
     headers: await getJoinRequestApiAuthHeaders({
-      originPath: `/clubs/${clubId}/join-requests`,
+      originPath: `/clubs/${club.slug}/join-requests`,
     }),
   });
 
   return {
     clubDescription: club.description,
     clubId: club.id,
+    clubSlug: club.slug,
     clubName: club.name,
     requests: requests.map(mapJoinRequestRecord),
   };

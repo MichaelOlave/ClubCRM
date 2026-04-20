@@ -63,7 +63,7 @@ const columns: Array<TableColumn<ClubRecord>> = [
     header: "Open",
     render: (club) => (
       <Button asChild size="sm" variant="secondary">
-        <Link href={`/clubs/${club.id}`}>View</Link>
+        <Link href={`/clubs/${club.slug}`}>View</Link>
       </Button>
     ),
     align: "right",

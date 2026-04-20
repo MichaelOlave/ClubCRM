@@ -21,6 +21,7 @@ import type { ActionNotice as ActionNoticeModel } from "@/lib/forms";
 type Props = {
   action: (formData: FormData) => Promise<void>;
   clubId: string;
+  clubSlug: string;
   members: MembershipAssignmentCandidate[];
   notice: ActionNoticeModel | null;
 };
@@ -28,7 +29,7 @@ type Props = {
 const selectClassName =
   "flex h-11 w-full rounded-2xl border border-input bg-background px-4 text-sm text-foreground shadow-xs outline-none transition focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20";
 
-export function AddMemberToClubDialog({ action, clubId, members, notice }: Props) {
+export function AddMemberToClubDialog({ action, clubId, clubSlug, members, notice }: Props) {
   const [open, setOpen] = useState(Boolean(notice && notice.kind === "error"));
 
   return (
@@ -51,6 +52,7 @@ export function AddMemberToClubDialog({ action, clubId, members, notice }: Props
         {members.length ? (
           <form action={action} className="grid gap-4 lg:grid-cols-3">
             <input name="clubId" type="hidden" value={clubId} />
+            <input name="clubSlug" type="hidden" value={clubSlug} />
 
             <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90 lg:col-span-3">
               <span>Member</span>

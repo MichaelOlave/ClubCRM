@@ -9,8 +9,8 @@ type Props = {
 };
 
 export default async function JoinRequestPage({ params }: Props) {
-  const { clubId } = await params;
-  const context = await getJoinRequestContext(clubId);
+  const { clubId: clubIdentifier } = await params;
+  const context = await getJoinRequestContext(clubIdentifier);
 
   if (!context) {
     notFound();

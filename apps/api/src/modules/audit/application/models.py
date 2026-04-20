@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+from src.modules.audit.domain.entities import AuditLog
+
 
 @dataclass(frozen=True)
 class AuditLogWrite:
@@ -29,3 +31,12 @@ class AuditLogFilters:
     occurred_from: datetime | None = None
     occurred_to: datetime | None = None
     limit: int = 50
+    offset: int = 0
+
+
+@dataclass(frozen=True)
+class AuditLogPage:
+    items: list["AuditLog"]
+    page: int
+    page_size: int
+    has_next: bool

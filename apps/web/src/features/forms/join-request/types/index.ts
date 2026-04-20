@@ -12,6 +12,7 @@ export type JoinRequestContext = {
 export type JoinRequestReviewViewModel = {
   clubDescription: string;
   clubId: string;
+  clubSlug: string;
   clubName: string;
   requests: JoinRequestRecord[];
 };
