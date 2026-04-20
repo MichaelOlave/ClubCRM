@@ -111,10 +111,16 @@ export async function createClubManagerGrantAction(formData: FormData) {
   let successRedirectPath = detailPath;
 
   try {
-    const grant = await createClubManagerGrantApi(clubId, {
-      member_id: memberId,
-      role_name: roleName,
-    });
+    const grant = await createClubManagerGrantApi(
+      clubId,
+      {
+        member_id: memberId,
+        role_name: roleName,
+      },
+      {
+        headers: await getAdminApiHeaders({ includeCsrf: true, originPath: detailPath }),
+      }
+    );
 
     revalidatePath("/clubs");
     revalidatePath(detailPath);
@@ -144,7 +150,9 @@ export async function deleteClubManagerGrantAction(formData: FormData) {
   let successRedirectPath = detailPath;
 
   try {
-    await deleteClubManagerGrantApi(clubId, grantId);
+    await deleteClubManagerGrantApi(clubId, grantId, {
+      headers: await getAdminApiHeaders({ includeCsrf: true, originPath: detailPath }),
+    });
 
     revalidatePath("/clubs");
     revalidatePath(detailPath);

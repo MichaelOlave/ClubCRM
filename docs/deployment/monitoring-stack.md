@@ -51,6 +51,41 @@ pnpm verify:monitoring
 These commands are intentionally separate from the default ClubCRM `pnpm dev`, `pnpm build`, and
 `pnpm verify` flows.
 
+### Live-Linked Local Development
+
+Use a dedicated env profile when you want local monitoring development to point at the live demo
+environment without changing the repo's default `.env`.
+
+For dashboard work, the smoothest path is local `monitor-web` against the already deployed
+`monitor-api`:
+
+```bash
+cp .env.monitoring.dashboard.example .env.monitoring.dashboard
+pnpm dev:monitor-web:live
+```
+
+This mode keeps the shared live control plane as the source of truth while you iterate on the
+dashboard locally. It is the recommended setup when you are adjusting panels, charts, layouts, and
+frontend control flows.
+
+For full local control-plane work, including new connector development in `apps/monitor-api`:
+
+```bash
+cp .env.monitoring.live.example .env.monitoring.live
+pnpm dev:monitor:live
+```
+
+Important constraint: a local `monitor-api` does not receive live VM heartbeats unless the live
+servers can reach your machine. For heartbeat-based connectors, you must either expose your local
+`MONITOR_API_PORT` through a reachable address or tunnel and repoint the guest agents'
+`MONITOR_API_BASE_URL`, or limit local testing to pull-based sources until that path is in place.
+
+The checked-in live examples were verified from this repo environment on April 18, 2026 against:
+
+- `http://192.168.139.213:8010/health`
+- `http://192.168.139.213:3001/api/snapshot`
+- `http://clubcrm.local/system/health`
+
 ## Host Placement
 
 The preferred live-demo shape is:

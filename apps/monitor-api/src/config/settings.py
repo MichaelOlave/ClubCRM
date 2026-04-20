@@ -39,6 +39,26 @@ class OrbStackSettings:
 
 
 @dataclass(frozen=True)
+class ProxmoxSettings:
+    base_url: str | None
+    token_id: str | None
+    token_secret: str | None
+    verify_tls: bool
+    timeout_seconds: float
+    poll_interval_seconds: float
+
+
+@dataclass(frozen=True)
+class SshVmPowerSettings:
+    ssh_host: str | None
+    ssh_user: str | None
+    ssh_port: int
+    ssh_identity_file: str | None
+    remote_wrapper: str | None
+    poll_interval_seconds: float
+
+
+@dataclass(frozen=True)
 class KubernetesSettings:
     snapshot_file: str | None
     poll_interval_seconds: float
@@ -47,6 +67,7 @@ class KubernetesSettings:
 @dataclass(frozen=True)
 class MonitoringSettings:
     target_vms: list[str]
+    vm_provider: str
 
 
 @dataclass(frozen=True)
@@ -55,6 +76,8 @@ class Settings:
     auth: AuthSettings
     synthetic: SyntheticMonitorSettings
     orbstack: OrbStackSettings
+    proxmox: ProxmoxSettings
+    ssh_vm_power: SshVmPowerSettings
     kubernetes: KubernetesSettings
     monitoring: MonitoringSettings
 
@@ -74,6 +97,14 @@ def _read_float_env(name: str, default: float) -> float:
         return default
 
     return float(value)
+
+
+def _read_bool_env(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _read_int_env(name: str, default: int) -> int:
@@ -146,11 +177,30 @@ def get_settings() -> Settings:
             ),
             poll_interval_seconds=_read_float_env("MONITOR_ORBSTACK_POLL_INTERVAL_SECONDS", 5.0),
         ),
+        proxmox=ProxmoxSettings(
+            base_url=_read_optional_env("MONITOR_PROXMOX_BASE_URL"),
+            token_id=_read_optional_env("MONITOR_PROXMOX_TOKEN_ID"),
+            token_secret=_read_optional_env("MONITOR_PROXMOX_TOKEN_SECRET"),
+            verify_tls=_read_bool_env("MONITOR_PROXMOX_VERIFY_TLS", True),
+            timeout_seconds=_read_float_env("MONITOR_PROXMOX_TIMEOUT_SECONDS", 5.0),
+            poll_interval_seconds=_read_float_env("MONITOR_PROXMOX_POLL_INTERVAL_SECONDS", 5.0),
+        ),
+        ssh_vm_power=SshVmPowerSettings(
+            ssh_host=_read_optional_env("MONITOR_SSH_VM_POWER_HOST"),
+            ssh_user=_read_optional_env("MONITOR_SSH_VM_POWER_USER"),
+            ssh_port=_read_int_env("MONITOR_SSH_VM_POWER_PORT", 22),
+            ssh_identity_file=_read_optional_env("MONITOR_SSH_VM_POWER_IDENTITY_FILE"),
+            remote_wrapper=_read_optional_env("MONITOR_SSH_VM_POWER_REMOTE_WRAPPER"),
+            poll_interval_seconds=_read_float_env(
+                "MONITOR_SSH_VM_POWER_POLL_INTERVAL_SECONDS", 5.0
+            ),
+        ),
         kubernetes=KubernetesSettings(
             snapshot_file=_read_optional_env("MONITOR_K8S_SNAPSHOT_FILE"),
             poll_interval_seconds=_read_float_env("MONITOR_K8S_POLL_INTERVAL_SECONDS", 5.0),
         ),
         monitoring=MonitoringSettings(
-            target_vms=_read_csv_env("MONITOR_TARGET_VMS", ["vm1", "vm2", "vm3"])
+            target_vms=_read_csv_env("MONITOR_TARGET_VMS", ["vm1", "vm2", "vm3"]),
+            vm_provider=os.getenv("MONITOR_VM_PROVIDER", "orbstack").strip().lower() or "orbstack",
         ),
     )

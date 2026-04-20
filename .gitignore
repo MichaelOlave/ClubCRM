@@ -17,6 +17,8 @@ pnpm-debug.log*
 .env
 .env.*
 !.env.example
+!.env.monitoring.dashboard.example
+!.env.monitoring.live.example
 !.env.production.example
 
 # Node / Next.js

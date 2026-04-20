@@ -9,7 +9,7 @@ from fastapi import WebSocket
 from src.config import Settings
 from src.modules.monitoring.application.state import MonitoringState
 from src.modules.monitoring.infrastructure.kubernetes import KubernetesCommandAdapter
-from src.modules.monitoring.infrastructure.orbstack import OrbStackSSHAdapter
+from src.modules.monitoring.infrastructure.vm_power import VmPowerAdapter
 from starlette.websockets import WebSocketDisconnect
 
 
@@ -53,13 +53,13 @@ class MonitoringRuntime:
         settings: Settings,
         state: MonitoringState,
         websocket_hub: WebSocketHub,
-        orbstack_adapter: OrbStackSSHAdapter,
+        vm_power_adapter: VmPowerAdapter,
         kubernetes_adapter: KubernetesCommandAdapter,
     ) -> None:
         self._settings = settings
         self._state = state
         self._websocket_hub = websocket_hub
-        self._orbstack_adapter = orbstack_adapter
+        self._vm_power_adapter = vm_power_adapter
         self._kubernetes_adapter = kubernetes_adapter
         self._tasks: list[asyncio.Task] = []
 
@@ -67,7 +67,7 @@ class MonitoringRuntime:
         self._tasks = [
             asyncio.create_task(self._run_synthetic_loop(), name="monitor-synthetic-loop"),
             asyncio.create_task(self._run_kubernetes_loop(), name="monitor-k8s-loop"),
-            asyncio.create_task(self._run_orbstack_loop(), name="monitor-orbstack-loop"),
+            asyncio.create_task(self._run_vm_power_loop(), name="monitor-vm-power-loop"),
             asyncio.create_task(self._run_websocket_loop(), name="monitor-websocket-loop"),
         ]
 
@@ -118,11 +118,18 @@ class MonitoringRuntime:
             )
             await asyncio.sleep(self._settings.kubernetes.poll_interval_seconds)
 
-    async def _run_orbstack_loop(self) -> None:
+    async def _run_vm_power_loop(self) -> None:
         while True:
-            states = await asyncio.to_thread(self._orbstack_adapter.list_vms)
+            states = await asyncio.to_thread(self._vm_power_adapter.list_vms)
             await self._state.record_vm_power_states(states)
-            await asyncio.sleep(self._settings.orbstack.poll_interval_seconds)
+            poll_interval_seconds = (
+                self._settings.proxmox.poll_interval_seconds
+                if self._settings.monitoring.vm_provider == "proxmox"
+                else self._settings.ssh_vm_power.poll_interval_seconds
+                if self._settings.monitoring.vm_provider == "ssh"
+                else self._settings.orbstack.poll_interval_seconds
+            )
+            await asyncio.sleep(poll_interval_seconds)
 
     async def _run_websocket_loop(self) -> None:
         while True:

@@ -1,9 +1,13 @@
+import { createHash, timingSafeEqual } from "node:crypto";
+
 function trimTrailingSlash(value: string) {
   return value.endsWith("/") ? value.slice(0, -1) : value;
 }
 
 const DEFAULT_CLUBCRM_DEMO_PATH = "/demo/failover";
 const FALLBACK_CLUBCRM_DEMO_PATH = "/system/health";
+const CONTROL_MODE_COOKIE_NAME = "clubcrm-control-mode";
+export const CONTROL_MODE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 12;
 
 export function getMonitorApiBaseUrl() {
   return trimTrailingSlash(
@@ -35,6 +39,51 @@ export function getMonitorAdminToken() {
   return process.env.MONITOR_ADMIN_TOKEN ?? "monitor-admin-token";
 }
 
+export function getControlModeCookieName() {
+  return CONTROL_MODE_COOKIE_NAME;
+}
+
+export function getControlModePassword() {
+  const password =
+    process.env.CONTROL_MODE_PASSWORD?.trim() ?? process.env.MONITOR_MODE_PASSWORD?.trim();
+  return password && password.length > 0 ? password : null;
+}
+
+export function isControlModeProtectionEnabled() {
+  return getControlModePassword() !== null;
+}
+
+export function isValidControlModePassword(candidate: string) {
+  const password = getControlModePassword();
+  if (!password) {
+    return true;
+  }
+
+  return secureCompare(candidate, password);
+}
+
+export function getControlModeSessionValue() {
+  const password = getControlModePassword();
+  if (!password) {
+    return null;
+  }
+
+  return hashControlModeValue(password);
+}
+
+export function isValidControlModeSession(sessionValue: string | null | undefined) {
+  const expected = getControlModeSessionValue();
+  if (!expected) {
+    return true;
+  }
+
+  if (!sessionValue) {
+    return false;
+  }
+
+  return secureCompare(sessionValue, expected);
+}
+
 export function getClubcrmDemoUrl() {
   const rawUrl =
     process.env.NEXT_PUBLIC_CLUBCRM_DEMO_URL ??
@@ -55,6 +104,17 @@ export async function resolveClubcrmDemoUrl() {
   }
 
   return preferredUrl;
+}
+
+export function getClubcrmLiveRoutingUrl(rawDemoUrl?: string) {
+  const baseDemoUrl = rawDemoUrl ?? getClubcrmDemoUrl();
+
+  try {
+    const demoUrl = new URL(baseDemoUrl);
+    return new URL("/system/health/live-routing", demoUrl).toString();
+  } catch {
+    return baseDemoUrl;
+  }
 }
 
 function normalizeClubcrmDemoUrl(rawUrl: string) {
@@ -99,4 +159,19 @@ async function isReachableClubcrmUrl(url: string) {
   } catch {
     return false;
   }
+}
+
+function hashControlModeValue(value: string) {
+  return createHash("sha256").update(`clubcrm-control:${value}`).digest("hex");
+}
+
+function secureCompare(left: string, right: string) {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+
+  if (leftBuffer.length !== rightBuffer.length) {
+    return false;
+  }
+
+  return timingSafeEqual(leftBuffer, rightBuffer);
 }

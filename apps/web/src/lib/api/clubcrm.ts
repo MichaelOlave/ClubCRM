@@ -94,21 +94,30 @@ export async function createClubManagerGrantApi(
   payload: {
     member_id: string;
     role_name: string;
-  }
+  },
+  init?: RequestInit
 ): Promise<BackendClubManagerGrantRecord> {
+  const headers = new Headers(init?.headers);
+
+  headers.set("Content-Type", "application/json");
+
   return (
     await fetchApiJson<BackendClubManagerGrantRecord>(`/clubs/${clubId}/manager-grants`, {
+      ...init,
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(payload),
     })
   ).data;
 }
 
-export async function deleteClubManagerGrantApi(clubId: string, grantId: string): Promise<void> {
+export async function deleteClubManagerGrantApi(
+  clubId: string,
+  grantId: string,
+  init?: RequestInit
+): Promise<void> {
   await fetchApiJson(`/clubs/${clubId}/manager-grants/${grantId}`, {
+    ...init,
     method: "DELETE",
   });
 }

@@ -16,7 +16,14 @@ From the repository root:
 ```bash
 pnpm bootstrap:monitoring
 pnpm dev:monitor-web
+pnpm dev:monitor-web:live
 pnpm lint:monitor-web
 pnpm build:monitor-web
 pnpm test:monitor-web
 ```
+
+For a live-linked local dashboard, copy `.env.monitoring.dashboard.example` to
+`.env.monitoring.dashboard` and run `pnpm dev:monitor-web:live`.
+
+Set `CONTROL_MODE_PASSWORD` when you want the operational control mode to require a password. The
+unlock is cached in a browser cookie for 12 hours, while demo mode remains available without it.

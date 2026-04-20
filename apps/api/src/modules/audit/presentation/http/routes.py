@@ -9,10 +9,8 @@ from src.modules.audit.application.models import AuditLogFilters
 from src.modules.audit.application.ports.audit_log_repository import AuditLogRepository
 from src.modules.audit.application.queries.list_audit_logs import ListAuditLogs
 from src.modules.audit.domain.entities import AuditLog
-from src.presentation.http.request_context import (
-    AuthenticatedRequestContext,
-    get_authenticated_request_context,
-)
+from src.modules.auth.domain.entities import AppAccess
+from src.modules.auth.presentation.http.dependencies import require_org_admin_access
 
 router = APIRouter(prefix="/audit-logs", tags=["audit"])
 
@@ -68,10 +66,7 @@ class AuditLogRead(BaseModel):
 @router.get("", response_model=list[AuditLogRead])
 def list_audit_logs(
     repository: Annotated[AuditLogRepository, Depends(get_audit_log_repository)],
-    _context: Annotated[
-        AuthenticatedRequestContext,
-        Depends(get_authenticated_request_context),
-    ],
+    _access: Annotated[AppAccess, Depends(require_org_admin_access)],
     action: str | None = None,
     resource_type: str | None = None,
     resource_id: str | None = None,

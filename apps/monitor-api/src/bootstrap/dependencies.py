@@ -6,6 +6,9 @@ from src.modules.monitoring.application.services import MonitoringRuntime, WebSo
 from src.modules.monitoring.application.state import MonitoringState
 from src.modules.monitoring.infrastructure.kubernetes import KubernetesCommandAdapter
 from src.modules.monitoring.infrastructure.orbstack import OrbStackSSHAdapter
+from src.modules.monitoring.infrastructure.proxmox import ProxmoxVmPowerAdapter
+from src.modules.monitoring.infrastructure.ssh_vm_power import SshVmPowerAdapter
+from src.modules.monitoring.infrastructure.vm_power import OrbStackVmPowerAdapter, VmPowerAdapter
 
 
 def build_monitoring_state(settings: Settings) -> MonitoringState:
@@ -27,6 +30,16 @@ def build_orbstack_adapter(settings: Settings) -> OrbStackSSHAdapter:
     return OrbStackSSHAdapter(settings.orbstack)
 
 
+def build_vm_power_adapter(settings: Settings) -> VmPowerAdapter:
+    provider = settings.monitoring.vm_provider
+    if provider == "proxmox":
+        return ProxmoxVmPowerAdapter(settings.proxmox)
+    if provider == "ssh":
+        return SshVmPowerAdapter(settings.ssh_vm_power)
+
+    return OrbStackVmPowerAdapter(build_orbstack_adapter(settings))
+
+
 def build_kubernetes_adapter(settings: Settings) -> KubernetesCommandAdapter:
     return KubernetesCommandAdapter(settings.kubernetes)
 
@@ -36,14 +49,14 @@ def build_monitoring_runtime(
     settings: Settings,
     monitoring_state: MonitoringState,
     websocket_hub: WebSocketHub,
-    orbstack_adapter: OrbStackSSHAdapter,
+    vm_power_adapter: VmPowerAdapter,
     kubernetes_adapter: KubernetesCommandAdapter,
 ) -> MonitoringRuntime:
     return MonitoringRuntime(
         settings=settings,
         state=monitoring_state,
         websocket_hub=websocket_hub,
-        orbstack_adapter=orbstack_adapter,
+        vm_power_adapter=vm_power_adapter,
         kubernetes_adapter=kubernetes_adapter,
     )
 
@@ -56,8 +69,8 @@ def get_websocket_hub(connection: HTTPConnection) -> WebSocketHub:
     return connection.app.state.websocket_hub
 
 
-def get_orbstack_adapter(connection: HTTPConnection) -> OrbStackSSHAdapter:
-    return connection.app.state.orbstack_adapter
+def get_vm_power_adapter(connection: HTTPConnection) -> VmPowerAdapter:
+    return connection.app.state.vm_power_adapter
 
 
 def get_kubernetes_adapter(connection: HTTPConnection) -> KubernetesCommandAdapter:

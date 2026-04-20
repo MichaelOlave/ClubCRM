@@ -1,6 +1,12 @@
+import { cookies } from "next/headers";
 import { MonitoringDashboardClient } from "@/features/monitoring/components/MonitoringDashboardClient";
 import { getInitialMonitoringSnapshot } from "@/features/monitoring/server/getInitialMonitoringSnapshot";
-import { getMonitorWebSocketUrl, resolveClubcrmDemoUrl } from "@/lib/env";
+import {
+  getControlModeCookieName,
+  getMonitorWebSocketUrl,
+  isValidControlModeSession,
+  resolveClubcrmDemoUrl,
+} from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +14,10 @@ export default async function HomePage() {
   const initialSnapshot = await getInitialMonitoringSnapshot();
   const streamUrl = getMonitorWebSocketUrl();
   const demoUrl = await resolveClubcrmDemoUrl();
+  const cookieStore = await cookies();
+  const initialControlModeUnlocked = isValidControlModeSession(
+    cookieStore.get(getControlModeCookieName())?.value
+  );
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
@@ -31,6 +41,7 @@ export default async function HomePage() {
       <MonitoringDashboardClient
         demoUrl={demoUrl}
         initialSnapshot={initialSnapshot}
+        initialControlModeUnlocked={initialControlModeUnlocked}
         streamUrl={streamUrl}
       />
     </main>

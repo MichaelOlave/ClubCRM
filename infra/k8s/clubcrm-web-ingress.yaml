@@ -3,6 +3,12 @@ kind: Ingress
 metadata:
   name: clubcrm-web
   namespace: clubcrm
+  annotations:
+    traefik.ingress.kubernetes.io/service.sticky.cookie: "true"
+    traefik.ingress.kubernetes.io/service.sticky.cookie.name: clubcrm_route
+    traefik.ingress.kubernetes.io/service.sticky.cookie.httponly: "true"
+    traefik.ingress.kubernetes.io/service.sticky.cookie.maxage: "43200"
+    traefik.ingress.kubernetes.io/service.sticky.cookie.path: /
 spec:
   ingressClassName: traefik
   rules:
