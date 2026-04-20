@@ -70,7 +70,7 @@ class MonitoringRouteTests(unittest.TestCase):
         self.assertIn("vms", payload)
         self.assertIn("generated_at", payload)
 
-    @patch("src.modules.monitoring.infrastructure.orbstack.OrbStackSSHAdapter.power_action")
+    @patch("src.modules.monitoring.infrastructure.vm_power.OrbStackVmPowerAdapter.power_action")
     def test_vm_control_returns_adapter_result(self, mock_power_action) -> None:
         mock_power_action.return_value.vm_id = "vm1"
         mock_power_action.return_value.power_state = "stopped"

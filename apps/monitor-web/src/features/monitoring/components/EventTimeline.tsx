@@ -6,7 +6,7 @@ type Props = {
 
 export function EventTimeline({ events }: Props) {
   return (
-    <section className="monitor-card px-6 py-6">
+    <section className="monitor-card flex min-h-0 flex-col px-6 py-6">
       <div className="flex items-center justify-between gap-4">
         <div>
           <div className="monitor-label">Timeline</div>
@@ -14,7 +14,7 @@ export function EventTimeline({ events }: Props) {
         </div>
         <div className="text-sm text-muted-foreground">{events.length} retained entries</div>
       </div>
-      <div className="mt-6 space-y-3">
+      <div className="mt-6 max-h-[min(70vh,52rem)] space-y-3 overflow-y-auto pr-2">
         {events.length > 0 ? (
           events.map((event) => (
             <article

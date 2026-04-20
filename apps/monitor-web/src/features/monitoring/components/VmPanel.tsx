@@ -3,11 +3,18 @@ import type { MonitoringVm } from "@/features/monitoring/types";
 type Props = {
   vms: MonitoringVm[];
   pendingActions: Record<string, boolean>;
+  showActions?: boolean;
   variant?: "default" | "compact";
   onVmPowerAction: (vmId: string, action: "start" | "stop" | "restart") => void;
 };
 
-export function VmPanel({ vms, pendingActions, variant = "default", onVmPowerAction }: Props) {
+export function VmPanel({
+  vms,
+  pendingActions,
+  showActions = true,
+  variant = "default",
+  onVmPowerAction,
+}: Props) {
   const isCompact = variant === "compact";
 
   return (
@@ -86,25 +93,27 @@ export function VmPanel({ vms, pendingActions, variant = "default", onVmPowerAct
                   }
                 />
               </div>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {(["start", "stop", "restart"] as const).map((action) => {
-                  const actionKey = `vm:${vm.id}:${action}`;
-                  const isPending = Boolean(pendingActions[actionKey]);
-                  return (
-                    <button
-                      key={action}
-                      aria-label={`${action} ${vm.id}`}
-                      type="button"
-                      className="inline-flex items-center gap-2 rounded-full border border-border/80 px-3 py-2 text-sm font-medium text-foreground transition hover:border-primary/60 hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={isVmActionPending}
-                      onClick={() => onVmPowerAction(vm.id, action)}
-                    >
-                      {isPending ? <StatusRing /> : null}
-                      {isPending ? `${toActionProgressLabel(action)}...` : action}
-                    </button>
-                  );
-                })}
-              </div>
+              {showActions ? (
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {(["start", "stop", "restart"] as const).map((action) => {
+                    const actionKey = `vm:${vm.id}:${action}`;
+                    const isPending = Boolean(pendingActions[actionKey]);
+                    return (
+                      <button
+                        key={action}
+                        aria-label={`${action} ${vm.id}`}
+                        type="button"
+                        className="inline-flex items-center gap-2 rounded-full border border-border/80 px-3 py-2 text-sm font-medium text-foreground transition hover:border-primary/60 hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={isVmActionPending}
+                        onClick={() => onVmPowerAction(vm.id, action)}
+                      >
+                        {isPending ? <StatusRing /> : null}
+                        {isPending ? `${toActionProgressLabel(action)}...` : action}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
             </article>
           );
         })}

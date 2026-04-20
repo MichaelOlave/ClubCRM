@@ -265,6 +265,9 @@ Use those tags in Kubero when creating the `clubcrm-web` and `clubcrm-api` appli
 Set the `clubcrm-web` replica count to `2` for the networking demo so the live diagnostics iframe
 can show traffic moving from the active web pod to the replacement pod during a recycle.
 
+The `clubcrm-web` ingress should also keep sticky-session cookies enabled so the same browser
+session stays pinned to one healthy web pod until that pod is recycled or becomes unavailable.
+
 If you are using the OrbStack overlay instead of Kubero-managed app workloads, build the same tags
 locally and import them onto the schedulable `k3s` nodes:
 

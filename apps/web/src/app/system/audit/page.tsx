@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/shadcn/button";
+import { requireOrgAdminBackendSession } from "@/features/auth/server";
 import { AuditLogOverview } from "@/features/audit";
 import { getAuditLogViewModel } from "@/features/audit/server";
 
@@ -20,6 +21,7 @@ type Props = {
 export const dynamic = "force-dynamic";
 
 export default async function SystemAuditPage({ searchParams }: Props) {
+  await requireOrgAdminBackendSession();
   const viewModel = await getAuditLogViewModel(await searchParams);
 
   return (

@@ -33,9 +33,19 @@ describe("MonitoringDashboardClient", () => {
     FakeWebSocket.instances = [];
     vi.useFakeTimers();
     vi.stubGlobal("WebSocket", FakeWebSocket);
+    Storage.prototype.getItem = vi.fn(() => null);
+    Storage.prototype.setItem = vi.fn();
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => Promise.resolve(new Response("{}")))
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+
+        if (url.includes("/api/live-routing")) {
+          return new Promise<Response>(() => {});
+        }
+
+        return Promise.resolve(new Response("{}"));
+      })
     );
   });
 
@@ -51,6 +61,7 @@ describe("MonitoringDashboardClient", () => {
       <MonitoringDashboardClient
         demoUrl="http://clubcrm.local/system/health"
         initialSnapshot={initialSnapshot}
+        initialControlModeUnlocked
         streamUrl="ws://localhost:8010/ws/stream"
       />
     );
@@ -106,13 +117,81 @@ describe("MonitoringDashboardClient", () => {
       <MonitoringDashboardClient
         demoUrl="http://clubcrm.local/system/health"
         initialSnapshot={initialSnapshot}
+        initialControlModeUnlocked={false}
         streamUrl="ws://localhost:8010/ws/stream"
       />
     );
 
-    expect(screen.getByRole("tab", { name: /Overview/i })).toHaveAttribute("aria-selected", "true");
-    expect(screen.queryByText("Current view")).not.toBeInTheDocument();
-    expect(screen.getByText("Latency over time")).toBeInTheDocument();
+    expect(screen.getByText("ClubCRM failover view")).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: /Overview/i })).not.toBeInTheDocument();
+    expect(screen.queryByText("Guarded demo actions")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Control mode/i }));
+
+    expect(screen.getByText("Enter password to continue")).toBeInTheDocument();
+  });
+
+  it("unlocks control mode and restores the protected tabs", async () => {
+    const initialSnapshot = {
+      ...createEmptySnapshot(),
+      containers: {
+        vm1: [{ name: "nginx", status: "running", image: "nginx:latest" }],
+      },
+      kubernetes: {
+        ...createEmptySnapshot().kubernetes,
+        connected: true,
+        source: "cluster-api",
+        pods: [
+          { namespace: "default", name: "clubcrm-web-1", status: "Running", node_name: "vm1" },
+        ],
+      },
+    } satisfies MonitoringSnapshot;
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.includes("/api/live-routing")) {
+        return new Promise<Response>(() => {});
+      }
+
+      if (url.includes("/api/monitor-mode-auth")) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              unlocked: true,
+            }),
+            { status: 200 }
+          )
+        );
+      }
+
+      return Promise.resolve(new Response("{}"));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <MonitoringDashboardClient
+        demoUrl="http://clubcrm.local/system/health"
+        initialSnapshot={initialSnapshot}
+        initialControlModeUnlocked={false}
+        streamUrl="ws://localhost:8010/ws/stream"
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Control mode/i }));
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "demo-secret" },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Unlock control mode/i }));
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/monitor-mode-auth",
+      expect.objectContaining({
+        method: "POST",
+      })
+    );
+    expect(screen.getByRole("tab", { name: /Overview/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: /Infrastructure/i }));
 
@@ -121,10 +200,40 @@ describe("MonitoringDashboardClient", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: /Controls/i }));
 
-    expect(screen.getByTitle("ClubCRM live routing demo")).toBeInTheDocument();
+    expect(screen.getByText("Guarded demo actions")).toBeInTheDocument();
   });
 
-  it("opens an in-app confirmation modal before running VM power actions", async () => {
+  it("keeps VM power actions inside control mode", () => {
+    const initialSnapshot = {
+      ...createEmptySnapshot(),
+      vms: [
+        {
+          id: "Server1",
+          power_state: "stopped",
+          agent_status: "offline",
+          cpu_percent: 0,
+          memory_percent: 0,
+          last_seen_at: null,
+          last_monotonic_time: null,
+          containers: [],
+          pending_commands: 0,
+        },
+      ],
+    } satisfies MonitoringSnapshot;
+
+    render(
+      <MonitoringDashboardClient
+        demoUrl="http://clubcrm.local/system/health"
+        initialSnapshot={initialSnapshot}
+        initialControlModeUnlocked={false}
+        streamUrl="ws://localhost:8010/ws/stream"
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: "start Server1" })).not.toBeInTheDocument();
+  });
+
+  it("opens an in-app confirmation modal before running control-mode VM power actions", async () => {
     const initialSnapshot = {
       ...createEmptySnapshot(),
       vms: [
@@ -174,10 +283,12 @@ describe("MonitoringDashboardClient", () => {
       <MonitoringDashboardClient
         demoUrl="http://clubcrm.local/system/health"
         initialSnapshot={initialSnapshot}
+        initialControlModeUnlocked
         streamUrl="ws://localhost:8010/ws/stream"
       />
     );
 
+    fireEvent.click(screen.getByRole("tab", { name: /Controls/i }));
     fireEvent.click(screen.getAllByRole("button", { name: "start Server1" })[0]!);
 
     expect(screen.getByText("Run this demo command?")).toBeInTheDocument();
@@ -187,6 +298,99 @@ describe("MonitoringDashboardClient", () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/control/vms/Server1/power",
+      expect.objectContaining({
+        method: "POST",
+      })
+    );
+  });
+
+  it("returns to demo mode when the user leaves control mode", () => {
+    const initialSnapshot = {
+      ...createEmptySnapshot(),
+      vms: [
+        {
+          id: "Server1",
+          power_state: "running",
+          agent_status: "online",
+          cpu_percent: 18,
+          memory_percent: 42,
+          last_seen_at: null,
+          last_monotonic_time: null,
+          containers: [],
+          pending_commands: 0,
+        },
+      ],
+    } satisfies MonitoringSnapshot;
+
+    render(
+      <MonitoringDashboardClient
+        demoUrl="http://clubcrm.local/system/health"
+        initialSnapshot={initialSnapshot}
+        initialControlModeUnlocked
+        streamUrl="ws://localhost:8010/ws/stream"
+      />
+    );
+
+    expect(screen.getByText("Latency over time")).toBeInTheDocument();
+    expect(screen.queryByTitle("ClubCRM live routing demo")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Demo mode/i }));
+
+    expect(screen.getByText("ClubCRM failover view")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "start Server1" })).not.toBeInTheDocument();
+  });
+
+  it("starts the failover flow from the demo rail button", async () => {
+    const initialSnapshot = {
+      ...createEmptySnapshot(),
+      kubernetes: {
+        ...createEmptySnapshot().kubernetes,
+        connected: true,
+        source: "cluster-api",
+        pods: [
+          {
+            namespace: "clubcrm",
+            name: "clubcrm-web-abc123",
+            status: "Running",
+            node_name: "server2",
+          },
+        ],
+      },
+    } satisfies MonitoringSnapshot;
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.includes("/api/live-routing")) {
+        return new Promise<Response>(() => {});
+      }
+
+      if (url.includes("/api/control/k8s/pods/clubcrm/clubcrm-web-abc123/recycle")) {
+        return Promise.resolve(new Response(JSON.stringify({ accepted: true }), { status: 200 }));
+      }
+
+      if (url.includes("/api/snapshot")) {
+        return Promise.resolve(new Response(JSON.stringify(initialSnapshot), { status: 200 }));
+      }
+
+      return Promise.resolve(new Response("{}"));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <MonitoringDashboardClient
+        demoUrl="http://clubcrm.local/system/health"
+        initialSnapshot={initialSnapshot}
+        initialControlModeUnlocked={false}
+        streamUrl="ws://localhost:8010/ws/stream"
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Start failover run/i }));
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/control/k8s/pods/clubcrm/clubcrm-web-abc123/recycle",
       expect.objectContaining({
         method: "POST",
       })

@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from src.bootstrap.dependencies import (
     get_kubernetes_adapter,
     get_monitoring_state,
-    get_orbstack_adapter,
+    get_vm_power_adapter,
     get_websocket_hub,
     require_admin_token,
     require_agent_token,
@@ -20,12 +20,12 @@ from src.modules.monitoring.domain.models import (
     ContainerSnapshot,
 )
 from src.modules.monitoring.infrastructure.kubernetes import KubernetesCommandAdapter
-from src.modules.monitoring.infrastructure.orbstack import OrbStackSSHAdapter
+from src.modules.monitoring.infrastructure.vm_power import VmPowerAdapter
 
 router = APIRouter(tags=["monitoring"])
 
 MonitoringStateDep = Annotated[MonitoringState, Depends(get_monitoring_state)]
-OrbStackAdapterDep = Annotated[OrbStackSSHAdapter, Depends(get_orbstack_adapter)]
+VmPowerAdapterDep = Annotated[VmPowerAdapter, Depends(get_vm_power_adapter)]
 KubernetesAdapterDep = Annotated[KubernetesCommandAdapter, Depends(get_kubernetes_adapter)]
 WebSocketHubDep = Annotated[WebSocketHub, Depends(get_websocket_hub)]
 
@@ -112,10 +112,10 @@ async def control_vm_power(
     payload: VmPowerRequest,
     request: Request,
     state: MonitoringStateDep,
-    orbstack_adapter: OrbStackAdapterDep,
+    vm_power_adapter: VmPowerAdapterDep,
 ) -> dict:
     require_admin_token(request)
-    result = await asyncio.to_thread(orbstack_adapter.power_action, vm_id, payload.action)
+    result = await asyncio.to_thread(vm_power_adapter.power_action, vm_id, payload.action)
     await state.record_vm_power_action(
         vm_id=result.vm_id,
         action=payload.action,

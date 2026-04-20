@@ -161,17 +161,25 @@ When Kubernetes data is available, the monitoring snapshot includes:
 Snapshot-file mode is useful when the UI needs to be stable before kubeconfig or live cluster access
 is ready.
 
-### 4. OrbStack VM Power Control
+### 4. VM Power Control
 
 The monitoring API does not expose arbitrary remote shell access.
 
-Instead, VM power control follows one of two narrow paths:
+Instead, VM power control now supports three backend families:
 
-- local mode: call `orbctl` directly on the monitoring host
-- remote mode: SSH to a dedicated user and invoke
+- OrbStack:
+  local mode calls `orbctl` directly on the monitoring host
+- OrbStack:
+  remote mode SSHes to a dedicated user and invokes
   `infra/monitoring/orbstack/clubcrm-monitor-orbstack.sh`
+- Proxmox:
+  API mode talks to the Proxmox REST API with an API token when
+  `MONITOR_VM_PROVIDER=proxmox`
+- SSH wrapper:
+  remote mode SSHes to a reachable host and invokes a restricted wrapper when
+  `MONITOR_VM_PROVIDER=ssh`
 
-The wrapper intentionally limits the command surface to:
+The OrbStack wrapper intentionally limits the command surface to:
 
 - `list`
 - `power start <machine>`
@@ -214,9 +222,12 @@ Most monitoring defaults live in `.env.example`, while deployment-oriented overr
 | Group                 | Key variables                                                                                                                                                                                                        | Purpose                                                                                                   |
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | API and web addresses | `MONITOR_API_PORT`, `MONITOR_API_BASE_URL`, `NEXT_PUBLIC_MONITOR_API_BASE_URL`, `NEXT_PUBLIC_MONITOR_WS_URL`, `MONITOR_WEB_PORT`                                                                                     | control where `monitor-api` listens, where `monitor-web` reaches it, and which WebSocket URL browsers use |
-| Auth                  | `MONITOR_ADMIN_TOKEN`, `MONITOR_AGENT_TOKENS`, `MONITOR_TARGET_VMS`                                                                                                                                                  | separate admin controls from per-VM agent authentication                                                  |
+| Auth                  | `MONITOR_ADMIN_TOKEN`, `CONTROL_MODE_PASSWORD`, `MONITOR_AGENT_TOKENS`, `MONITOR_TARGET_VMS`                                                                                                                         | separate dashboard operator access, admin controls, and per-VM agent authentication                       |
 | Synthetic monitoring  | `MONITOR_SYNTHETIC_TARGET_URL`, `MONITOR_SYNTHETIC_INTERVAL_SECONDS`, `MONITOR_SYNTHETIC_TIMEOUT_SECONDS`, `MONITOR_HISTORY_LIMIT`, `MONITOR_EVENT_LIMIT`, `MONITOR_STALE_AFTER_SECONDS`, `MONITOR_LATENCY_SPIKE_MS` | tune the synthetic health loop and dashboard history windows                                              |
+| VM power provider     | `MONITOR_VM_PROVIDER`                                                                                                                                                                                                | select `orbstack`, `proxmox`, or `ssh` for VM power polling and actions                                   |
 | OrbStack control      | `MONITOR_ORBSTACK_SSH_HOST`, `MONITOR_ORBSTACK_SSH_USER`, `MONITOR_ORBSTACK_SSH_PORT`, `MONITOR_ORBSTACK_SSH_IDENTITY_FILE`, `MONITOR_ORBSTACK_REMOTE_WRAPPER`, `MONITOR_ORBSTACK_POLL_INTERVAL_SECONDS`             | switch between local `orbctl` mode and remote-wrapper mode                                                |
+| Proxmox control       | `MONITOR_PROXMOX_BASE_URL`, `MONITOR_PROXMOX_TOKEN_ID`, `MONITOR_PROXMOX_TOKEN_SECRET`, `MONITOR_PROXMOX_VERIFY_TLS`, `MONITOR_PROXMOX_TIMEOUT_SECONDS`, `MONITOR_PROXMOX_POLL_INTERVAL_SECONDS`                     | use the Proxmox API for VM power polling and actions                                                      |
+| SSH VM control        | `MONITOR_SSH_VM_POWER_HOST`, `MONITOR_SSH_VM_POWER_USER`, `MONITOR_SSH_VM_POWER_PORT`, `MONITOR_SSH_VM_POWER_IDENTITY_FILE`, `MONITOR_SSH_VM_POWER_REMOTE_WRAPPER`, `MONITOR_SSH_VM_POWER_POLL_INTERVAL_SECONDS`     | use a restricted SSH wrapper for VM power polling and actions                                             |
 | Kubernetes and iframe | `MONITOR_K8S_SNAPSHOT_FILE`, `MONITOR_K8S_POLL_INTERVAL_SECONDS`, `NEXT_PUBLIC_CLUBCRM_DEMO_URL`, `CLUBCRM_DEMO_URL`                                                                                                 | control how Kubernetes data is sourced and which ClubCRM page is embedded                                 |
 
 ## Deployment Modes
