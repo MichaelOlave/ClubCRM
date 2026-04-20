@@ -1,4 +1,5 @@
 import unittest
+from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -9,6 +10,8 @@ add_api_root_to_path()
 from src.infrastructure.postgres.client import PostgresClient
 from src.infrastructure.postgres.models.tables import (
     AdminUserModel,
+    AuditLogModel,
+    AuthUserBindingModel,
     ClubManagerRoleModel,
     MemberModel,
     MembershipModel,
@@ -28,7 +31,23 @@ class PostgresSeedTests(unittest.TestCase):
         session.scalar.return_value = None
         existing_admins_result = MagicMock()
         existing_admins_result.scalars.return_value.all.return_value = []
-        session.execute.return_value = existing_admins_result
+        bound_admin_result = MagicMock()
+        bound_admin_result.scalar_one_or_none.return_value = SimpleNamespace(
+            id="admin-123",
+            email="developer@clubcrm.local",
+        )
+        missing_binding_result = MagicMock()
+        missing_binding_result.scalar_one_or_none.return_value = None
+        missing_bound_admin_result = MagicMock()
+        missing_bound_admin_result.scalar_one_or_none.return_value = None
+        empty_audit_result = MagicMock()
+        empty_audit_result.scalar_one_or_none.return_value = None
+        session.execute.side_effect = [
+            existing_admins_result,
+            bound_admin_result,
+            missing_binding_result,
+            empty_audit_result,
+        ]
 
         seeded = seed(client=client)
 
@@ -66,6 +85,32 @@ class PostgresSeedTests(unittest.TestCase):
             and model.club_id == seeded_manager_grants[0].club_id
         ]
         self.assertEqual(len(seeded_club_manager_memberships), 1)
+        seeded_auth_bindings = [
+            model
+            for call in session.add_all.call_args_list
+            for model in call.args[0]
+            if isinstance(model, AuthUserBindingModel)
+        ]
+        self.assertEqual(len(seeded_auth_bindings), 0)
+        seeded_audit_logs = [
+            model
+            for call in session.add_all.call_args_list
+            for model in call.args[0]
+            if isinstance(model, AuditLogModel)
+        ]
+        self.assertEqual(len(seeded_audit_logs), 0)
+        added_auth_bindings = [
+            call.args[0]
+            for call in session.add.call_args_list
+            if isinstance(call.args[0], AuthUserBindingModel)
+        ]
+        self.assertEqual(len(added_auth_bindings), 1)
+        added_audit_logs = [
+            call.args[0]
+            for call in session.add.call_args_list
+            if isinstance(call.args[0], AuditLogModel)
+        ]
+        self.assertEqual(len(added_audit_logs), 1)
 
     def test_seed_backfills_default_admin_users_for_existing_champlain_org(self) -> None:
         client, session = self._build_client_and_session()
@@ -75,12 +120,35 @@ class PostgresSeedTests(unittest.TestCase):
         seed_org_result.scalar_one_or_none.return_value = SimpleNamespace(id="org-123")
         existing_admins_result = MagicMock()
         existing_admins_result.scalars.return_value.all.return_value = []
-        session.execute.side_effect = [seed_org_result, existing_admins_result]
+        club_result = MagicMock()
+        club_result.scalar_one_or_none.return_value = SimpleNamespace(id="club-123")
+        bound_admin_result = MagicMock()
+        bound_admin_result.scalar_one_or_none.return_value = SimpleNamespace(
+            id="admin-123",
+            email="developer@clubcrm.local",
+        )
+        missing_binding_result = MagicMock()
+        missing_binding_result.scalar_one_or_none.return_value = None
+        empty_audit_result = MagicMock()
+        empty_audit_result.scalar_one_or_none.return_value = None
+        stale_event_result = MagicMock()
+        stale_event_result.scalar_one_or_none.return_value = SimpleNamespace(
+            starts_at=datetime.now(UTC) - timedelta(days=1),
+            ends_at=None,
+        )
+        session.execute.side_effect = [
+            seed_org_result,
+            existing_admins_result,
+            club_result,
+            bound_admin_result,
+            missing_binding_result,
+            empty_audit_result,
+            stale_event_result,
+        ]
 
         seeded = seed(client=client)
 
         self.assertTrue(seeded)
-        session.add.assert_not_called()
         session.commit.assert_called_once()
         seeded_admin_emails = [
             model.email
@@ -88,6 +156,18 @@ class PostgresSeedTests(unittest.TestCase):
             if isinstance(model, AdminUserModel)
         ]
         self.assertCountEqual(seeded_admin_emails, DEFAULT_ADMIN_EMAILS)
+        added_auth_bindings = [
+            call.args[0]
+            for call in session.add.call_args_list
+            if isinstance(call.args[0], AuthUserBindingModel)
+        ]
+        self.assertEqual(len(added_auth_bindings), 1)
+        added_audit_logs = [
+            call.args[0]
+            for call in session.add.call_args_list
+            if isinstance(call.args[0], AuditLogModel)
+        ]
+        self.assertEqual(len(added_audit_logs), 1)
 
     def test_seed_skips_when_database_already_contains_organizations(self) -> None:
         client, session = self._build_client_and_session()
@@ -116,6 +196,26 @@ class PostgresSeedTests(unittest.TestCase):
             session
         )
         session.scalar.return_value = "org-123"
+        seed_org_result = MagicMock()
+        seed_org_result.scalar_one_or_none.return_value = SimpleNamespace(id="org-123")
+        club_result = MagicMock()
+        club_result.scalar_one_or_none.return_value = SimpleNamespace(id="club-123")
+        missing_bound_admin_result = MagicMock()
+        missing_bound_admin_result.scalar_one_or_none.return_value = None
+        empty_audit_result = MagicMock()
+        empty_audit_result.scalar_one_or_none.return_value = None
+        future_event_result = MagicMock()
+        future_event_result.scalar_one_or_none.return_value = SimpleNamespace(
+            starts_at=datetime.now(UTC) + timedelta(days=1),
+            ends_at=None,
+        )
+        session.execute.side_effect = [
+            seed_org_result,
+            club_result,
+            missing_bound_admin_result,
+            empty_audit_result,
+            future_event_result,
+        ]
 
         seed()
 

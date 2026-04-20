@@ -12,6 +12,8 @@ def main() -> None:
     run_api_module("alembic", "upgrade", "head", cwd=API_DIR)
     # Load local relational demo data without duplicating rows on each restart.
     run_api_module("src.infrastructure.postgres.seed", cwd=API_DIR)
+    # Load baseline document data for form workflows when MongoDB is empty.
+    run_api_module("src.infrastructure.mongodb.seed", cwd=API_DIR)
     # Polling is more reliable than native filesystem events on Windows-hosted
     # bind mounts and still works fine for container-based local development.
     os.environ.setdefault("WATCHFILES_FORCE_POLLING", "true")
