@@ -1,4 +1,4 @@
-import type { MemberRecord } from "@/types/api";
+import type { MemberRecord, MembershipRecord } from "@/types/api";
 
 export type MemberListViewModel = {
   members: MemberRecord[];
@@ -11,5 +11,6 @@ export type MemberDetailField = {
 
 export type MemberDetailViewModel = {
   member: MemberRecord;
+  memberships: MembershipRecord[];
   metadata: MemberDetailField[];
 };

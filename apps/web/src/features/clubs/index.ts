@@ -1,7 +1,7 @@
 export { ClubDirectory } from "./components/ClubDirectory";
+export { ClubControlPanel } from "./components/ClubControlPanel";
 export { ClubManagerAccessCard } from "./components/ClubManagerAccessCard";
 export { ClubProfile } from "./components/ClubProfile";
-export { ClubQuickActions } from "./components/ClubQuickActions";
 export { CreateAnnouncementDialog } from "./components/CreateAnnouncementDialog";
 export { CreateClubDialog } from "./components/CreateClubDialog";
 export { CreateEventDialog } from "./components/CreateEventDialog";

@@ -6,15 +6,18 @@ import type { MembershipRecord } from "@/types/api";
 import { Badge } from "@/components/shadcn/badge";
 import { Card } from "@/components/shadcn/card";
 import { EmptyState } from "@/components/shadcn/empty-state";
-import { TabsView } from "@/components/shadcn/tabs-view";
 import { formatDateTime } from "@/lib/utils/formatters";
 
 type Props = {
   announcementActions?: (announcement: ClubDetailViewModel["announcements"][number]) => ReactNode;
   detail: ClubDetailViewModel;
   eventActions?: (event: ClubDetailViewModel["events"][number]) => ReactNode;
+  headerActions?: ReactNode;
+  activityActions?: ReactNode;
   membershipActions?: (membership: MembershipRecord) => ReactNode;
   memberships: MembershipRecord[];
+  rosterActions?: ReactNode;
+  renderMembershipAssignment?: (membership: MembershipRecord) => ReactNode;
 };
 
 function getStatusVariant(status: ClubDetailViewModel["club"]["status"]) {
@@ -50,10 +53,14 @@ export function ClubProfile({
   announcementActions,
   detail,
   eventActions,
+  headerActions,
+  activityActions,
   membershipActions,
   memberships,
+  rosterActions,
+  renderMembershipAssignment,
 }: Props) {
-  const overview = (
+  return (
     <div className="space-y-6">
       <Card className="space-y-5 rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
         <div className="flex flex-wrap items-center gap-3">
@@ -70,6 +77,9 @@ export function ClubProfile({
             <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
               {detail.club.description}
             </p>
+            {headerActions ? (
+              <div className="mt-5 flex flex-wrap gap-2">{headerActions}</div>
+            ) : null}
           </div>
           <div className="space-y-3 rounded-[1.25rem] border border-border bg-muted/40 p-4">
             <div>
@@ -105,128 +115,133 @@ export function ClubProfile({
       <MembershipTable
         actionsHeader="Roster actions"
         description="This shared membership table can be reused by club detail, member detail, and future review workflows."
+        headerActions={rosterActions}
         memberships={memberships}
+        renderAssignment={renderMembershipAssignment}
         renderActions={membershipActions}
         title="Club roster"
       />
-    </div>
-  );
 
-  const activity = (
-    <div className="grid gap-6 xl:grid-cols-2">
-      <Card className="space-y-4 rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
-        <div>
-          <h3 className="text-xl font-semibold text-foreground">Upcoming events</h3>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Events stay inside the club detail route for the MVP instead of becoming a separate
-            top-level page.
-          </p>
-        </div>
-
-        {detail.events.length ? (
-          <div className="space-y-4">
-            {detail.events.map((event) => (
-              <div className="rounded-[1.25rem] border border-border p-4" key={event.id}>
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <Badge variant={getEventVariant(event.status)}>{event.status}</Badge>
-                      <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                        {formatEventWindow(event)}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="text-base font-semibold text-foreground">{event.title}</h4>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {event.location ?? "Location TBD"}
-                      </p>
-                    </div>
-                    <p className="text-sm leading-6 text-muted-foreground">{event.description}</p>
-                  </div>
-
-                  {eventActions ? (
-                    <div className="flex flex-wrap gap-2">{eventActions(event)}</div>
-                  ) : null}
-                </div>
-              </div>
-            ))}
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="space-y-1">
+            <h3 className="text-xl font-semibold text-foreground">Activity</h3>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Events and announcements now live directly on the overview page instead of a separate
+              tab.
+            </p>
           </div>
-        ) : (
-          <EmptyState
-            description="Use the add event action on this page to schedule the club's next activity."
-            title="No events yet"
-          />
-        )}
-      </Card>
-
-      <Card className="space-y-4 rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
-        <div>
-          <h3 className="text-xl font-semibold text-foreground">Announcements</h3>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Announcement management also stays scoped to the selected club in this MVP.
-          </p>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {activityActions}
+            <Badge variant="muted">
+              {detail.events.length + detail.announcements.length} items
+            </Badge>
+          </div>
         </div>
 
-        {detail.announcements.length ? (
-          <div className="space-y-4">
-            {detail.announcements.map((announcement) => (
-              <div className="rounded-[1.25rem] border border-border p-4" key={announcement.id}>
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <Badge variant={getAnnouncementVariant(announcement.status)}>
-                        {announcement.status}
-                      </Badge>
-                      <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                        {formatDateTime(announcement.publishedAt)}
-                      </p>
-                    </div>
-                    <div>
-                      <h4 className="text-base font-semibold text-foreground">
-                        {announcement.title}
-                      </h4>
-                      {announcement.createdBy ? (
-                        <p className="mt-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                          Created by {announcement.createdBy}
+        <div className="grid gap-6 xl:grid-cols-2">
+          <Card className="space-y-4 rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
+            <div>
+              <h4 className="text-xl font-semibold text-foreground">Upcoming events</h4>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Events stay inside the club detail route for the MVP instead of becoming a separate
+                top-level page.
+              </p>
+            </div>
+
+            {detail.events.length ? (
+              <div className="space-y-4">
+                {detail.events.map((event) => (
+                  <div className="rounded-[1.25rem] border border-border p-4" key={event.id}>
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <Badge variant={getEventVariant(event.status)}>{event.status}</Badge>
+                          <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                            {formatEventWindow(event)}
+                          </p>
+                        </div>
+                        <div>
+                          <h5 className="text-base font-semibold text-foreground">{event.title}</h5>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {event.location ?? "Location TBD"}
+                          </p>
+                        </div>
+                        <p className="text-sm leading-6 text-muted-foreground">
+                          {event.description}
                         </p>
+                      </div>
+
+                      {eventActions ? (
+                        <div className="flex flex-wrap gap-2">{eventActions(event)}</div>
                       ) : null}
                     </div>
-                    <p className="text-sm leading-6 text-muted-foreground">{announcement.body}</p>
                   </div>
-
-                  {announcementActions ? (
-                    <div className="flex flex-wrap gap-2">{announcementActions(announcement)}</div>
-                  ) : null}
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            description="Use the add announcement action on this page to publish or schedule an update."
-            title="No announcements yet"
-          />
-        )}
-      </Card>
-    </div>
-  );
+            ) : (
+              <EmptyState
+                description="Use the add event action on this page to schedule the club's next activity."
+                title="No events yet"
+              />
+            )}
+          </Card>
 
-  return (
-    <TabsView
-      activeId="overview"
-      tabs={[
-        {
-          id: "overview",
-          label: "Overview",
-          content: overview,
-        },
-        {
-          id: "activity",
-          label: "Activity",
-          count: detail.events.length + detail.announcements.length,
-          content: activity,
-        },
-      ]}
-    />
+          <Card className="space-y-4 rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
+            <div>
+              <h4 className="text-xl font-semibold text-foreground">Announcements</h4>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Announcement management also stays scoped to the selected club in this MVP.
+              </p>
+            </div>
+
+            {detail.announcements.length ? (
+              <div className="space-y-4">
+                {detail.announcements.map((announcement) => (
+                  <div className="rounded-[1.25rem] border border-border p-4" key={announcement.id}>
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <Badge variant={getAnnouncementVariant(announcement.status)}>
+                            {announcement.status}
+                          </Badge>
+                          <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                            {formatDateTime(announcement.publishedAt)}
+                          </p>
+                        </div>
+                        <div>
+                          <h5 className="text-base font-semibold text-foreground">
+                            {announcement.title}
+                          </h5>
+                          {announcement.createdBy ? (
+                            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                              Created by {announcement.createdBy}
+                            </p>
+                          ) : null}
+                        </div>
+                        <p className="text-sm leading-6 text-muted-foreground">
+                          {announcement.body}
+                        </p>
+                      </div>
+
+                      {announcementActions ? (
+                        <div className="flex flex-wrap gap-2">
+                          {announcementActions(announcement)}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState
+                description="Use the add announcement action on this page to publish or schedule an update."
+                title="No announcements yet"
+              />
+            )}
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 }

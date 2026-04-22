@@ -9,7 +9,9 @@ import type { TableColumn } from "@/types/ui";
 export function MembershipTable({
   actionsHeader = "Actions",
   description = "Membership assignment stays in a reusable table so both club and member detail routes can share it.",
+  headerActions,
   memberships,
+  renderAssignment,
   renderActions,
   title = "Memberships",
 }: MembershipTableModel) {
@@ -17,14 +19,15 @@ export function MembershipTable({
     {
       key: "member-or-club",
       header: "Assignment",
-      render: (membership) => (
-        <div className="space-y-1">
-          <p className="font-semibold text-foreground">{membership.memberName}</p>
-          <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-            {membership.clubName}
-          </p>
-        </div>
-      ),
+      render: (membership) =>
+        renderAssignment?.(membership) ?? (
+          <div className="space-y-1">
+            <p className="font-semibold text-foreground">{membership.memberName}</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+              {membership.clubName}
+            </p>
+          </div>
+        ),
     },
     {
       key: "role",
@@ -60,9 +63,13 @@ export function MembershipTable({
 
   return (
     <Card className="space-y-5 rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
-      <div className="space-y-2">
-        <h3 className="text-xl font-semibold text-foreground">{title}</h3>
-        <p className="text-sm leading-6 text-muted-foreground">{description}</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
+          <h3 className="text-xl font-semibold text-foreground">{title}</h3>
+          <p className="text-sm leading-6 text-muted-foreground">{description}</p>
+        </div>
+
+        {headerActions ? <div className="flex flex-wrap gap-2">{headerActions}</div> : null}
       </div>
 
       <DataTable

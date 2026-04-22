@@ -40,6 +40,10 @@ export async function getDashboardViewModel(
   const pendingRosterCount = membershipLists
     .flat()
     .filter((membership) => membership.status === "pending").length;
+  const announcementCount = clubActivity.reduce(
+    (count, entry) => count + entry.announcements.length,
+    0
+  );
 
   const upcomingEventCount = clubActivity.reduce(
     (count, entry) =>
@@ -49,7 +53,7 @@ export async function getDashboardViewModel(
       ).length,
     0
   );
-  const joinPreviewHref = clubs[0] ? `/join/${clubs[0].id}` : "/clubs";
+  const joinPreviewHref = clubs[0] ? `/join/${clubs[0].slug}` : "/clubs";
 
   return {
     metrics: [
@@ -75,33 +79,14 @@ export async function getDashboardViewModel(
         detail: "Scheduled events aggregated from the club activity endpoints.",
         tone: upcomingEventCount ? "success" : "warning",
       },
-    ],
-    quickActions: [
       {
-        label: "Browse clubs",
-        href: "/clubs",
-        id: "browse-clubs",
-        description: "Review the live club directory and detail pages.",
-      },
-      ...(isOrgAdmin
-        ? [
-            {
-              label: "Browse members",
-              href: "/members",
-              id: "browse-members",
-              description: "Inspect organization-level members and their memberships.",
-            },
-          ]
-        : []),
-      {
-        label: clubs[0] ? "Preview join form" : "Open clubs",
-        href: joinPreviewHref,
-        id: "join-preview",
-        description: clubs[0]
-          ? "Open the public join route for the first club returned by the API."
-          : "Create or seed a club record before testing the public join route.",
+        label: "Announcements",
+        value: `${announcementCount}`,
+        detail: "Club announcements and scheduled posts aggregated from the live API.",
+        tone: announcementCount ? "success" : "warning",
       },
     ],
+    joinPreviewHref,
     activity: clubActivity
       .flatMap((entry) => [
         ...entry.events
@@ -112,6 +97,7 @@ export async function getDashboardViewModel(
             description: event.location ?? createExcerpt(event.description),
             timestamp: event.starts_at ?? "",
             type: "event" as const,
+            href: `/clubs/${entry.club.slug}`,
           })),
         ...entry.announcements.map((announcement) => ({
           id: `announcement-${announcement.id}`,
@@ -119,6 +105,7 @@ export async function getDashboardViewModel(
           description: createExcerpt(announcement.body),
           timestamp: announcement.published_at,
           type: "announcement" as const,
+          href: `/clubs/${entry.club.slug}`,
         })),
       ])
       .sort((left, right) => right.timestamp.localeCompare(left.timestamp))

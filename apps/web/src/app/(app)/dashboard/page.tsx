@@ -13,8 +13,7 @@ export default async function DashboardPage() {
   const session = await requireAuthorizedBackendSession();
   const isOrgAdmin = isOrgAdminBackendAuthSession(session);
   const viewModel = await getDashboardViewModel(session);
-  const previewJoinHref =
-    viewModel.quickActions.find((action) => action.href.startsWith("/join/"))?.href ?? null;
+  const previewJoinHref = viewModel.joinPreviewHref;
 
   return (
     <div className="space-y-8">
