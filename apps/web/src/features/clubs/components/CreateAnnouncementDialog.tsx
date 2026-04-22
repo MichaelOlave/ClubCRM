@@ -27,6 +27,7 @@ type Props = {
 
 export function CreateAnnouncementDialog({ action, clubId, clubSlug, notice }: Props) {
   const [open, setOpen] = useState(Boolean(notice && notice.kind === "error"));
+  const timeZoneOffsetMinutes = `${new Date().getTimezoneOffset()}`;
 
   return (
     <Dialog onOpenChange={setOpen} open={open}>
@@ -48,6 +49,7 @@ export function CreateAnnouncementDialog({ action, clubId, clubSlug, notice }: P
         <form action={action} className="grid gap-4 lg:grid-cols-2">
           <input name="clubId" type="hidden" value={clubId} />
           <input name="clubSlug" type="hidden" value={clubSlug} />
+          <input name="timeZoneOffsetMinutes" type="hidden" value={timeZoneOffsetMinutes} />
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90 lg:col-span-2">
             <span>Announcement title</span>

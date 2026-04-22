@@ -12,6 +12,7 @@ export function MembershipTable({
   headerActions,
   memberships,
   renderAssignment,
+  renderRole,
   renderActions,
   title = "Memberships",
 }: MembershipTableModel) {
@@ -32,7 +33,7 @@ export function MembershipTable({
     {
       key: "role",
       header: "Role",
-      render: (membership) => membership.role,
+      render: (membership) => renderRole?.(membership) ?? membership.role,
     },
     {
       key: "status",

@@ -104,6 +104,15 @@ class FakeAuthorizationRepository(AuthorizationRepository):
                     managed_club_ids=("club-1",),
                 ),
             ),
+            "club-manager@clubcrm.local": AuthorizationResolution(
+                admin_user_id=None,
+                member_id="member-local-manager",
+                access=AppAccess(
+                    primary_role="club_manager",
+                    organization_id="org-1",
+                    managed_club_ids=("club-1", "club-2"),
+                ),
+            ),
         }
 
     def resolve_access_for_identity(
@@ -444,7 +453,7 @@ class AuthRouteTests(unittest.TestCase):
                 {
                     "primary_role": "club_manager",
                     "organization_id": "org-1",
-                    "managed_club_ids": ["club-1"],
+                    "managed_club_ids": ["club-1", "club-2"],
                 },
             )
 
@@ -452,7 +461,7 @@ class AuthRouteTests(unittest.TestCase):
             self.assertTrue(session_payload["authenticated"])
             self.assertTrue(session_payload["authorized"])
             self.assertEqual(session_payload["access"]["primaryRole"], "club_manager")
-            self.assertEqual(session_payload["access"]["managedClubIds"], ["club-1"])
+            self.assertEqual(session_payload["access"]["managedClubIds"], ["club-1", "club-2"])
 
     def test_bypass_login_can_switch_roles_between_requests(self) -> None:
         with auth_test_client(
@@ -473,6 +482,7 @@ class AuthRouteTests(unittest.TestCase):
             session_payload = client.get("/auth/session").json()
             self.assertEqual(session_payload["user"]["sub"], "dev-auth-bypass-club-manager")
             self.assertEqual(session_payload["access"]["primaryRole"], "club_manager")
+            self.assertEqual(session_payload["access"]["managedClubIds"], ["club-1", "club-2"])
 
     def test_callback_rotates_the_pre_auth_session_into_an_authenticated_session(self) -> None:
         with auth_test_client(

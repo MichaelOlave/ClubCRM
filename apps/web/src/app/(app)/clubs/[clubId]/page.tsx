@@ -39,6 +39,9 @@ import {
 } from "@/features/memberships/server";
 import { getActionNotice } from "@/lib/forms";
 
+const membershipEditTriggerClassName =
+  "-mx-2 -my-1 rounded-[1rem] px-2 py-1 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+
 type Props = {
   params: Promise<{
     clubId: string;
@@ -276,15 +279,35 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
             clubSlug={detail.club.slug}
             membership={membership}
             notice={membershipUpdateTarget === membership.id ? membershipUpdateErrorNotice : null}
+            triggerTooltip="Click to edit role"
             trigger={
               <button
-                className="rounded-[1rem] px-2 py-1 -mx-2 -my-1 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label={`Edit ${membership.memberName}'s role`}
+                className={membershipEditTriggerClassName}
                 type="button"
               >
                 <span className="block font-semibold text-foreground">{membership.memberName}</span>
                 <span className="block text-xs uppercase tracking-[0.14em] text-muted-foreground">
                   {membership.clubName}
                 </span>
+              </button>
+            }
+          />
+        )}
+        renderMembershipRole={(membership) => (
+          <EditMembershipRoleDialog
+            action={updateMembershipRoleAction}
+            clubSlug={detail.club.slug}
+            membership={membership}
+            notice={membershipUpdateTarget === membership.id ? membershipUpdateErrorNotice : null}
+            triggerTooltip="Click to edit role"
+            trigger={
+              <button
+                aria-label={`Edit ${membership.memberName}'s role`}
+                className={membershipEditTriggerClassName}
+                type="button"
+              >
+                <span className="font-medium text-foreground">{membership.role}</span>
               </button>
             }
           />

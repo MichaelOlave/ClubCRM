@@ -34,6 +34,44 @@ function hasInvalidEventRange(startsAt: string, endsAt: string | null): boolean 
   return Boolean(endsAt && startsAt >= endsAt);
 }
 
+function parseTimeZoneOffsetMinutes(formData: FormData): number | null {
+  const value = getOptionalString(formData, "timeZoneOffsetMinutes");
+
+  if (!value) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(value, 10);
+
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function toUtcIsoString(localDateTime: string, timeZoneOffsetMinutes: number | null): string {
+  if (timeZoneOffsetMinutes === null) {
+    return localDateTime;
+  }
+
+  const match = localDateTime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/);
+
+  if (!match) {
+    return localDateTime;
+  }
+
+  const [, year, month, day, hour, minute, second] = match;
+  const utcTimestamp =
+    Date.UTC(
+      Number.parseInt(year, 10),
+      Number.parseInt(month, 10) - 1,
+      Number.parseInt(day, 10),
+      Number.parseInt(hour, 10),
+      Number.parseInt(minute, 10),
+      Number.parseInt(second ?? "0", 10)
+    ) +
+    timeZoneOffsetMinutes * 60_000;
+
+  return new Date(utcTimestamp).toISOString();
+}
+
 function validateDescriptionLength(
   description: string,
   {
@@ -230,8 +268,11 @@ export async function createEventAction(formData: FormData) {
   const clubSlug = getClubRouteSlug(formData, clubId);
   const title = getRequiredString(formData, "title", "Event title");
   const description = getRequiredString(formData, "description", "Description");
+  const timeZoneOffsetMinutes = parseTimeZoneOffsetMinutes(formData);
   const startsAt = getRequiredString(formData, "startsAt", "Start time");
   const endsAt = getOptionalString(formData, "endsAt");
+  const normalizedStartsAt = toUtcIsoString(startsAt, timeZoneOffsetMinutes);
+  const normalizedEndsAt = endsAt ? toUtcIsoString(endsAt, timeZoneOffsetMinutes) : null;
   const location = getOptionalString(formData, "location");
   const detailPath = getClubDetailPath(clubSlug);
   let successRedirectPath = detailPath;
@@ -256,9 +297,9 @@ export async function createEventAction(formData: FormData) {
         club_id: clubId,
         title,
         description,
-        starts_at: startsAt,
+        starts_at: normalizedStartsAt,
         location,
-        ends_at: endsAt,
+        ends_at: normalizedEndsAt,
       },
       {
         headers: await getAdminApiHeaders({ includeCsrf: true, originPath: detailPath }),
@@ -289,8 +330,11 @@ export async function updateEventAction(formData: FormData) {
   const eventId = getRequiredString(formData, "eventId", "Event");
   const title = getRequiredString(formData, "title", "Event title");
   const description = getRequiredString(formData, "description", "Description");
+  const timeZoneOffsetMinutes = parseTimeZoneOffsetMinutes(formData);
   const startsAt = getRequiredString(formData, "startsAt", "Start time");
   const endsAt = getOptionalString(formData, "endsAt");
+  const normalizedStartsAt = toUtcIsoString(startsAt, timeZoneOffsetMinutes);
+  const normalizedEndsAt = endsAt ? toUtcIsoString(endsAt, timeZoneOffsetMinutes) : null;
   const location = getOptionalString(formData, "location");
   const detailPath = getClubDetailPath(clubSlug);
   let successRedirectPath = detailPath;
@@ -317,9 +361,9 @@ export async function updateEventAction(formData: FormData) {
       {
         title,
         description,
-        starts_at: startsAt,
+        starts_at: normalizedStartsAt,
         location,
-        ends_at: endsAt,
+        ends_at: normalizedEndsAt,
       },
       {
         headers: await getAdminApiHeaders({ includeCsrf: true, originPath: detailPath }),
@@ -381,7 +425,11 @@ export async function createAnnouncementAction(formData: FormData) {
   const title = getRequiredString(formData, "title", "Announcement title");
   const body = getRequiredString(formData, "body", "Message");
   const createdBy = getOptionalString(formData, "createdBy");
+  const timeZoneOffsetMinutes = parseTimeZoneOffsetMinutes(formData);
   const publishedAt = getOptionalString(formData, "publishedAt");
+  const normalizedPublishedAt = publishedAt
+    ? toUtcIsoString(publishedAt, timeZoneOffsetMinutes)
+    : null;
   const detailPath = getClubDetailPath(clubSlug);
   let successRedirectPath = detailPath;
 
@@ -392,7 +440,7 @@ export async function createAnnouncementAction(formData: FormData) {
         title,
         body,
         created_by: createdBy,
-        published_at: publishedAt,
+        published_at: normalizedPublishedAt,
       },
       {
         headers: await getAdminApiHeaders({ includeCsrf: true, originPath: detailPath }),
@@ -425,7 +473,9 @@ export async function updateAnnouncementAction(formData: FormData) {
   const announcementId = getRequiredString(formData, "announcementId", "Announcement");
   const title = getRequiredString(formData, "title", "Announcement title");
   const body = getRequiredString(formData, "body", "Message");
+  const timeZoneOffsetMinutes = parseTimeZoneOffsetMinutes(formData);
   const publishedAt = getRequiredString(formData, "publishedAt", "Publish time");
+  const normalizedPublishedAt = toUtcIsoString(publishedAt, timeZoneOffsetMinutes);
   const createdBy = getOptionalString(formData, "createdBy");
   const detailPath = getClubDetailPath(clubSlug);
   let successRedirectPath = detailPath;
@@ -436,7 +486,7 @@ export async function updateAnnouncementAction(formData: FormData) {
       {
         title,
         body,
-        published_at: publishedAt,
+        published_at: normalizedPublishedAt,
         created_by: createdBy,
       },
       {

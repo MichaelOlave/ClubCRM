@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useState } from "react";
 
 import { ActionNotice } from "@/components/ui/ActionNotice";
@@ -11,8 +12,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/shadcn/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/shadcn/tooltip";
 import { MembershipRoleSelect } from "@/features/memberships/components/MembershipRoleSelect";
 import type { MembershipRecord } from "@/types/api";
 import type { ActionNotice as ActionNoticeModel } from "@/lib/forms";
@@ -23,20 +24,62 @@ type Props = {
   membership: MembershipRecord;
   notice: ActionNoticeModel | null;
   trigger?: React.ReactNode;
+  triggerTooltip?: React.ReactNode;
 };
 
-export function EditMembershipRoleDialog({ action, clubSlug, membership, notice, trigger }: Props) {
+export function EditMembershipRoleDialog({
+  action,
+  clubSlug,
+  membership,
+  notice,
+  trigger,
+  triggerTooltip,
+}: Props) {
   const [open, setOpen] = useState(Boolean(notice && notice.kind === "error"));
+  const baseTrigger = trigger ?? (
+    <Button size="sm" variant="outline">
+      Edit role
+    </Button>
+  );
+  const triggerElement = React.isValidElement(baseTrigger)
+    ? (baseTrigger as React.ReactElement<React.HTMLAttributes<HTMLElement>>)
+    : null;
+  const dialogTrigger = triggerElement ? (
+    React.cloneElement(triggerElement, {
+      "aria-expanded": open,
+      "aria-haspopup": "dialog",
+      onClick: (event: React.MouseEvent<HTMLElement>) => {
+        triggerElement.props.onClick?.(event);
+
+        if (!event.defaultPrevented) {
+          setOpen(true);
+        }
+      },
+    })
+  ) : (
+    <Button
+      aria-expanded={open}
+      aria-haspopup="dialog"
+      onClick={() => setOpen(true)}
+      size="sm"
+      variant="outline"
+    >
+      Edit role
+    </Button>
+  );
 
   return (
     <Dialog onOpenChange={setOpen} open={open}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button size="sm" variant="outline">
-            Edit role
-          </Button>
-        )}
-      </DialogTrigger>
+      {triggerTooltip ? (
+        <Tooltip>
+          <TooltipTrigger asChild>{dialogTrigger}</TooltipTrigger>
+          <TooltipContent side="top" sideOffset={8}>
+            {triggerTooltip}
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        dialogTrigger
+      )}
 
       <DialogContent className="max-w-lg">
         <DialogHeader>

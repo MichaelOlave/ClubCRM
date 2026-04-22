@@ -1,3 +1,5 @@
+import { parseApiDateTime } from "@/lib/utils/datetime";
+
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
   day: "numeric",
@@ -11,9 +13,9 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
 });
 
 export function formatDate(value: string): string {
-  return dateFormatter.format(new Date(value));
+  return dateFormatter.format(parseApiDateTime(value));
 }
 
 export function formatDateTime(value: string): string {
-  return dateTimeFormatter.format(new Date(value));
+  return dateTimeFormatter.format(parseApiDateTime(value));
 }
