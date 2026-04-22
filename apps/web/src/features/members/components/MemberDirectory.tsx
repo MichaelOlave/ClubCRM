@@ -20,12 +20,18 @@ const columns: Array<TableColumn<MemberRecord>> = [
     key: "member",
     header: "Member",
     render: (member) => (
-      <div className="space-y-1">
-        <p className="font-semibold text-foreground">
-          {member.firstName} {member.lastName}
-        </p>
-        <p className="text-sm text-muted-foreground">{member.email}</p>
-      </div>
+      <Link
+        aria-label={`Open ${member.firstName} ${member.lastName} profile`}
+        className="block rounded-[1rem] px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        href={`/members/${member.id}`}
+      >
+        <div className="space-y-1">
+          <p className="font-semibold text-foreground">
+            {member.firstName} {member.lastName}
+          </p>
+          <p className="text-sm text-muted-foreground">{member.email}</p>
+        </div>
+      </Link>
     ),
   },
   {
@@ -36,12 +42,24 @@ const columns: Array<TableColumn<MemberRecord>> = [
   {
     key: "primary-club",
     header: "Primary club",
-    render: (member) => (
-      <div className="space-y-1">
-        <p>{member.primaryClub ?? "No club assignment"}</p>
-        <Badge variant={getStatusVariant(member.status)}>{member.status}</Badge>
-      </div>
-    ),
+    render: (member) =>
+      member.primaryClubId && member.primaryClub ? (
+        <Link
+          aria-label={`Open ${member.primaryClub} club`}
+          className="block rounded-[1rem] px-2 py-1 -mx-2 -my-1 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          href={`/clubs/${member.primaryClubId}`}
+        >
+          <div className="space-y-1">
+            <p>{member.primaryClub}</p>
+            <Badge variant={getStatusVariant(member.status)}>{member.status}</Badge>
+          </div>
+        </Link>
+      ) : (
+        <div className="space-y-1">
+          <p>{member.primaryClub ?? "No club assignment"}</p>
+          <Badge variant={getStatusVariant(member.status)}>{member.status}</Badge>
+        </div>
+      ),
   },
   {
     key: "clubs",

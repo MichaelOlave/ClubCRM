@@ -1,5 +1,3 @@
-import type { ActivityRecord } from "@/types/api";
-
 export type DashboardMetric = {
   detail: string;
   label: string;
@@ -7,15 +5,17 @@ export type DashboardMetric = {
   value: string;
 };
 
-export type QuickAction = {
+export type DashboardActivityRecord = {
   description: string;
-  href: string;
   id: string;
-  label: string;
+  timestamp: string;
+  title: string;
+  href: string;
+  type: "announcement" | "event";
 };
 
 export type DashboardViewModel = {
-  activity: ActivityRecord[];
+  activity: DashboardActivityRecord[];
   metrics: DashboardMetric[];
-  quickActions: QuickAction[];
+  joinPreviewHref: string | null;
 };

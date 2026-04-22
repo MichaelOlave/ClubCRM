@@ -55,6 +55,7 @@ export type MemberRecord = {
   studentId: string | null;
   status: MemberStatus;
   clubCount: number;
+  primaryClubId: string | null;
   primaryClub: string | null;
   createdAt: string | null;
   updatedAt: string | null;

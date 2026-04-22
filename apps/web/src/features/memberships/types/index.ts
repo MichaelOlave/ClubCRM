@@ -5,7 +5,9 @@ import type { MembershipRecord } from "@/types/api";
 export type MembershipTableModel = {
   actionsHeader?: string;
   description?: string;
+  headerActions?: ReactNode;
   memberships: MembershipRecord[];
+  renderAssignment?: (membership: MembershipRecord) => ReactNode;
   renderActions?: (membership: MembershipRecord) => ReactNode;
   title?: string;
 };

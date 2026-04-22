@@ -30,10 +30,18 @@ const columns: Array<TableColumn<ClubRecord>> = [
     key: "club",
     header: "Club",
     render: (club) => (
-      <div className="space-y-1">
-        <p className="font-semibold text-foreground">{club.name}</p>
-        <p className="max-w-md text-sm leading-6 text-muted-foreground">{club.description}</p>
-      </div>
+      <Link
+        aria-label={`Open ${club.name}`}
+        className="group block max-w-md rounded-[1rem] p-1 -m-1 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        href={`/clubs/${club.slug}`}
+      >
+        <div className="space-y-1">
+          <p className="font-semibold text-foreground transition-colors group-hover:text-brand">
+            {club.name}
+          </p>
+          <p className="text-sm leading-6 text-muted-foreground">{club.description}</p>
+        </div>
+      </Link>
     ),
   },
   {

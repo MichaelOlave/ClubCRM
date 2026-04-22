@@ -7,7 +7,6 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { requireOrgAdminBackendSession } from "@/features/auth/server";
 import { EditMemberDialog, MemberProfile } from "@/features/members";
 import { getMemberDetail, updateMemberAction } from "@/features/members/server";
-import { getMembershipsForMember } from "@/features/memberships/server";
 import { getActionNotice } from "@/lib/forms";
 
 type Props = {
@@ -23,11 +22,7 @@ type Props = {
 export default async function MemberDetailPage({ params, searchParams }: Props) {
   await requireOrgAdminBackendSession();
   const { memberId } = await params;
-  const [detail, memberships, query] = await Promise.all([
-    getMemberDetail(memberId),
-    getMembershipsForMember(memberId),
-    searchParams,
-  ]);
+  const [detail, query] = await Promise.all([getMemberDetail(memberId), searchParams]);
 
   if (!detail) {
     notFound();
@@ -51,9 +46,9 @@ export default async function MemberDetailPage({ params, searchParams }: Props) 
             <Button asChild variant="secondary">
               <Link href="/members">Back to members</Link>
             </Button>
-            {memberships[0] ? (
+            {detail.memberships[0] ? (
               <Button asChild variant="ghost">
-                <Link href={`/clubs/${memberships[0].clubId}`}>Open primary club</Link>
+                <Link href={`/clubs/${detail.memberships[0].clubId}`}>Open primary club</Link>
               </Button>
             ) : null}
           </>
@@ -65,7 +60,7 @@ export default async function MemberDetailPage({ params, searchParams }: Props) 
 
       <ActionNotice notice={memberUpdateSuccessNotice} />
 
-      <MemberProfile detail={detail} memberships={memberships} />
+      <MemberProfile detail={detail} />
     </div>
   );
 }

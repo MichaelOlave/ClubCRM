@@ -33,9 +33,6 @@ export default async function SystemAuditPage({ searchParams }: Props) {
             <Button asChild variant="secondary">
               <Link href="/dashboard">Back to dashboard</Link>
             </Button>
-            <Button asChild variant="ghost">
-              <Link href="/system/health">System health</Link>
-            </Button>
           </>
         }
         description="Review the admin-side record of who changed what, where the request came from, and when it happened."

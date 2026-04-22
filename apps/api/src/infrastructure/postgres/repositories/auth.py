@@ -1,4 +1,4 @@
-from sqlalchemy import and_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -51,23 +51,34 @@ class PostgresAuthorizationRepository(AuthorizationRepository):
             if email is not None:
                 if admin_user is None:
                     admin_user = self._find_admin_user_by_email(session, email)
-                    if (
-                        binding is not None
-                        and admin_user is not None
-                        and binding.admin_user_id != admin_user.id
-                    ):
-                        binding.admin_user_id = admin_user.id
-                        binding_changed = True
 
                 if member is None:
                     member = self._find_manager_member_by_email(session, email)
-                    if (
-                        binding is not None
-                        and member is not None
-                        and binding.member_id != member.id
-                    ):
-                        binding.member_id = member.id
-                        binding_changed = True
+
+            if binding is None and (admin_user is not None or member is not None):
+                binding = self._find_binding_for_identity(
+                    session,
+                    admin_user_id=admin_user.id if admin_user is not None else None,
+                    member_id=member.id if member is not None else None,
+                )
+
+            if binding is not None:
+                if binding.admin_user_id and admin_user is None:
+                    admin_user = session.get(AdminUserModel, binding.admin_user_id)
+                if binding.member_id and member is None:
+                    member = session.get(MemberModel, binding.member_id)
+                if binding.provider_subject != provider_subject:
+                    binding.provider_subject = provider_subject
+                    binding_changed = True
+                if admin_user is not None and binding.admin_user_id != admin_user.id:
+                    binding.admin_user_id = admin_user.id
+                    binding_changed = True
+                if member is not None and binding.member_id != member.id:
+                    binding.member_id = member.id
+                    binding_changed = True
+                if email is not None and binding.email != email:
+                    binding.email = email
+                    binding_changed = True
 
             if binding is None and (admin_user is not None or member is not None):
                 binding = AuthUserBindingModel(
@@ -198,6 +209,37 @@ class PostgresAuthorizationRepository(AuthorizationRepository):
             .scalars()
             .first()
         )
+
+    def _find_binding_for_identity(
+        self,
+        session: Session,
+        *,
+        admin_user_id: str | None,
+        member_id: str | None,
+    ) -> AuthUserBindingModel | None:
+        filters = []
+        if admin_user_id is not None:
+            filters.append(AuthUserBindingModel.admin_user_id == admin_user_id)
+        if member_id is not None:
+            filters.append(AuthUserBindingModel.member_id == member_id)
+        if not filters:
+            return None
+
+        bindings = (
+            session.execute(
+                select(AuthUserBindingModel)
+                .where(or_(*filters))
+                .order_by(AuthUserBindingModel.created_at, AuthUserBindingModel.id)
+            )
+            .scalars()
+            .all()
+        )
+        if len(bindings) > 1:
+            raise AuthorizationConflictError(
+                "ClubCRM found conflicting auth access bindings for this identity."
+            )
+
+        return bindings[0] if bindings else None
 
     def _list_managed_club_ids(self, session: Session, member_id: str) -> tuple[str, ...]:
         rows = session.execute(

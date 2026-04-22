@@ -22,17 +22,20 @@ type Props = {
   clubSlug: string;
   membership: MembershipRecord;
   notice: ActionNoticeModel | null;
+  trigger?: React.ReactNode;
 };
 
-export function EditMembershipRoleDialog({ action, clubSlug, membership, notice }: Props) {
+export function EditMembershipRoleDialog({ action, clubSlug, membership, notice, trigger }: Props) {
   const [open, setOpen] = useState(Boolean(notice && notice.kind === "error"));
 
   return (
     <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          Edit role
-        </Button>
+        {trigger ?? (
+          <Button size="sm" variant="outline">
+            Edit role
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent className="max-w-lg">

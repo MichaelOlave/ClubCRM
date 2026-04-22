@@ -1,7 +1,12 @@
 import { getMemberApi, listClubsApi, listMembersApi, listMembershipsApi } from "@/lib/api/clubcrm";
 import { formatDateTime } from "@/lib/utils/formatters";
 import type { MemberDetailViewModel } from "@/features/members/types";
-import type { BackendMemberRecord, BackendMembershipRecord, MemberRecord } from "@/types/api";
+import type {
+  BackendMemberRecord,
+  BackendMembershipRecord,
+  MemberRecord,
+  MembershipRecord,
+} from "@/types/api";
 
 function getMemberStatus(memberships: BackendMembershipRecord[]): MemberRecord["status"] {
   return memberships.some((membership) => membership.status !== "pending")
@@ -13,13 +18,22 @@ function getPrimaryClubName(
   memberships: BackendMembershipRecord[],
   clubNames: Map<string, string>
 ): string | null {
+  const primaryMembership = getPrimaryMembership(memberships);
+
+  return primaryMembership ? (clubNames.get(primaryMembership.club_id) ?? null) : null;
+}
+
+function getPrimaryMembership(
+  memberships: BackendMembershipRecord[]
+): BackendMembershipRecord | null {
   const sortedMemberships = memberships
     .slice()
     .sort((left, right) => (left.joined_at ?? "").localeCompare(right.joined_at ?? ""));
-  const primaryMembership =
-    sortedMemberships.find((membership) => membership.status !== "pending") ?? sortedMemberships[0];
-
-  return primaryMembership ? (clubNames.get(primaryMembership.club_id) ?? null) : null;
+  return (
+    sortedMemberships.find((membership) => membership.status !== "pending") ??
+    sortedMemberships[0] ??
+    null
+  );
 }
 
 function mapMemberRecord(
@@ -27,6 +41,8 @@ function mapMemberRecord(
   memberships: BackendMembershipRecord[],
   clubNames: Map<string, string>
 ): MemberRecord {
+  const primaryMembership = getPrimaryMembership(memberships);
+
   return {
     id: member.id,
     organizationId: member.organization_id,
@@ -36,9 +52,35 @@ function mapMemberRecord(
     studentId: member.student_id,
     status: getMemberStatus(memberships),
     clubCount: memberships.length,
+    primaryClubId: primaryMembership?.club_id ?? null,
     primaryClub: getPrimaryClubName(memberships, clubNames),
     createdAt: member.created_at,
     updatedAt: member.updated_at,
+  };
+}
+
+function formatRoleLabel(role: string): string {
+  return role
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((token) => `${token.charAt(0).toUpperCase()}${token.slice(1)}`)
+    .join(" ");
+}
+
+function mapMembershipRecord(
+  membership: BackendMembershipRecord,
+  clubName: string,
+  memberName: string
+): MembershipRecord {
+  return {
+    id: membership.id,
+    clubId: membership.club_id,
+    clubName,
+    memberId: membership.member_id,
+    memberName,
+    role: formatRoleLabel(membership.role),
+    status: membership.status === "pending" ? "pending" : "active",
+    joinedAt: membership.joined_at,
   };
 }
 
@@ -110,9 +152,17 @@ export async function getMemberDetail(memberId: string): Promise<MemberDetailVie
   ]);
 
   const clubNames = new Map(clubs.map((club) => [club.id, club.name]));
+  const memberName = `${member.first_name} ${member.last_name}`.trim();
 
   return {
     member: mapMemberRecord(member, memberships, clubNames),
+    memberships: memberships.map((membership) =>
+      mapMembershipRecord(
+        membership,
+        membership.club_name ?? clubNames.get(membership.club_id) ?? membership.club_id,
+        memberName
+      )
+    ),
     metadata: buildMetadata(member),
   };
 }
