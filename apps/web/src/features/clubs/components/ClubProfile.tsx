@@ -18,6 +18,7 @@ type Props = {
   memberships: MembershipRecord[];
   rosterActions?: ReactNode;
   renderMembershipAssignment?: (membership: MembershipRecord) => ReactNode;
+  renderMembershipRole?: (membership: MembershipRecord) => ReactNode;
 };
 
 function getStatusVariant(status: ClubDetailViewModel["club"]["status"]) {
@@ -38,7 +39,16 @@ function getAnnouncementVariant(status: ClubDetailViewModel["announcements"][num
 }
 
 function getEventVariant(status: ClubDetailViewModel["events"][number]["status"]) {
-  return status === "upcoming" ? "success" : "warning";
+  switch (status) {
+    case "upcoming":
+      return "success";
+    case "in_progress":
+      return "warning";
+    case "past":
+      return "muted";
+    default:
+      return "warning";
+  }
 }
 
 function formatEventWindow(event: ClubDetailViewModel["events"][number]): string {
@@ -59,6 +69,7 @@ export function ClubProfile({
   memberships,
   rosterActions,
   renderMembershipAssignment,
+  renderMembershipRole,
 }: Props) {
   return (
     <div className="space-y-6">
@@ -118,6 +129,7 @@ export function ClubProfile({
         headerActions={rosterActions}
         memberships={memberships}
         renderAssignment={renderMembershipAssignment}
+        renderRole={renderMembershipRole}
         renderActions={membershipActions}
         title="Club roster"
       />
@@ -142,10 +154,10 @@ export function ClubProfile({
         <div className="grid gap-6 xl:grid-cols-2">
           <Card className="space-y-4 rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
             <div>
-              <h4 className="text-xl font-semibold text-foreground">Upcoming events</h4>
+              <h4 className="text-xl font-semibold text-foreground">Events</h4>
               <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Events stay inside the club detail route for the MVP instead of becoming a separate
-                top-level page.
+                Upcoming, in-progress, and past club events stay inside the club detail route for
+                the MVP instead of becoming a separate top-level page.
               </p>
             </div>
 

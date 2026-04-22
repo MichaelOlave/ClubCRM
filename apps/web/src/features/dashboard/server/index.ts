@@ -4,6 +4,7 @@ import type { AuthorizedBackendAuthSession } from "@/features/auth/types";
 import { getClubList } from "@/features/clubs/server";
 import { getMemberList } from "@/features/members/server";
 import type { DashboardViewModel } from "@/features/dashboard/types";
+import { getApiDateTimeTimestamp } from "@/lib/utils/datetime";
 
 function createExcerpt(value: string): string {
   const normalizedValue = value.replace(/\s+/g, " ").trim();
@@ -49,7 +50,7 @@ export async function getDashboardViewModel(
     (count, entry) =>
       count +
       entry.events.filter(
-        (event) => event.starts_at && new Date(event.starts_at).getTime() >= Date.now()
+        (event) => event.starts_at && getApiDateTimeTimestamp(event.starts_at) >= Date.now()
       ).length,
     0
   );

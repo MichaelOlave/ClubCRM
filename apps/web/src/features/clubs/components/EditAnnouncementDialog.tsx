@@ -17,6 +17,7 @@ import { Input } from "@/components/shadcn/input";
 import { Textarea } from "@/components/shadcn/textarea";
 import type { ClubDetailViewModel } from "@/features/clubs/types";
 import type { ActionNotice as ActionNoticeModel } from "@/lib/forms";
+import { parseApiDateTime } from "@/lib/utils/datetime";
 import { TEXT_LIMITS } from "@/lib/textLimits";
 
 type Props = {
@@ -28,7 +29,7 @@ type Props = {
 };
 
 function toDateTimeLocalValue(value: string): string {
-  const date = new Date(value);
+  const date = parseApiDateTime(value);
   const timezoneOffset = date.getTimezoneOffset() * 60_000;
 
   return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
@@ -36,6 +37,7 @@ function toDateTimeLocalValue(value: string): string {
 
 export function EditAnnouncementDialog({ action, announcement, clubId, clubSlug, notice }: Props) {
   const [open, setOpen] = useState(Boolean(notice && notice.kind === "error"));
+  const timeZoneOffsetMinutes = `${new Date().getTimezoneOffset()}`;
 
   return (
     <Dialog onOpenChange={setOpen} open={open}>
@@ -59,6 +61,7 @@ export function EditAnnouncementDialog({ action, announcement, clubId, clubSlug,
           <input name="clubId" type="hidden" value={clubId} />
           <input name="clubSlug" type="hidden" value={clubSlug} />
           <input name="announcementId" type="hidden" value={announcement.id} />
+          <input name="timeZoneOffsetMinutes" type="hidden" value={timeZoneOffsetMinutes} />
 
           <label className="flex flex-col gap-2 text-sm font-medium text-foreground/90 lg:col-span-2">
             <span>Announcement title</span>

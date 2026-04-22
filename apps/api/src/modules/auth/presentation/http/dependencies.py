@@ -110,6 +110,18 @@ def build_developer_bypass_access(
             managed_club_ids=(),
         )
 
+    resolved_access = (
+        ResolveAuthorizedAccess(repository=active_authorization_repository)
+        .execute(build_developer_bypass_user("club_manager"))
+        .access
+    )
+    if resolved_access is not None and resolved_access.managed_club_ids:
+        return AppAccess(
+            primary_role="club_manager",
+            organization_id=resolved_access.organization_id,
+            managed_club_ids=resolved_access.managed_club_ids,
+        )
+
     managed_clubs = active_club_repository.list_clubs(organization_id)
     managed_club_ids = (managed_clubs[0].id,) if managed_clubs else ()
     return AppAccess(

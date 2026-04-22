@@ -9,6 +9,7 @@ import {
 import { canAccessClub, isOrgAdminBackendAuthSession } from "@/features/auth/server";
 import type { AuthorizedBackendAuthSession } from "@/features/auth/types";
 import type { ClubDetailViewModel } from "@/features/clubs/types";
+import { getApiDateTimeTimestamp } from "@/lib/utils/datetime";
 import type {
   AnnouncementRecord,
   BackendAnnouncementRecord,
@@ -25,6 +26,21 @@ type DatedBackendEventRecord = BackendEventRecord & {
   starts_at: string;
 };
 
+function getEventStatus(event: DatedBackendEventRecord): EventRecord["status"] {
+  const startsAt = getApiDateTimeTimestamp(event.starts_at);
+  const now = Date.now();
+
+  if (startsAt > now) {
+    return "upcoming";
+  }
+
+  if (typeof event.ends_at === "string") {
+    return getApiDateTimeTimestamp(event.ends_at) > now ? "in_progress" : "past";
+  }
+
+  return "past";
+}
+
 function getClubStatus(status: string): ClubStatus {
   switch (status) {
     case "planning":
@@ -38,7 +54,7 @@ function getClubStatus(status: string): ClubStatus {
 function isUpcomingEvent(event: BackendEventRecord): event is DatedBackendEventRecord {
   const startsAt = event.starts_at;
 
-  return typeof startsAt === "string" && new Date(startsAt).getTime() >= Date.now();
+  return typeof startsAt === "string" && getApiDateTimeTimestamp(startsAt) >= Date.now();
 }
 
 function getUpcomingEvents(events: BackendEventRecord[]): DatedBackendEventRecord[] {
@@ -47,10 +63,18 @@ function getUpcomingEvents(events: BackendEventRecord[]): DatedBackendEventRecor
     .sort((left, right) => left.starts_at.localeCompare(right.starts_at));
 }
 
+function getDatedEvents(events: BackendEventRecord[]): DatedBackendEventRecord[] {
+  return events
+    .filter((event): event is DatedBackendEventRecord => typeof event.starts_at === "string")
+    .sort((left, right) => left.starts_at.localeCompare(right.starts_at));
+}
+
 function getAnnouncementStatus(
   announcement: BackendAnnouncementRecord
 ): AnnouncementRecord["status"] {
-  return new Date(announcement.published_at).getTime() > Date.now() ? "scheduled" : "published";
+  return getApiDateTimeTimestamp(announcement.published_at) > Date.now()
+    ? "scheduled"
+    : "published";
 }
 
 function getCurrentUserDisplayName(session: AuthorizedBackendAuthSession): string | null {
@@ -91,7 +115,7 @@ function mapEventRecord(event: DatedBackendEventRecord): EventRecord {
     location: event.location,
     startsAt: event.starts_at,
     endsAt: event.ends_at,
-    status: "upcoming",
+    status: getEventStatus(event),
   };
 }
 
@@ -156,12 +180,12 @@ export async function getClubDetail(
       ? listClubManagerGrantsApi(club.id)
       : Promise.resolve([] as BackendClubManagerGrantRecord[]),
   ]);
-  const upcomingEvents = getUpcomingEvents(events);
+  const datedEvents = getDatedEvents(events);
   const manager = isOrgAdmin ? getManagerName(managerGrants) : getCurrentUserDisplayName(session);
 
   return {
     club: mapClubRecord(club, memberships, events, manager),
-    events: upcomingEvents.map(mapEventRecord),
+    events: datedEvents.map(mapEventRecord),
     announcements: announcements
       .slice()
       .sort((left, right) => right.published_at.localeCompare(left.published_at))

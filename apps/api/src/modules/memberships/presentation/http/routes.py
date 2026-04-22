@@ -80,7 +80,9 @@ class UpdateMembershipRequest(BaseModel):
 
 
 def _build_membership_label(membership: Membership) -> str:
-    return f"{membership.member_id} in {membership.club_id}"
+    member_label = membership.member_name or membership.member_id
+    club_label = membership.club_name or membership.club_id
+    return f"{member_label} in {club_label}"
 
 
 def _build_membership_summary(
@@ -89,8 +91,8 @@ def _build_membership_summary(
     changed_fields: list[str] | None = None,
 ) -> dict[str, object]:
     summary: dict[str, object] = {
-        "club_id": membership.club_id,
-        "member_id": membership.member_id,
+        "club": membership.club_name or membership.club_id,
+        "member": membership.member_name or membership.member_id,
         "role": membership.role,
         "status": membership.status,
     }

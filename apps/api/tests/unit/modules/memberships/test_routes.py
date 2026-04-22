@@ -178,6 +178,31 @@ class MembershipRouteTests(unittest.TestCase):
         missing_response = self.client.get(f"/memberships/{created_id}")
         self.assertEqual(missing_response.status_code, 404)
         self.assertEqual(len(self.audit_repository.audit_logs), 3)
+        self.assertEqual(
+            self.audit_repository.audit_logs[0].resource_label,
+            "member-2 in club-1",
+        )
+
+    def test_membership_audit_log_prefers_names_for_resource_labels(self) -> None:
+        response = self.client.patch(
+            "/memberships/membership-1",
+            json={"role": "president"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(self.audit_repository.audit_logs), 1)
+        self.assertEqual(
+            self.audit_repository.audit_logs[0].resource_label,
+            "Taylor Student in Chess Club",
+        )
+        self.assertEqual(
+            self.audit_repository.audit_logs[0].summary_json["member"],
+            "Taylor Student",
+        )
+        self.assertEqual(
+            self.audit_repository.audit_logs[0].summary_json["club"],
+            "Chess Club",
+        )
 
     def test_club_manager_must_scope_roster_queries_to_a_managed_club(self) -> None:
         self.app.dependency_overrides[require_authorized_access] = (
