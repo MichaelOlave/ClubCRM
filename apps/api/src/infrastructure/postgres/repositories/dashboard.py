@@ -239,8 +239,7 @@ class PostgresDashboardRepository(DashboardRepository):
             .group_by(AnnouncementModel.club_id)
         ).all()
         announcement_counts_by_club = {
-            str(club_id): int(total_announcements or 0)
-            for club_id, total_announcements in rows
+            str(club_id): int(total_announcements or 0) for club_id, total_announcements in rows
         }
         announcement_count = sum(announcement_counts_by_club.values())
 

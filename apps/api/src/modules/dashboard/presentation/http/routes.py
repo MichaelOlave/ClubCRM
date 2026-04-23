@@ -203,9 +203,7 @@ async def get_dashboard_overview(
         organization_id=access.organization_id,
         primary_role=access.primary_role,
         club_ids=(
-            tuple(sorted(access.managed_club_ids))
-            if access.primary_role == "club_manager"
-            else ()
+            tuple(sorted(access.managed_club_ids)) if access.primary_role == "club_manager" else ()
         ),
     )
     overview = await GetDashboardOverviewHandler(repository=repository, cache=cache).handle(query)
