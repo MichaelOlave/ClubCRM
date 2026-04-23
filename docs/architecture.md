@@ -81,8 +81,8 @@ The companion networking layer includes:
 - ingress and service routing
 - Kubernetes service communication
 - deployment reliability and recovery behavior
-- an optional companion monitoring and control plane for the networking demo, kept separate from the
-  core ClubCRM `web` and `api` apps
+- an optional companion cluster visualizer for the networking demo, kept separate from the core
+  ClubCRM `web` and `api` apps
 
 See [plans/team-execution-plan.md](plans/team-execution-plan.md) and [plans/networking-team-execution-plan.md](plans/networking-team-execution-plan.md) for the original course-planning context behind these workstreams.
 

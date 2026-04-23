@@ -2,6 +2,10 @@
 
 This document describes the live Docker-based production deployment currently running on the production host for ClubCRM.
 
+It does not cover the separate monitoring stack deployment under `apps/monitor-api` and
+`apps/monitor-web`; that companion stack is documented in
+[docs/deployment/monitoring-stack.md](monitoring-stack.md).
+
 ## Current Status
 
 The current deployment is live and DNS is already cut over.

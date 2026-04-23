@@ -6,8 +6,8 @@ actually running on the live cluster right now, and what is broken or drifted as
 It is intended to complement, not replace:
 
 - `docs/deployment/k3s-kubero-longhorn.md`, which is the target runbook
-- `docs/deployment/companion-monitoring-stack.md`, which explains how Longhorn state is surfaced in
-  the companion monitoring stack
+- `docs/deployment/companion-monitoring-stack.md`, which explains how the off-cluster monitoring
+  stack observes Kubernetes node, pod, and Longhorn state during the networking demo
 
 ## Scope
 
@@ -103,34 +103,17 @@ networking-final cluster, and `local-path` is supposed to be the fallback path.
 
 ## Monitoring Integration
 
-Longhorn is also implemented as part of the companion monitoring stack.
+The current v1 companion visualizer renders Kubernetes topology plus an initial Longhorn storage
+overlay. Its job is still intentionally narrow:
 
-### `monitor-api`
+- watch Kubernetes node state
+- watch pod placement and transitions
+- render Longhorn volume and replica health when the CRDs are available
+- keep the off-cluster demo view alive while the main cluster changes
 
-`apps/monitor-api/src/modules/monitoring/infrastructure/kubernetes.py` polls:
-
-- nodes
-- pods
-- storage classes
-- PVCs
-- `volumes.longhorn.io` from namespace `longhorn-system`
-
-It serializes that data into the shared monitoring snapshot as:
-
-- `storage_classes`
-- `pvcs`
-- `longhorn_volumes`
-
-### `monitor-web`
-
-`apps/monitor-web/src/features/monitoring/components/StoragePanel.tsx` renders:
-
-- storage classes
-- persistent volume claims
-- Longhorn volume status, robustness, node, and size
-
-So Longhorn is not only a cluster-side dependency in this repo. It is also part of the demo
-observability story.
+Longhorn matters operationally to the networking runbook and now appears in the visualizer contract
+as root-level `volumes` and `replicas`. The visualizer is still not the final source of truth for
+Longhorn diagnosis; use the dedicated cluster checks in this runbook for that.
 
 ## Current Live Cluster State
 
@@ -346,28 +329,15 @@ Impact:
 - snapshot-file rehearsals can show a storage story that does not match the real deployment
 - screenshots or demos based on the fixture may overstate Longhorn readiness
 
-### 5. The monitoring adapter can silently hide Longhorn-specific failures
+### 5. The current monitoring stack can surface Longhorn data, but it is still not the final source of truth
 
-`apps/monitor-api/src/modules/monitoring/infrastructure/kubernetes.py` only marks Kubernetes as
-disconnected when the node or pod fetch fails.
-
-If this happens:
-
-- `kubectl get nodes` works
-- `kubectl get pods` works
-- `kubectl get volumes.longhorn.io` fails
-
-the monitoring snapshot still comes back as:
-
-- `connected: true`
-- `source: kubectl`
-- `longhorn_volumes: []`
+The v1 companion monitoring stack now includes Longhorn collections in its snapshot data.
 
 Impact:
 
-- the dashboard can make Longhorn problems look like "no volumes exist" instead of "Longhorn data
-  could not be collected"
-- operators lose an important troubleshooting signal during the demo
+- it can show the application impact of storage problems through pod state changes
+- it also exposes Longhorn-specific root collections named `volumes` and `replicas`
+- Longhorn diagnosis still requires the dedicated cluster checks in this runbook
 
 ### 6. The primary and fallback paths are both implemented, but only the fallback is clearly proven
 

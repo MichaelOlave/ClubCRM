@@ -1,69 +1,93 @@
 {
+  "type": "snapshot",
+  "ts": 1713830400,
   "nodes": [
-    { "name": "clubcrm-node-a", "status": "Ready" },
-    { "name": "clubcrm-node-b", "status": "Ready" }
+    {
+      "name": "server1",
+      "status": "Ready",
+      "roles": ["control-plane"]
+    },
+    {
+      "name": "server2",
+      "status": "Ready",
+      "roles": ["worker"]
+    },
+    {
+      "name": "server3",
+      "status": "NotReady",
+      "roles": ["worker"]
+    }
   ],
   "pods": [
     {
       "namespace": "clubcrm",
       "name": "clubcrm-web-7f88d8db8b-jz7vp",
       "status": "Running",
-      "node_name": "clubcrm-node-a"
+      "node_name": "server2",
+      "uid": "clubcrm-web-7f88d8db8b-jz7vp"
     },
     {
       "namespace": "clubcrm",
       "name": "clubcrm-api-78d48894dc-94m4h",
       "status": "Running",
-      "node_name": "clubcrm-node-b"
-    }
-  ],
-  "storage_classes": [
-    {
-      "name": "longhorn",
-      "provisioner": "driver.longhorn.io",
-      "is_default": false,
-      "volume_binding_mode": "Immediate",
-      "reclaim_policy": "Delete"
-    }
-  ],
-  "pvcs": [
-    {
-      "namespace": "clubcrm-data",
-      "name": "postgres-data-postgres-0",
-      "status": "Bound",
-      "storage_class_name": "longhorn",
-      "requested_storage": "20Gi",
-      "volume_name": "pvc-postgres-data-postgres-0",
-      "volume_status": "Bound"
+      "node_name": "server1",
+      "uid": "clubcrm-api-78d48894dc-94m4h"
     },
     {
       "namespace": "clubcrm-data",
-      "name": "redis-data-redis-0",
-      "status": "Bound",
-      "storage_class_name": "longhorn",
-      "requested_storage": "5Gi",
-      "volume_name": "pvc-redis-data-redis-0",
-      "volume_status": "Bound"
+      "name": "postgres-0",
+      "status": "Pending",
+      "node_name": null,
+      "uid": "postgres-0"
     }
   ],
-  "longhorn_volumes": [
+  "volumes": [
     {
-      "namespace": "longhorn-system",
-      "name": "pvc-postgres-data-postgres-0",
+      "name": "pvc-postgres-data",
+      "pvc_namespace": "clubcrm-data",
+      "pvc_name": "postgres-data",
+      "workload_namespace": "clubcrm-data",
+      "workload_name": "postgres-0",
+      "workload_kind": "StatefulSet",
+      "attachment_node": "server2",
       "state": "attached",
-      "robustness": "healthy",
-      "size": "21474836480",
-      "node_id": "clubcrm-node-b",
-      "ready": true
+      "robustness": "degraded",
+      "health": "degraded"
     },
     {
-      "namespace": "longhorn-system",
-      "name": "pvc-redis-data-redis-0",
-      "state": "attached",
-      "robustness": "healthy",
-      "size": "5368709120",
-      "node_id": "clubcrm-node-a",
-      "ready": true
+      "name": "pvc-redis-data",
+      "pvc_namespace": "clubcrm-data",
+      "pvc_name": "redis-data",
+      "workload_namespace": "clubcrm-data",
+      "workload_name": "redis-0",
+      "workload_kind": "StatefulSet",
+      "attachment_node": "server3",
+      "state": "detached",
+      "robustness": "faulted",
+      "health": "faulted"
+    }
+  ],
+  "replicas": [
+    {
+      "name": "pvc-postgres-data-r-server2",
+      "volume_name": "pvc-postgres-data",
+      "node_name": "server2",
+      "mode": "RW",
+      "health": "healthy"
+    },
+    {
+      "name": "pvc-postgres-data-r-server3",
+      "volume_name": "pvc-postgres-data",
+      "node_name": "server3",
+      "mode": "WO",
+      "health": "degraded"
+    },
+    {
+      "name": "pvc-redis-data-r-server3",
+      "volume_name": "pvc-redis-data",
+      "node_name": "server3",
+      "mode": "ERR",
+      "health": "faulted"
     }
   ]
 }

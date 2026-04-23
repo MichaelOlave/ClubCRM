@@ -2,7 +2,7 @@
 
 This document is the repo-backed runbook for the ClubCRM networking final.
 
-For the off-cluster observer and control plane that sits beside this cluster, see
+For the off-cluster monitoring stack that sits beside this cluster, see
 [Companion Monitoring Stack Guide](companion-monitoring-stack.md) and
 [Monitoring Stack Deployment](monitoring-stack.md).
 
@@ -29,7 +29,7 @@ The intended split is:
 - cluster storage through Longhorn
 - app ingress through Traefik and ServiceLB
 - app workload management through Kubero for the main path
-- monitoring and failover visibility through the off-cluster companion stack
+- monitoring visibility through the off-cluster companion visualizer
 
 This keeps the responsibilities explicit:
 
@@ -62,8 +62,8 @@ Important routing and storage details:
 - `infra/k8s/examples/clubcrm-app-env.example.yaml` contains the environment values Kubero should
   inject into app workloads
 - `infra/k8s/overlays/orbstack-demo/` provides the practical OrbStack fallback for classroom demos
-- `docs/deployment/monitoring-stack.md` explains how to point the companion monitoring stack at the
-  live cluster
+- `docs/deployment/monitoring-stack.md` explains how to point the companion visualizer at the live
+  cluster
 
 Apply the base repo-managed manifests with:
 
@@ -100,17 +100,6 @@ Install the required packages on all three VMs:
 sudo apt-get update
 sudo apt-get install -y open-iscsi nfs-common curl
 sudo systemctl enable --now iscsid
-```
-
-Install the monitoring guest agent on all three VMs:
-
-```bash
-python3 -m venv /opt/clubcrm/infra/monitoring/vm-agent/.venv
-/opt/clubcrm/infra/monitoring/vm-agent/.venv/bin/pip install --upgrade pip
-/opt/clubcrm/infra/monitoring/vm-agent/.venv/bin/pip install -r infra/monitoring/vm-agent/requirements.txt
-sudo cp infra/monitoring/vm-agent/monitor-vm-agent.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now monitor-vm-agent
 ```
 
 Recreate the expected admin users before the cluster rollout:
@@ -359,31 +348,27 @@ If you are running the OrbStack overlay, this step becomes optional because the 
 `http://kubero.local` for the final, while the overlay provides the app runtime that works on the
 classroom VMs.
 
-## 8. Point The Companion Monitoring Stack At The Cluster
+## 8. Point The Companion Cluster Visualizer At The Cluster
 
 On the monitoring host:
 
-- install `kubectl` with access to the live `k3s` cluster
-- set `MONITOR_SYNTHETIC_TARGET_URL=http://clubcrm.local/system/health`
-- keep the existing VM power path pointing at OrbStack
-- keep the guest agents on `Server1`, `Server2`, and `Server3`
+- mount a kubeconfig with access to the live `k3s` cluster
+- set `MONITOR_CLUSTER_KUBECONFIG` to the in-container kubeconfig path
+- optionally set `MONITOR_CLUSTER_CONTEXT` when the kubeconfig contains multiple contexts
+- use `MONITOR_CLUSTER_SNAPSHOT_FILE` only as a fallback for rehearsal or offline demos
 
 For the current live environment:
 
 - the monitoring host is `DemoControlPlaneServer` at `192.168.139.213`
-- the dashboard UI is served on `http://192.168.139.213:3001`
-- the direct `monitor-web` container is reachable on `http://192.168.139.213:3002`
-- `monitor-api` is reachable from the cluster nodes at `http://100.95.238.93:8010`
-- the VM agents use `Server1`, `Server2`, and `Server3` as their `MONITOR_AGENT_VM_ID` values
+- the visualizer UI is served through `http://192.168.139.213:3001`
+- `monitor-api` is served on `http://192.168.139.213:8010`
 
 The monitoring dashboard will then show:
 
-- VM telemetry and power state
-- Kubernetes nodes and pods
-- storage classes
-- PVC status
-- Longhorn volume health
-- an embedded ClubCRM public failover iframe that reports the active web pod
+- Kubernetes nodes and pod placement
+- unscheduled or unhealthy pod states
+- Longhorn `volumes` and `replicas` when the CRDs are available
+- recent node, pod, volume, and replica events
 
 ## 9. Add Host Entries For The Demo
 
@@ -418,7 +403,7 @@ Demo goals:
 - the embedded `/demo/failover` page reports the active web pod and switches to the
   replacement pod after a recycle
 - a Postgres pod restart does not lose data
-- the companion dashboard shows VM, pod, PVC, and Longhorn status throughout the demo
+- the companion visualizer shows node and pod placement throughout the demo
 
 ## Troubleshooting Notes
 
@@ -443,8 +428,8 @@ Demo goals:
 - Kubero is up but not reachable on `kubero.local`:
   Confirm the installed Kubero service name and service port still match `infra/k8s/kubero-ingress.yaml`.
 
-- Monitoring shows VM data but no cluster data:
-  Check the monitoring host kubeconfig or set `MONITOR_K8S_SNAPSHOT_FILE` for a fallback view.
+- Monitoring shows no cluster data:
+  Check the monitoring host kubeconfig or set `MONITOR_CLUSTER_SNAPSHOT_FILE` for a fallback view.
 
 - The monitoring dashboard reaches the old cluster instead of the replacement servers:
   Update `/etc/hosts` on the presenter machine and `DemoControlPlaneServer` so `clubcrm.local` and

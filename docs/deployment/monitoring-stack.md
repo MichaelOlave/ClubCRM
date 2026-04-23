@@ -1,31 +1,28 @@
 # Monitoring Stack Deployment
 
-This document covers how to deploy the companion monitoring and control stack for the ClubCRM
-networking demo.
+This document covers how to deploy the companion cluster visualizer for the ClubCRM networking demo.
 
-For the higher-level architecture, data flow, and API/control model, start with
+For the higher-level architecture and data-flow model, start with
 [Companion Monitoring Stack Guide](companion-monitoring-stack.md).
 
 ## Deployment Goal
 
-The monitoring stack should stay available even while the main demo VMs, pods, or storage-backed
-services are being disrupted on purpose.
+The monitoring stack should stay available even while the main demo cluster is being disrupted on
+purpose.
 
 That means the deployment shape is intentionally separate from the main ClubCRM app pair:
 
 - `monitor-api` and `monitor-web` run on their own host
-- OrbStack power control is reached either locally or through a restricted SSH wrapper
-- Kubernetes visibility comes from `kubectl` or a snapshot file
-- guest agents run inside the demo VMs for CPU, memory, and container telemetry
+- `monitor-api` reaches Kubernetes through a mounted kubeconfig or a checked-in snapshot file
+- browsers reach the dashboard through `monitor-web`
+- the browser WebSocket connects directly to `monitor-api` unless an external proxy is configured
+- a checked-in JSON fixture remains available for rehearsal and fallback
 
 ## Required Repo Assets
 
 - `apps/monitor-api`
 - `apps/monitor-web`
 - `infra/monitoring/docker-compose.monitoring.yml`
-- `infra/monitoring/orbstack/clubcrm-monitor-orbstack.sh`
-- `infra/monitoring/vm-agent/monitor_vm_agent.py`
-- `infra/monitoring/vm-agent/monitor-vm-agent.service`
 - `infra/monitoring/fixtures/k8s-snapshot.json`
 
 ## Local Development
@@ -51,64 +48,32 @@ pnpm verify:monitoring
 These commands are intentionally separate from the default ClubCRM `pnpm dev`, `pnpm build`, and
 `pnpm verify` flows.
 
-### Live-Linked Local Development
-
-Use a dedicated env profile when you want local monitoring development to point at the live demo
-environment without changing the repo's default `.env`.
-
-For dashboard work, the smoothest path is local `monitor-web` against the already deployed
-`monitor-api`:
-
-```bash
-cp .env.monitoring.dashboard.example .env.monitoring.dashboard
-pnpm dev:monitor-web:live
-```
-
-This mode keeps the shared live control plane as the source of truth while you iterate on the
-dashboard locally. It is the recommended setup when you are adjusting panels, charts, layouts, and
-frontend control flows.
-
-For full local control-plane work, including new connector development in `apps/monitor-api`:
-
-```bash
-cp .env.monitoring.live.example .env.monitoring.live
-pnpm dev:monitor:live
-```
-
-Important constraint: a local `monitor-api` does not receive live VM heartbeats unless the live
-servers can reach your machine. For heartbeat-based connectors, you must either expose your local
-`MONITOR_API_PORT` through a reachable address or tunnel and repoint the guest agents'
-`MONITOR_API_BASE_URL`, or limit local testing to pull-based sources until that path is in place.
-
-The checked-in live examples were verified from this repo environment on April 18, 2026 against:
-
-- `http://192.168.139.213:8010/health`
-- `http://192.168.139.213:3001/api/snapshot`
-- `http://clubcrm.local/system/health`
+The root `dev:monitor-api:live`, `dev:monitor-web:live`, and `dev:monitor:live` scripts remain as
+operator conveniences for loading live-demo env files. They are not required for fixture mode or
+for the Compose deployment below.
 
 ## Host Placement
 
 The preferred live-demo shape is:
 
 - one separate monitoring host for `monitor-api` and `monitor-web`
-- one Mac host running OrbStack for `Server1`, `Server2`, and `Server3`
-- optional live kubeconfig on the monitoring host for cluster visibility
+- the `k3s` cluster continues to run on `Server1`, `Server2`, and `Server3`
+- the monitoring host mounts a kubeconfig with read access to cluster nodes, pods, and Longhorn
+  custom resources
+- the dashboard stays reachable from the presentation machine even if cluster nodes are changing
 
-Current live deployment as of April 18, 2026:
+Current host mapping for the networking environment:
 
-- monitoring host VM: `DemoControlPlaneServer` at `192.168.139.213`
-- dashboard URL: `http://192.168.139.213:3001`
-- direct `monitor-web` container URL: `http://192.168.139.213:3002`
-- `monitor-api`: `http://192.168.139.213:8010`
-- VM-agent reachable monitoring API address from the replacement cluster nodes:
-  `http://100.95.238.93:8010`
+- `Server1` -> `100.122.118.85`
+- `Server2` -> `100.67.65.5`
+- `Server3` -> `100.99.187.90`
+- `DemoControlPlaneServer` -> `192.168.139.213`
 
 The monitoring host needs:
 
 - Docker and Docker Compose
 - the repo checkout or copied deployment assets
-- either local `orbctl` access or SSH access to the OrbStack wrapper
-- either `kubectl` access to the cluster or a mounted JSON snapshot file
+- a kubeconfig file with read access to the cluster
 
 ## Standalone Compose Deployment
 
@@ -125,147 +90,66 @@ By default it runs:
 - `monitor-api` on `8010`
 - `monitor-web` on `3001`
 
-Useful deployment overrides include:
+The compose deployment mounts a kubeconfig into `monitor-api`. Override these values on the host as
+needed:
 
-- `MONITOR_API_IMAGE`
-- `MONITOR_WEB_IMAGE`
-- `MONITOR_API_PORT`
-- `MONITOR_WEB_PORT`
+- `MONITOR_CLUSTER_KUBECONFIG_HOST_PATH`
+- `MONITOR_CLUSTER_KUBECONFIG`
+- `MONITOR_CLUSTER_CONTEXT`
+- `MONITOR_CLUSTER_IN_CLUSTER`
+- `MONITOR_CLUSTER_SNAPSHOT_FILE`
+- `MONITOR_LONGHORN_ENABLED`
+
+Useful frontend overrides include:
+
 - `NEXT_PUBLIC_MONITOR_API_BASE_URL`
 - `NEXT_PUBLIC_MONITOR_WS_URL`
+- `MONITOR_WEB_PORT`
 
-## Live Demo Environment Values
+## Recommended Environment Values
 
-For the networking final, point the synthetic monitor and embedded iframe at the shared ingress
-host instead of local development ports:
+For a live kubeconfig-mounted deployment:
 
-```bash
-MONITOR_SYNTHETIC_TARGET_URL=http://clubcrm.local/system/health
-NEXT_PUBLIC_CLUBCRM_DEMO_URL=http://clubcrm.local/demo/failover
+```dotenv
+MONITOR_API_PORT=8010
+MONITOR_WEB_PORT=3001
+MONITOR_ADMIN_TOKEN=monitor-admin-token
+CLUSTER_VIEWER_PUBLIC=true
+MONITOR_CLUSTER_KUBECONFIG_HOST_PATH=/absolute/path/to/kubeconfig
+MONITOR_CLUSTER_KUBECONFIG=/etc/clubcrm-monitor/kubeconfig
+MONITOR_CLUSTER_CONTEXT=
+MONITOR_CLUSTER_IN_CLUSTER=false
+MONITOR_CLUSTER_SNAPSHOT_FILE=
+MONITOR_LONGHORN_ENABLED=true
+MONITOR_CLUSTER_HEARTBEAT_SECONDS=5
+MONITOR_CLUSTER_WATCH_TIMEOUT_SECONDS=300
+NEXT_PUBLIC_MONITOR_API_BASE_URL=http://192.168.139.213:8010
+NEXT_PUBLIC_MONITOR_WS_URL=ws://192.168.139.213:8010/ws/stream
 ```
 
-Add matching host entries on the monitoring host and the presenter machine:
+For offline rehearsal or frontend work without live cluster access:
 
-```text
-100.122.118.85 clubcrm.local kubero.local
-100.122.118.85 Server1 server1
-100.67.65.5 Server2 server2
-100.99.187.90 Server3 server3
+```dotenv
+MONITOR_CLUSTER_KUBECONFIG=
+MONITOR_CLUSTER_SNAPSHOT_FILE=/workspace/infra/monitoring/fixtures/k8s-snapshot.json
 ```
 
-With that iframe target in place, the monitoring dashboard can keep the ClubCRM diagnostics page
-visible while you recycle the active web pod.
+## Snapshot Fixture
 
-## OrbStack Control Path
+`infra/monitoring/fixtures/k8s-snapshot.json` should match the live API shape:
 
-The monitoring API does not run arbitrary shell from the UI.
+- root `type`
+- root `ts`
+- root `nodes`
+- root `pods`
+- root `volumes`
+- root `replicas`
 
-When `monitor-api` runs on the same Mac host as OrbStack, it talks to `orbctl` directly.
+The `volumes` collection represents Longhorn volume state, including PVC and workload correlation,
+attachment node, state, robustness, and health. The `replicas` collection represents Longhorn
+replica placement and health per volume.
 
-When `monitor-api` runs on a separate monitoring host, it SSHes into a dedicated user on the Mac
-host and calls the wrapper script with the narrow command surface below:
-
-- `list`
-- `power start <machine>`
-- `power stop <machine>`
-- `power restart <machine>`
-
-Install the sample wrapper from:
-
-- [`infra/monitoring/orbstack/clubcrm-monitor-orbstack.sh`](../../infra/monitoring/orbstack/clubcrm-monitor-orbstack.sh)
-
-Relevant OrbStack command references:
-
-- [OrbStack headless CLI usage](https://docs.orbstack.dev/headless)
-- [OrbStack Linux machine commands](https://docs.orbstack.dev/machines/commands)
-
-If the deployment host's OrbStack release formats `orb info` differently, update the wrapper
-parsing logic rather than widening the monitoring API's command surface.
-
-## VM Agent Installation
-
-Each demo VM can run the lightweight guest agent from:
-
-- [`infra/monitoring/vm-agent/monitor_vm_agent.py`](../../infra/monitoring/vm-agent/monitor_vm_agent.py)
-
-The agent:
-
-- sends CPU, memory, and container telemetry to `POST /api/agents/{vm_id}/heartbeat`
-- receives queued container commands back in the heartbeat response
-- executes `start`, `stop`, and `restart` for containers through the Docker SDK when available,
-  and falls back to the Docker CLI when only the CLI is present
-- reports command results on the next heartbeat
-
-Create a dedicated virtual environment for the VM agent and install the optional
-dependencies there. This avoids Ubuntu 24.04 `externally-managed-environment`
-errors and keeps the service runtime isolated from the base image Python:
-
-```bash
-python3 -m venv /opt/clubcrm/infra/monitoring/vm-agent/.venv
-/opt/clubcrm/infra/monitoring/vm-agent/.venv/bin/pip install --upgrade pip
-/opt/clubcrm/infra/monitoring/vm-agent/.venv/bin/pip install -r infra/monitoring/vm-agent/requirements.txt
-```
-
-Install the sample `systemd` unit:
-
-```bash
-sudo cp infra/monitoring/vm-agent/monitor-vm-agent.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now monitor-vm-agent
-```
-
-The sample service expects an environment file at `/etc/clubcrm-monitor-agent.env`.
-
-Example for `Server1`:
-
-```bash
-MONITOR_API_BASE_URL=http://<monitor-host>:8010
-MONITOR_AGENT_VM_ID=Server1
-MONITOR_AGENT_TOKEN=monitor-agent-server1
-MONITOR_AGENT_INTERVAL_SECONDS=1
-MONITOR_AGENT_TIMEOUT_SECONDS=2
-```
-
-Equivalent live values for the replacement cluster:
-
-```bash
-MONITOR_API_BASE_URL=http://100.95.238.93:8010
-MONITOR_AGENT_VM_ID=Server1
-MONITOR_AGENT_TOKEN=monitor-agent-server1
-```
-
-Use the same shape for `Server2` and `Server3` with their matching IDs and tokens.
-
-For local OrbStack rehearsals where the guest VM needs to reach the Mac host directly, this usually
-becomes:
-
-```bash
-MONITOR_API_BASE_URL=http://host.internal:8010
-```
-
-If the guest VM cannot route to `host.internal`, set `MONITOR_API_BASE_URL` to a
-directly reachable address for the monitoring host instead.
-
-## Kubernetes Inputs
-
-The monitoring API supports two Kubernetes input paths:
-
-1. live `kubectl` on the monitoring host
-2. a snapshot file defined by `MONITOR_K8S_SNAPSHOT_FILE`
-
-With live `kubectl` access, the monitoring snapshot includes:
-
-- nodes
-- pods
-- storage classes
-- PVC status merged with PV status
-- Longhorn volume state from `volumes.longhorn.io`
-
-A sample file lives at:
-
-- [`infra/monitoring/fixtures/k8s-snapshot.json`](../../infra/monitoring/fixtures/k8s-snapshot.json)
-
-Use snapshot mode when you want repeatable UI demos before the live cluster feed is ready.
+Keep fixture captures aligned to that root-level shape so `monitor-api` can load them directly.
 
 ## Verification
 
@@ -274,20 +158,21 @@ From the monitoring host, verify the deployment with:
 ```bash
 curl http://localhost:8010/health
 curl http://localhost:8010/api/snapshot
-curl http://localhost:3001/api/snapshot
+curl http://localhost:3001
 ```
 
-For the live OrbStack control-plane VM:
+For the live monitoring host at `192.168.139.213`:
 
 ```bash
 curl http://192.168.139.213:8010/health
-curl http://192.168.139.213:3001/api/snapshot
+curl http://192.168.139.213:8010/api/snapshot
+curl http://192.168.139.213:3001
 ```
 
 In the browser, confirm:
 
-- the dashboard loads without WebSocket errors
-- VM telemetry appears for `Server1`, `Server2`, and `Server3`
-- Kubernetes panels show either live data or snapshot data
-- the embedded ClubCRM iframe reaches the expected public route
-- a guarded action updates the event timeline
+- the dashboard loads without errors
+- the cluster graph renders nodes and scheduled pods
+- the Longhorn panel shows fixture or live `volumes` and `replicas` when available
+- recent node, pod, volume, or replica events appear in the event feed
+- the browser connects to `NEXT_PUBLIC_MONITOR_WS_URL`

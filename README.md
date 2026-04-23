@@ -158,7 +158,7 @@ Before opening a pull request, run the narrowest relevant checks from the reposi
 - `docs/plans/team-execution-plan.md` for scope and ownership guidance
 - `docs/plans/networking-team-execution-plan.md` for the companion networking workstream
 - `docs/deployment/ssh-docker-deploy.md` for the current SSH-based VM deployment path
-- `docs/deployment/companion-monitoring-stack.md` for the companion monitoring app architecture and data flow
+- `docs/deployment/companion-monitoring-stack.md` for the companion monitoring stack architecture and data flow
 - `docs/deployment/current-longhorn-implementation.md` for the current Longhorn implementation, live-cluster status, and broken pieces
 - `docs/deployment/monitoring-stack.md` for the separate networking-demo monitoring stack
 - `docs/deployment/k3s-kubero-longhorn.md` for the networking-final cluster rollout

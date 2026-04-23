@@ -1,49 +1,35 @@
-import { cookies } from "next/headers";
-import { MonitoringDashboardClient } from "@/features/monitoring/components/MonitoringDashboardClient";
-import { getInitialMonitoringSnapshot } from "@/features/monitoring/server/getInitialMonitoringSnapshot";
-import {
-  getControlModeCookieName,
-  getMonitorWebSocketUrl,
-  isValidControlModeSession,
-  resolveClubcrmDemoUrl,
-} from "@/lib/env";
+import { ClusterDashboard } from "@/features/cluster/components/ClusterDashboard";
+import { getInitialClusterSnapshot } from "@/features/cluster/server/getInitialSnapshot";
+import { getMonitorWebSocketUrl } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const initialSnapshot = await getInitialMonitoringSnapshot();
+  const initialSnapshot = await getInitialClusterSnapshot();
   const streamUrl = getMonitorWebSocketUrl();
-  const demoUrl = await resolveClubcrmDemoUrl();
-  const cookieStore = await cookies();
-  const initialControlModeUnlocked = isValidControlModeSession(
-    cookieStore.get(getControlModeCookieName())?.value
-  );
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
       <header className="flex flex-col gap-3 pt-4">
-        <span className="monitor-label">Companion Monitoring Stack</span>
+        <span className="text-xs uppercase tracking-[0.2em] text-zinc-400">
+          ClubCRM cluster visualizer
+        </span>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl space-y-2">
-            <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-              ClubCRM networking control plane
+            <h1 className="text-4xl font-semibold tracking-tight text-zinc-50 sm:text-5xl">
+              Live Kubernetes cluster view
             </h1>
-            <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-              Live telemetry, synthetic checks, cluster state, Longhorn storage health, and guarded
-              failover controls for the dedicated networking demo environment.
+            <p className="max-w-2xl text-base leading-7 text-zinc-400 sm:text-lg">
+              Watches the k3s cluster from outside and streams every node and pod transition over a
+              WebSocket. Pods move between nodes in real time as the scheduler reassigns them.
             </p>
           </div>
-          <div className="rounded-full border border-primary/35 bg-primary/12 px-4 py-2 text-sm font-medium text-primary">
-            Separate from the main ClubCRM web and API apps
+          <div className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-200">
+            Event-driven · no polling
           </div>
         </div>
       </header>
-      <MonitoringDashboardClient
-        demoUrl={demoUrl}
-        initialSnapshot={initialSnapshot}
-        initialControlModeUnlocked={initialControlModeUnlocked}
-        streamUrl={streamUrl}
-      />
+      <ClusterDashboard initialSnapshot={initialSnapshot} streamUrl={streamUrl} />
     </main>
   );
 }
