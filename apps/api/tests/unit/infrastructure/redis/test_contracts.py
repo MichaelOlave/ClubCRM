@@ -20,7 +20,14 @@ from src.modules.clubs.domain.entities import Club
 from src.modules.dashboard.application.ports.dashboard_summary_cache import (
     DashboardSummaryCache,
 )
-from src.modules.dashboard.domain.models import DashboardSummary
+from src.modules.dashboard.domain.models import (
+    DashboardOverview,
+    DashboardOverviewActivity,
+    DashboardOverviewClubSummary,
+    DashboardOverviewMetrics,
+    DashboardOverviewScope,
+    DashboardSummary,
+)
 
 
 class RedisAdapterContractTests(unittest.TestCase):
@@ -62,6 +69,47 @@ class RedisAdapterContractTests(unittest.TestCase):
             total_events=2,
             total_announcements=4,
         )
+        overview = DashboardOverview(
+            scope=DashboardOverviewScope(
+                organization_id="org-1",
+                primary_role="club_manager",
+                club_ids=("club-1",),
+            ),
+            metrics=DashboardOverviewMetrics(
+                accessible_club_count=1,
+                active_club_count=1,
+                unique_member_count=9,
+                pending_membership_count=1,
+                upcoming_event_count=2,
+                announcement_count=4,
+                multi_club_member_count=0,
+            ),
+            clubs=(
+                DashboardOverviewClubSummary(
+                    id="club-1",
+                    organization_id="org-1",
+                    slug="chess-club",
+                    name="Chess Club",
+                    description="Strategy and tournaments.",
+                    status="active",
+                    member_count=9,
+                    manager_name="Alex Smith",
+                    next_event_at="2026-05-01T18:00:00+00:00",
+                ),
+            ),
+            recent_activity=(
+                DashboardOverviewActivity(
+                    id="event-1",
+                    club_id="club-1",
+                    club_slug="chess-club",
+                    club_name="Chess Club",
+                    type="event",
+                    title="Spring Open",
+                    description="Student Center",
+                    timestamp="2026-04-24T18:00:00+00:00",
+                ),
+            ),
+        )
         mock_client.get_json.return_value = asdict(summary)
         mock_client.ttl.return_value = 42
         mock_client.get_int.side_effect = [5, 4, 1, 2, 0]
@@ -74,10 +122,23 @@ class RedisAdapterContractTests(unittest.TestCase):
         cache.set("club-1", summary)
         cache.delete("club-1")
         analytics = cache.get_analytics("club-1")
+        mock_client.get_json.return_value = asdict(overview)
+        cached_overview = cache.get_overview(
+            organization_id="org-1",
+            primary_role="club_manager",
+            club_ids=("club-1",),
+        )
+        cache.set_overview(
+            organization_id="org-1",
+            primary_role="club_manager",
+            club_ids=("club-1",),
+            overview=overview,
+        )
 
         self.assertEqual(analytics.status, "warm")
         self.assertTrue(analytics.cache_present)
         self.assertEqual(analytics.request_count, 5)
+        self.assertEqual(cached_overview.scope.club_ids, ("club-1",))
 
     @patch(
         "src.infrastructure.redis.sessions.session_store.uuid4",

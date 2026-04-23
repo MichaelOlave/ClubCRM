@@ -188,6 +188,52 @@ export type BackendDashboardSummaryRecord = {
   total_announcements: number;
 };
 
+export type BackendDashboardOverviewScopeRecord = {
+  organization_id: string;
+  primary_role: "org_admin" | "club_manager";
+  club_ids: string[];
+};
+
+export type BackendDashboardOverviewMetricsRecord = {
+  accessible_club_count: number;
+  active_club_count: number;
+  unique_member_count: number;
+  pending_membership_count: number;
+  upcoming_event_count: number;
+  announcement_count: number;
+  multi_club_member_count: number;
+};
+
+export type BackendDashboardOverviewClubSummaryRecord = {
+  id: string;
+  organization_id: string;
+  slug: string;
+  name: string;
+  description: string;
+  status: string;
+  member_count: number;
+  manager_name: string | null;
+  next_event_at: string | null;
+};
+
+export type BackendDashboardOverviewActivityRecord = {
+  id: string;
+  club_id: string;
+  club_slug: string;
+  club_name: string;
+  type: "announcement" | "event";
+  title: string;
+  description: string;
+  timestamp: string;
+};
+
+export type BackendDashboardOverviewRecord = {
+  scope: BackendDashboardOverviewScopeRecord;
+  metrics: BackendDashboardOverviewMetricsRecord;
+  clubs: BackendDashboardOverviewClubSummaryRecord[];
+  recent_activity: BackendDashboardOverviewActivityRecord[];
+};
+
 export type BackendDashboardRedisAnalyticsRecord = {
   club_id: string;
   cache_key: string;
