@@ -140,6 +140,7 @@ MongoDB should store flexible form documents.
 Suggested collections:
 
 - `join_requests`
+- `club_applications`
 - `interest_forms`
 - `rsvp_submissions`
 - `feedback_submissions`
