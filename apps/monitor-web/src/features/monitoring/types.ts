@@ -81,6 +81,31 @@ export type MonitoringEvent = {
   metadata: Record<string, unknown>;
 };
 
+export type MonitoringDemoRunningWebPod = {
+  namespace: string;
+  name: string;
+  status: string;
+  node_name: string | null;
+  vm_id: string | null;
+};
+
+export type MonitoringDemoFailoverTarget = {
+  namespace: string;
+  name: string;
+  status: string;
+  node_name: string | null;
+  vm_id: string | null;
+} | null;
+
+export type MonitoringDemo = {
+  failover_target: MonitoringDemoFailoverTarget;
+  node_vm_map: Record<string, string>;
+  ready_node_names: string[];
+  healthy_vm_count: number;
+  running_web_pods: MonitoringDemoRunningWebPod[];
+  standby_node_names: string[];
+};
+
 export type MonitoringSnapshot = {
   service: MonitoringService;
   vms: MonitoringVm[];
@@ -95,6 +120,7 @@ export type MonitoringSnapshot = {
     pvcs: MonitoringKubernetesPvc[];
     longhorn_volumes: MonitoringLonghornVolume[];
   };
+  demo: MonitoringDemo;
   events: MonitoringEvent[];
   generated_at: string;
 };

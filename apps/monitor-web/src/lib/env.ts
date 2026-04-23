@@ -106,17 +106,6 @@ export async function resolveClubcrmDemoUrl() {
   return preferredUrl;
 }
 
-export function getClubcrmLiveRoutingUrl(rawDemoUrl?: string) {
-  const baseDemoUrl = rawDemoUrl ?? getClubcrmDemoUrl();
-
-  try {
-    const demoUrl = new URL(baseDemoUrl);
-    return new URL("/system/health/live-routing", demoUrl).toString();
-  } catch {
-    return baseDemoUrl;
-  }
-}
-
 function normalizeClubcrmDemoUrl(rawUrl: string) {
   try {
     const url = new URL(rawUrl);

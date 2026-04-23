@@ -71,6 +71,11 @@ class MonitoringSettings:
 
 
 @dataclass(frozen=True)
+class ClubcrmSettings:
+    demo_url: str
+
+
+@dataclass(frozen=True)
 class Settings:
     api: ApiSettings
     auth: AuthSettings
@@ -80,6 +85,7 @@ class Settings:
     ssh_vm_power: SshVmPowerSettings
     kubernetes: KubernetesSettings
     monitoring: MonitoringSettings
+    clubcrm: ClubcrmSettings
 
 
 def _read_optional_env(name: str) -> str | None:
@@ -202,5 +208,8 @@ def get_settings() -> Settings:
         monitoring=MonitoringSettings(
             target_vms=_read_csv_env("MONITOR_TARGET_VMS", ["vm1", "vm2", "vm3"]),
             vm_provider=os.getenv("MONITOR_VM_PROVIDER", "orbstack").strip().lower() or "orbstack",
+        ),
+        clubcrm=ClubcrmSettings(
+            demo_url=os.getenv("CLUBCRM_DEMO_URL", "http://clubcrm.local/demo/failover"),
         ),
     )

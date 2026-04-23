@@ -4,6 +4,7 @@ from src.bootstrap.dependencies import build_vm_power_adapter
 from src.config.settings import (
     ApiSettings,
     AuthSettings,
+    ClubcrmSettings,
     KubernetesSettings,
     MonitoringSettings,
     OrbStackSettings,
@@ -78,4 +79,5 @@ def build_settings(vm_provider: str) -> Settings:
         ),
         kubernetes=KubernetesSettings(snapshot_file=None, poll_interval_seconds=5.0),
         monitoring=MonitoringSettings(target_vms=["Server1"], vm_provider=vm_provider),
+        clubcrm=ClubcrmSettings(demo_url="http://clubcrm.local/demo/failover"),
     )

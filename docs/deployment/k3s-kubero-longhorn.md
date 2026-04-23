@@ -265,6 +265,11 @@ Use those tags in Kubero when creating the `clubcrm-web` and `clubcrm-api` appli
 Set the `clubcrm-web` replica count to `2` for the networking demo so the live diagnostics iframe
 can show traffic moving from the active web pod to the replacement pod during a recycle.
 
+For the demo to fail over cleanly between servers instead of bouncing between pod instances on the
+same node, the `clubcrm-web` replicas must be spread across distinct Kubernetes nodes. The
+repo-managed OrbStack overlay now enforces that with pod anti-affinity and a hostname-level
+topology spread rule for `clubcrm-web`.
+
 The `clubcrm-web` ingress should also keep sticky-session cookies enabled so the same browser
 session stays pinned to one healthy web pod until that pod is recycled or becomes unavailable.
 

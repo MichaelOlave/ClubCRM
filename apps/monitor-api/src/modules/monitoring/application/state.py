@@ -6,6 +6,7 @@ from itertools import count
 from typing import Any
 from uuid import uuid4
 
+from src.modules.monitoring.application.demo import serialize_demo_snapshot
 from src.modules.monitoring.domain.models import (
     AgentCommandResult,
     ContainerSnapshot,
@@ -438,6 +439,11 @@ class MonitoringState:
                     for volume in self._kubernetes_longhorn_volumes
                 ],
             },
+            "demo": serialize_demo_snapshot(
+                nodes=self._kubernetes_nodes,
+                pods=self._kubernetes_pods,
+                vms=self._vms.values(),
+            ),
             "events": [
                 {
                     "id": event.id,

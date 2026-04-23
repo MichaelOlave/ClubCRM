@@ -5,7 +5,9 @@ from src.modules.monitoring.application.state import MonitoringState
 from src.modules.monitoring.domain.models import (
     AgentCommandResult,
     ContainerSnapshot,
+    KubernetesNodeSnapshot,
     KubernetesPersistentVolumeClaimSnapshot,
+    KubernetesPodSnapshot,
     KubernetesStorageClassSnapshot,
     LonghornVolumeSnapshot,
 )
@@ -38,6 +40,7 @@ class MonitoringStateTests(unittest.IsolatedAsyncioTestCase):
         event_kinds = [event["kind"] for event in snapshot["events"]]
         self.assertIn("service-availability", event_kinds)
         self.assertIn("latency-spike", event_kinds)
+        self.assertIn("demo", snapshot)
 
     async def test_marks_agent_stale_after_missed_heartbeat(self) -> None:
         state = MonitoringState(
@@ -167,3 +170,59 @@ class MonitoringStateTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(snapshot["kubernetes"]["storage_classes"][0]["name"], "longhorn")
         self.assertEqual(snapshot["kubernetes"]["pvcs"][0]["status"], "Bound")
         self.assertTrue(snapshot["kubernetes"]["longhorn_volumes"][0]["ready"])
+
+    async def test_serializes_demo_failover_summary(self) -> None:
+        state = MonitoringState(
+            target_vms=["Server1", "Server2"],
+            history_limit=5,
+            event_limit=10,
+            stale_after_seconds=5,
+            latency_spike_threshold_ms=500,
+            synthetic_target_url="http://localhost:8000/health",
+        )
+
+        await state.record_vm_power_states({"Server1": "running", "Server2": "running"})
+        await state.record_heartbeat(
+            vm_id="Server1",
+            cpu_percent=12,
+            memory_percent=24,
+            monotonic_time=1.0,
+            containers=[],
+            command_results=[],
+        )
+        await state.record_heartbeat(
+            vm_id="Server2",
+            cpu_percent=8,
+            memory_percent=22,
+            monotonic_time=2.0,
+            containers=[],
+            command_results=[],
+        )
+        await state.record_kubernetes_snapshot(
+            connected=True,
+            source="kubectl",
+            nodes=[
+                KubernetesNodeSnapshot(name="Server1", status="Ready"),
+                KubernetesNodeSnapshot(name="Server2", status="Ready"),
+            ],
+            pods=[
+                KubernetesPodSnapshot(
+                    namespace="clubcrm",
+                    name="clubcrm-web-abc123",
+                    status="Running",
+                    node_name="Server1",
+                ),
+                KubernetesPodSnapshot(
+                    namespace="clubcrm",
+                    name="clubcrm-web-def456",
+                    status="Running",
+                    node_name="Server2",
+                ),
+            ],
+        )
+
+        snapshot = await state.snapshot()
+
+        self.assertEqual(snapshot["demo"]["failover_target"]["vm_id"], "Server1")
+        self.assertEqual(snapshot["demo"]["healthy_vm_count"], 2)
+        self.assertEqual(snapshot["demo"]["standby_node_names"], ["Server2"])

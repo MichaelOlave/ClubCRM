@@ -33,6 +33,33 @@ class SshVmPowerAdapterTests(unittest.TestCase):
         self.assertEqual(invoked_command[:5], ["ssh", "-i", "/tmp/id_monitor", "-p", "2222"])
 
     @patch("src.modules.monitoring.infrastructure.ssh_vm_power.subprocess.run")
+    def test_list_vms_runs_local_wrapper_when_remote_host_is_not_configured(self, mock_run) -> None:
+        mock_run.return_value.returncode = 0
+        mock_run.return_value.stdout = '[{"name":"Server1","status":"running"}]'
+        mock_run.return_value.stderr = ""
+
+        with patch(
+            "src.modules.monitoring.infrastructure.ssh_vm_power.Path.is_file",
+            return_value=True,
+        ), patch("src.modules.monitoring.infrastructure.ssh_vm_power.os.access", return_value=True):
+            adapter = SshVmPowerAdapter(
+                SshVmPowerSettings(
+                    ssh_host=None,
+                    ssh_user=None,
+                    ssh_port=22,
+                    ssh_identity_file=None,
+                    remote_wrapper="/tmp/clubcrm-monitor-vm-power",
+                    poll_interval_seconds=5.0,
+                )
+            )
+
+            states = adapter.list_vms()
+
+        self.assertEqual(states["Server1"], "running")
+        invoked_command = mock_run.call_args.args[0]
+        self.assertEqual(invoked_command[1:], ["/tmp/clubcrm-monitor-vm-power", "list"])
+
+    @patch("src.modules.monitoring.infrastructure.ssh_vm_power.subprocess.run")
     def test_power_action_builds_expected_result(self, mock_run) -> None:
         mock_run.return_value.returncode = 0
         mock_run.return_value.stdout = (
