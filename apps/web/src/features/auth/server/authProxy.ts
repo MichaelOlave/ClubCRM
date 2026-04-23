@@ -14,22 +14,45 @@ function appendSetCookies(source: Response, target: NextResponse) {
   }
 }
 
+function normalizeBrowserHost(host: string): string {
+  if (host === "0.0.0.0" || host.startsWith("0.0.0.0:")) {
+    return host.replace("0.0.0.0", "localhost");
+  }
+
+  if (host === "[::]" || host.startsWith("[::]:")) {
+    return host.replace("[::]", "localhost");
+  }
+
+  return host;
+}
+
+function getBrowserOrigin(request: NextRequest): URL {
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const requestHost = request.headers.get("host") ?? request.nextUrl.host;
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const protocol = forwardedProto ?? request.nextUrl.protocol.replace(/:$/, "");
+  const host = normalizeBrowserHost(forwardedHost ?? requestHost);
+
+  return new URL(`${protocol}://${host}`);
+}
+
 function buildCurrentOriginRedirect(location: string, request: NextRequest): string {
-  const parsedLocation = new URL(location, request.nextUrl.origin);
+  const browserOrigin = getBrowserOrigin(request);
+  const parsedLocation = new URL(location, browserOrigin);
   const currentOriginPath = `${parsedLocation.pathname}${parsedLocation.search}${parsedLocation.hash}`;
 
-  return new URL(currentOriginPath, request.nextUrl.origin).toString();
+  return new URL(currentOriginPath, browserOrigin).toString();
 }
 
 function buildAuthProxyHeaders(request: NextRequest): HeadersInit {
-  const requestHost = request.headers.get("host") ?? request.nextUrl.host;
+  const browserOrigin = getBrowserOrigin(request);
   const cookieHeader = request.headers.get("cookie");
 
   return {
     ...(cookieHeader ? { cookie: cookieHeader } : {}),
-    host: requestHost,
-    "x-forwarded-host": requestHost,
-    "x-forwarded-proto": request.nextUrl.protocol.replace(/:$/, ""),
+    host: browserOrigin.host,
+    "x-forwarded-host": browserOrigin.host,
+    "x-forwarded-proto": browserOrigin.protocol.replace(/:$/, ""),
     [PROXIED_AUTH_REQUEST_HEADER]: "1",
   };
 }

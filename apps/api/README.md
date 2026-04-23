@@ -124,7 +124,9 @@ port if `8000` is already in use. The resolved binding is written to
 - `/auth/*` owns login, callback, session, and logout for the backend-owned auth flow
 - `GET /audit-logs` returns the protected admin audit trail used by `/system/audit`
 - `GET /dashboard/summary/{club_id}` returns dashboard summary data for an authorized club
-- `/forms/*` owns public join-request submission plus protected pending, approve, and deny flows
+- `/forms/*` owns public join-request submission plus protected pending, approve, and deny flows;
+  the public join-request POST now mirrors the web text limits server-side and applies a basic
+  Redis-backed rate limit
 - `/clubs/*` includes CRUD plus club-manager grant management, now exposing stable club `slug`
   values alongside internal IDs and enforcing per-organization uniqueness for club URL slugs
 - `/members/*` and `/memberships/*` provide the current roster-management surface
