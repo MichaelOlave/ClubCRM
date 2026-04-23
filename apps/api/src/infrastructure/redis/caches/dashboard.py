@@ -1,10 +1,16 @@
 from dataclasses import asdict
+from hashlib import sha1
+from typing import Literal
 
 from src.infrastructure.redis.client import RedisClient
 from src.modules.dashboard.application.ports.dashboard_summary_cache import (
     DashboardSummaryCache,
 )
-from src.modules.dashboard.domain.models import DashboardRedisAnalytics, DashboardSummary
+from src.modules.dashboard.domain.models import (
+    DashboardOverview,
+    DashboardRedisAnalytics,
+    DashboardSummary,
+)
 
 
 class RedisDashboardSummaryCache(DashboardSummaryCache):
@@ -18,6 +24,20 @@ class RedisDashboardSummaryCache(DashboardSummaryCache):
 
     def _metric_key(self, club_id: str, metric: str) -> str:
         return f"clubcrm:dashboard:summary:{club_id}:{metric}"
+
+    def _overview_key(
+        self,
+        *,
+        organization_id: str,
+        primary_role: Literal["org_admin", "club_manager"],
+        club_ids: tuple[str, ...],
+    ) -> str:
+        if primary_role == "org_admin":
+            return f"clubcrm:dashboard:overview:{organization_id}:org_admin"
+
+        club_set = ",".join(sorted(club_ids))
+        digest = sha1(club_set.encode("utf-8")).hexdigest()
+        return f"clubcrm:dashboard:overview:{organization_id}:club_manager:{digest}"
 
     def get(self, club_id: str) -> DashboardSummary | None:
         self.client.increment(self._metric_key(club_id, "requests"))
@@ -67,4 +87,41 @@ class RedisDashboardSummaryCache(DashboardSummaryCache):
             hit_rate=hit_rate,
             status="warm" if cache_present else "cold",
             error=None,
+        )
+
+    def get_overview(
+        self,
+        *,
+        organization_id: str,
+        primary_role: Literal["org_admin", "club_manager"],
+        club_ids: tuple[str, ...],
+    ) -> DashboardOverview | None:
+        data = self.client.get_json(
+            self._overview_key(
+                organization_id=organization_id,
+                primary_role=primary_role,
+                club_ids=club_ids,
+            )
+        )
+        if data is None:
+            return None
+
+        return DashboardOverview.from_dict(data)
+
+    def set_overview(
+        self,
+        *,
+        organization_id: str,
+        primary_role: Literal["org_admin", "club_manager"],
+        club_ids: tuple[str, ...],
+        overview: DashboardOverview,
+    ) -> None:
+        self.client.set_json(
+            self._overview_key(
+                organization_id=organization_id,
+                primary_role=primary_role,
+                club_ids=club_ids,
+            ),
+            asdict(overview),
+            ttl_seconds=self.TTL_SECONDS,
         )

@@ -10,6 +10,7 @@ from src.modules.auth.presentation.http.dependencies import (
     require_authorized_access,
 )
 from src.modules.dashboard.application.handlers import (
+    GetDashboardOverviewHandler,
     GetDashboardRedisAnalyticsHandler,
     GetDashboardSummaryHandler,
 )
@@ -17,10 +18,129 @@ from src.modules.dashboard.application.ports.dashboard_repository import Dashboa
 from src.modules.dashboard.application.ports.dashboard_summary_cache import (
     DashboardSummaryCache,
 )
-from src.modules.dashboard.application.queries import DashboardSummaryQuery
-from src.modules.dashboard.domain.models import DashboardRedisAnalytics, DashboardSummary
+from src.modules.dashboard.application.queries import DashboardOverviewQuery, DashboardSummaryQuery
+from src.modules.dashboard.domain.models import (
+    DashboardOverview,
+    DashboardOverviewActivity,
+    DashboardOverviewClubSummary,
+    DashboardOverviewMetrics,
+    DashboardOverviewScope,
+    DashboardRedisAnalytics,
+    DashboardSummary,
+)
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+
+
+class DashboardOverviewScopeResponse(BaseModel):
+    organization_id: str
+    primary_role: str
+    club_ids: list[str]
+
+    @classmethod
+    def from_domain(cls, scope: DashboardOverviewScope) -> "DashboardOverviewScopeResponse":
+        return cls(
+            organization_id=scope.organization_id,
+            primary_role=scope.primary_role,
+            club_ids=list(scope.club_ids),
+        )
+
+
+class DashboardOverviewMetricsResponse(BaseModel):
+    accessible_club_count: int
+    active_club_count: int
+    unique_member_count: int
+    pending_membership_count: int
+    upcoming_event_count: int
+    announcement_count: int
+    multi_club_member_count: int
+
+    @classmethod
+    def from_domain(cls, metrics: DashboardOverviewMetrics) -> "DashboardOverviewMetricsResponse":
+        return cls(
+            accessible_club_count=metrics.accessible_club_count,
+            active_club_count=metrics.active_club_count,
+            unique_member_count=metrics.unique_member_count,
+            pending_membership_count=metrics.pending_membership_count,
+            upcoming_event_count=metrics.upcoming_event_count,
+            announcement_count=metrics.announcement_count,
+            multi_club_member_count=metrics.multi_club_member_count,
+        )
+
+
+class DashboardOverviewClubSummaryResponse(BaseModel):
+    id: str
+    organization_id: str
+    slug: str
+    name: str
+    description: str
+    status: str
+    member_count: int
+    manager_name: str | None
+    next_event_at: str | None
+
+    @classmethod
+    def from_domain(
+        cls, club: DashboardOverviewClubSummary
+    ) -> "DashboardOverviewClubSummaryResponse":
+        return cls(
+            id=club.id,
+            organization_id=club.organization_id,
+            slug=club.slug,
+            name=club.name,
+            description=club.description,
+            status=club.status,
+            member_count=club.member_count,
+            manager_name=club.manager_name,
+            next_event_at=club.next_event_at,
+        )
+
+
+class DashboardOverviewActivityResponse(BaseModel):
+    id: str
+    club_id: str
+    club_slug: str
+    club_name: str
+    type: str
+    title: str
+    description: str
+    timestamp: str
+
+    @classmethod
+    def from_domain(
+        cls, activity: DashboardOverviewActivity
+    ) -> "DashboardOverviewActivityResponse":
+        return cls(
+            id=activity.id,
+            club_id=activity.club_id,
+            club_slug=activity.club_slug,
+            club_name=activity.club_name,
+            type=activity.type,
+            title=activity.title,
+            description=activity.description,
+            timestamp=activity.timestamp,
+        )
+
+
+class DashboardOverviewResponse(BaseModel):
+    scope: DashboardOverviewScopeResponse
+    metrics: DashboardOverviewMetricsResponse
+    clubs: list[DashboardOverviewClubSummaryResponse]
+    recent_activity: list[DashboardOverviewActivityResponse]
+
+    @classmethod
+    def from_domain(cls, overview: DashboardOverview) -> "DashboardOverviewResponse":
+        return cls(
+            scope=DashboardOverviewScopeResponse.from_domain(overview.scope),
+            metrics=DashboardOverviewMetricsResponse.from_domain(overview.metrics),
+            clubs=[
+                DashboardOverviewClubSummaryResponse.from_domain(club) for club in overview.clubs
+            ],
+            recent_activity=[
+                DashboardOverviewActivityResponse.from_domain(activity)
+                for activity in overview.recent_activity
+            ],
+        )
 
 
 class DashboardSummaryResponse(BaseModel):
@@ -71,6 +191,25 @@ class DashboardRedisAnalyticsResponse(BaseModel):
             status=analytics.status,
             error=analytics.error,
         )
+
+
+@router.get("/summary", response_model=DashboardOverviewResponse)
+async def get_dashboard_overview(
+    access: Annotated[AppAccess, Depends(require_authorized_access)],
+    repository: Annotated[DashboardRepository, Depends(get_dashboard_repository)],
+    cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
+):
+    query = DashboardOverviewQuery(
+        organization_id=access.organization_id,
+        primary_role=access.primary_role,
+        club_ids=(
+            tuple(sorted(access.managed_club_ids))
+            if access.primary_role == "club_manager"
+            else ()
+        ),
+    )
+    overview = await GetDashboardOverviewHandler(repository=repository, cache=cache).handle(query)
+    return DashboardOverviewResponse.from_domain(overview)
 
 
 @router.get("/summary/{club_id}", response_model=DashboardSummaryResponse)

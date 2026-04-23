@@ -1,8 +1,8 @@
 import {
+  getDashboardOverviewApi,
   resolveClubApi,
   listAnnouncementsApi,
   listClubManagerGrantsApi,
-  listClubsApi,
   listEventsApi,
   listMembershipsApi,
 } from "@/lib/api/clubcrm";
@@ -15,6 +15,7 @@ import type {
   BackendAnnouncementRecord,
   BackendClubRecord,
   BackendClubManagerGrantRecord,
+  BackendDashboardOverviewClubSummaryRecord,
   BackendEventRecord,
   BackendMembershipRecord,
   ClubRecord,
@@ -85,14 +86,10 @@ function getManagerName(grants: BackendClubManagerGrantRecord[]): string | null 
   return grants[0]?.member_name ?? null;
 }
 
-function mapClubRecord(
-  club: BackendClubRecord,
-  memberships: BackendMembershipRecord[],
-  events: BackendEventRecord[],
+function mapOverviewClubRecord(
+  club: BackendDashboardOverviewClubSummaryRecord,
   manager: string | null
 ): ClubRecord {
-  const upcomingEvents = getUpcomingEvents(events);
-
   return {
     id: club.id,
     organizationId: club.organization_id,
@@ -100,11 +97,33 @@ function mapClubRecord(
     name: club.name,
     description: club.description,
     status: getClubStatus(club.status),
-    memberCount: memberships.length,
+    memberCount: club.member_count,
     manager,
-    nextEventAt: upcomingEvents[0]?.starts_at ?? null,
+    nextEventAt: club.next_event_at,
     tags: [],
   };
+}
+
+function mapClubRecord(
+  club: BackendClubRecord,
+  memberships: BackendMembershipRecord[],
+  events: BackendEventRecord[],
+  manager: string | null
+): ClubRecord {
+  return mapOverviewClubRecord(
+    {
+      id: club.id,
+      organization_id: club.organization_id,
+      slug: club.slug,
+      name: club.name,
+      description: club.description,
+      status: club.status,
+      member_count: memberships.length,
+      manager_name: manager,
+      next_event_at: getUpcomingEvents(events)[0]?.starts_at ?? null,
+    },
+    manager
+  );
 }
 
 function mapEventRecord(event: DatedBackendEventRecord): EventRecord {
@@ -131,28 +150,14 @@ function mapAnnouncementRecord(announcement: BackendAnnouncementRecord): Announc
 }
 
 export async function getClubList(session: AuthorizedBackendAuthSession): Promise<ClubRecord[]> {
-  const clubs = await listClubsApi();
-
-  if (!clubs.length) {
-    return [];
-  }
-
+  const overview = await getDashboardOverviewApi();
   const isOrgAdmin = isOrgAdminBackendAuthSession(session);
-  const [membershipsByClub, eventsByClub, grantsByClub] = await Promise.all([
-    Promise.all(clubs.map((club) => listMembershipsApi({ clubId: club.id }))),
-    Promise.all(clubs.map((club) => listEventsApi(club.id))),
-    isOrgAdmin
-      ? Promise.all(clubs.map((club) => listClubManagerGrantsApi(club.id)))
-      : Promise.resolve(clubs.map((): BackendClubManagerGrantRecord[] => [])),
-  ]);
   const currentUserDisplayName = getCurrentUserDisplayName(session);
 
-  return clubs.map((club, index) =>
-    mapClubRecord(
+  return overview.clubs.map((club) =>
+    mapOverviewClubRecord(
       club,
-      membershipsByClub[index] ?? [],
-      eventsByClub[index] ?? [],
-      isOrgAdmin ? getManagerName(grantsByClub[index] ?? []) : currentUserDisplayName
+      isOrgAdmin ? club.manager_name : (club.manager_name ?? currentUserDisplayName)
     )
   );
 }

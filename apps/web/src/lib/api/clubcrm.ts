@@ -4,6 +4,7 @@ import type {
   BackendAuditLogListRecord,
   BackendClubManagerGrantRecord,
   BackendClubRecord,
+  BackendDashboardOverviewRecord,
   BackendDashboardRedisAnalyticsRecord,
   BackendDashboardSummaryRecord,
   BackendEventRecord,
@@ -443,6 +444,10 @@ export async function getDashboardSummaryApi(
   clubId: string
 ): Promise<BackendDashboardSummaryRecord> {
   return (await fetchApiJson<BackendDashboardSummaryRecord>(`/dashboard/summary/${clubId}`)).data;
+}
+
+export async function getDashboardOverviewApi(): Promise<BackendDashboardOverviewRecord> {
+  return (await fetchApiJson<BackendDashboardOverviewRecord>("/dashboard/summary")).data;
 }
 
 export async function getDashboardRedisAnalyticsApi(
