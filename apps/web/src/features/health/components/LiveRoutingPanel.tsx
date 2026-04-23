@@ -24,7 +24,7 @@ type StepTone = "active" | "complete" | "pending" | "warning";
 const POLL_INTERVAL_MS = 500;
 const RECONNECT_INTERVAL_MS = 250;
 const POLL_TIMEOUT_MS = 1200;
-const DEMO_TIMEOUT_MS = 45000;
+const DEMO_TIMEOUT_MS = 150000;
 
 export function LiveRoutingPanel({
   initialSnapshot,
@@ -37,7 +37,9 @@ export function LiveRoutingPanel({
   const [demoPhase, setDemoPhase] = useState<DemoPhase>("idle");
   const [baselineSnapshot, setBaselineSnapshot] = useState<LiveRoutingSnapshot | null>(null);
   const [startedAt, setStartedAt] = useState<string | null>(null);
-  const [sampleCount, setSampleCount] = useState(0);
+  const [completedAt, setCompletedAt] = useState<string | null>(null);
+  const [interruptionObserved, setInterruptionObserved] = useState(false);
+  const [clockNow, setClockNow] = useState(() => Date.now());
   const timeoutIdRef = useRef<number | null>(null);
   const requestControllerRef = useRef<AbortController | null>(null);
   const isRefreshingRef = useRef(false);
@@ -59,7 +61,25 @@ export function LiveRoutingPanel({
   }, [baselineSnapshot]);
 
   useEffect(() => {
-    if (demoPhase !== "waitingForFailover") {
+    const shouldTick =
+      runStartedAtMsRef.current !== null &&
+      (demoPhase === "waitingForFailover" || demoPhase === "timeout");
+    if (!shouldTick) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setClockNow(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [demoPhase]);
+
+  useEffect(() => {
+    const shouldPoll = demoPhase === "waitingForFailover" || demoPhase === "timeout";
+    if (!shouldPoll) {
       if (timeoutIdRef.current !== null) {
         window.clearTimeout(timeoutIdRef.current);
       }
@@ -71,7 +91,10 @@ export function LiveRoutingPanel({
     let isActive = true;
 
     function scheduleNextRefresh(delayMs = POLL_INTERVAL_MS) {
-      if (!isActive || demoPhaseRef.current !== "waitingForFailover") {
+      if (
+        !isActive ||
+        (demoPhaseRef.current !== "waitingForFailover" && demoPhaseRef.current !== "timeout")
+      ) {
         return;
       }
 
@@ -109,20 +132,24 @@ export function LiveRoutingPanel({
         snapshotRef.current = nextSnapshot;
         setSnapshot(nextSnapshot);
         setPollState("live");
-        setSampleCount((current) => current + 1);
+        setClockNow(Date.now());
+
+        if (!nextSnapshot.api.connected) {
+          setInterruptionObserved(true);
+        }
 
         if (nextChanges.length > 0) {
           setChanges((current) => [...nextChanges, ...current].slice(0, 6));
         }
 
         if (failoverDetected) {
+          setCompletedAt((current) => current ?? new Date().toISOString());
           setDemoPhase("completed");
           return;
         }
 
-        if (elapsedMs >= DEMO_TIMEOUT_MS) {
+        if (elapsedMs >= DEMO_TIMEOUT_MS && demoPhaseRef.current === "waitingForFailover") {
           setDemoPhase("timeout");
-          return;
         }
       } catch {
         if (!isActive) {
@@ -130,14 +157,15 @@ export function LiveRoutingPanel({
         }
 
         setPollState("reconnecting");
+        setInterruptionObserved(true);
         nextDelayMs = RECONNECT_INTERVAL_MS;
 
         if (
           runStartedAtMsRef.current !== null &&
-          Date.now() - runStartedAtMsRef.current >= DEMO_TIMEOUT_MS
+          Date.now() - runStartedAtMsRef.current >= DEMO_TIMEOUT_MS &&
+          demoPhaseRef.current === "waitingForFailover"
         ) {
           setDemoPhase("timeout");
-          return;
         }
       } finally {
         window.clearTimeout(abortTimeoutId);
@@ -161,15 +189,26 @@ export function LiveRoutingPanel({
   }, [demoPhase, pollUrl]);
 
   const isInProgress = demoPhase === "capturingBaseline" || demoPhase === "waitingForFailover";
+  const failoverDetected =
+    baselineSnapshot !== null &&
+    baselineSnapshot.webRuntime.instanceId !== snapshot.webRuntime.instanceId;
+  const elapsedLabel = getElapsedLabel({
+    completedAt,
+    currentPhase: demoPhase,
+    nowMs: clockNow,
+    startedAt,
+  });
   const flowSteps = buildFlowSteps({
     baselineSnapshot,
     demoPhase,
-    sampleCount,
+    interruptionObserved,
     snapshot,
   });
   const heroCopy = getHeroCopy({
     baselineSnapshot,
     demoPhase,
+    elapsedLabel,
+    interruptionObserved,
     pollState,
     snapshot,
     startedAt,
@@ -187,7 +226,9 @@ export function LiveRoutingPanel({
     setActionError(null);
     setPollState("idle");
     setChanges([]);
-    setSampleCount(0);
+    setCompletedAt(null);
+    setInterruptionObserved(false);
+    setClockNow(Date.now());
 
     let nextBaseline = snapshotRef.current;
 
@@ -219,32 +260,37 @@ export function LiveRoutingPanel({
   }
 
   return (
-    <section className="rounded-[1.5rem] border border-brand-border bg-brand-surface p-6 sm:p-8">
+    <section className="rounded-[1.75rem] border border-brand-border bg-brand-surface p-6 shadow-[0_24px_70px_rgba(15,23,42,0.08)] sm:p-8">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
         <div className="max-w-3xl space-y-3">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-brand">Demo flow</p>
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-brand">
+            Audience screen
+          </p>
           <div className="space-y-2">
-            <h2 className="text-2xl font-semibold text-foreground sm:text-3xl">
-              Start the failover sequence with one button press
+            <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+              Follow ClubCRM traffic as it fails over to a healthy replacement server
             </h2>
-            <p className="text-sm leading-6 text-muted-foreground">
-              Capture the current browser entry pod, trigger the live pod recycle, and let this page
-              confirm when traffic lands on a replacement pod. The button stays locked while a run
-              is already in progress.
+            <p className="text-sm leading-6 text-muted-foreground sm:text-base">
+              This public page turns live routing snapshots into a presentation-first failover
+              story. The presenter console is the canonical place to run the server restart demo;
+              this button remains available as a faster pod-recycle rehearsal path.
             </p>
           </div>
         </div>
         <div className="flex flex-col items-start gap-3 xl:items-end">
           <div className="flex flex-wrap gap-3">
-            <StatusBadge label={heroCopy.badge} tone={heroCopy.badgeTone} />
             <StatusBadge
               label={`API ${snapshot.api.connected ? "connected" : "offline"}`}
               tone={snapshot.api.connected ? "success" : "critical"}
             />
+            <StatusBadge
+              label={pollState === "reconnecting" ? "Signal interrupted" : "Live snapshots"}
+              tone={pollState === "reconnecting" ? "warning" : "success"}
+            />
           </div>
           <Button
             aria-busy={isInProgress}
-            className="min-w-52 justify-center"
+            className="min-w-56 justify-center"
             disabled={isInProgress}
             onClick={() => {
               void handleStartDemo();
@@ -255,7 +301,7 @@ export function LiveRoutingPanel({
             {isInProgress ? (
               <>
                 <Spinner />
-                Demo in progress
+                Pod recycle in progress
               </>
             ) : (
               heroCopy.buttonLabel
@@ -271,24 +317,74 @@ export function LiveRoutingPanel({
         </div>
       ) : null}
 
-      <div className="mt-6 rounded-[1.35rem] border border-brand-border/80 bg-background/80 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.05)]">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-2xl">
-            <p className="text-sm font-medium text-foreground">{heroCopy.title}</p>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">{heroCopy.description}</p>
+      <div className="mt-6 rounded-[1.6rem] border border-brand-emphasis/30 bg-background/90 p-6 shadow-[0_20px_40px_rgba(15,23,42,0.05)] transition-colors">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+          <div className="max-w-3xl space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <StatusBadge label={heroCopy.badge} tone={heroCopy.badgeTone} />
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Client-side run state
+              </span>
+            </div>
+            <div className="space-y-3">
+              <p className="text-5xl font-semibold tracking-tight text-foreground transition-colors sm:text-6xl">
+                {heroCopy.headline}
+              </p>
+              <p className="text-lg font-medium text-foreground">{heroCopy.title}</p>
+              <p className="max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
+                {heroCopy.description}
+              </p>
+            </div>
           </div>
-          <dl className="grid gap-3 sm:grid-cols-3">
-            <SummaryStat
-              label="Baseline pod"
-              value={getPrimaryLabel(baselineSnapshot?.webRuntime ?? null)}
-            />
-            <SummaryStat label="Current pod" value={getPrimaryLabel(snapshot.webRuntime)} />
-            <SummaryStat
-              label="Samples"
-              value={sampleCount > 0 ? `${sampleCount}` : demoPhase === "idle" ? "Waiting" : "0"}
-            />
-          </dl>
+          <div className="rounded-[1.35rem] border border-brand-border/80 bg-brand-surface px-5 py-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Current route
+            </p>
+            <p className="mt-2 text-3xl font-semibold text-foreground">
+              {getServerLabel(snapshot.webRuntime)}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Pod {getTechnicalLabel(snapshot.webRuntime)}
+            </p>
+          </div>
         </div>
+
+        <dl className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <SummaryStat
+            detail={
+              baselineSnapshot
+                ? `Pod ${getTechnicalLabel(baselineSnapshot.webRuntime)}`
+                : "Will lock when the rehearsal starts."
+            }
+            label="Baseline server"
+            value={baselineSnapshot ? getServerLabel(baselineSnapshot.webRuntime) : "Waiting"}
+          />
+          <SummaryStat
+            detail={`Pod ${getTechnicalLabel(snapshot.webRuntime)}`}
+            label="Current server"
+            value={getServerLabel(snapshot.webRuntime)}
+          />
+          <SummaryStat
+            detail={snapshot.api.endpoint}
+            label="API status"
+            value={snapshot.api.connected ? "Connected" : "Offline"}
+          />
+          <SummaryStat
+            detail={
+              startedAt
+                ? `Run started ${formatTimestamp(startedAt)}`
+                : "Starts when you trigger the pod recycle run."
+            }
+            label={
+              failoverDetected
+                ? "Time to reroute"
+                : demoPhase === "idle"
+                  ? "Failover timer"
+                  : "Elapsed run time"
+            }
+            value={elapsedLabel}
+          />
+        </dl>
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-4">
@@ -305,26 +401,26 @@ export function LiveRoutingPanel({
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <RuntimeCard
-          description="This is the pod the browser is currently reaching through the public route."
+          description="This is the server and pod the public route is currently reaching. The server label is the primary audience signal; pod details stay here as supporting evidence."
           instance={snapshot.webRuntime}
-          title="Browser entry pod"
+          title="Browser entry server"
         />
         <RuntimeCard
-          description={`Status: ${snapshot.api.status} • ${snapshot.api.endpoint}`}
+          description={`Reference signal only. This shows the API runtime behind the health endpoint. Status: ${snapshot.api.status} • ${snapshot.api.endpoint}`}
           instance={snapshot.api.runtime}
-          title="API upstream pod"
+          title="API upstream server"
         />
       </div>
 
       <div className="mt-6 grid gap-4 xl:grid-cols-[0.82fr_1.18fr]">
-        <div className="rounded-[1.25rem] border border-brand-border/80 bg-background/70 p-4">
+        <div className="rounded-[1.25rem] border border-brand-border/80 bg-background/70 p-5">
           <p className="text-sm font-medium text-foreground">Run status</p>
           <p className="mt-2 text-2xl font-semibold text-foreground">
             {startedAt ? formatTimestamp(startedAt) : "Ready to start"}
           </p>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">{heroCopy.supportingText}</p>
         </div>
-        <div className="rounded-[1.25rem] border border-brand-border/80 bg-background/70 p-4">
+        <div className="rounded-[1.25rem] border border-brand-border/80 bg-background/70 p-5">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-medium text-foreground">Observed changes</p>
             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
@@ -336,7 +432,7 @@ export function LiveRoutingPanel({
               changes.map((change) => (
                 <div
                   key={change.id}
-                  className="rounded-[1rem] border border-brand-border/70 bg-brand-surface px-4 py-3"
+                  className="rounded-[1rem] border border-brand-border/70 bg-brand-surface px-4 py-3 transition-colors"
                 >
                   <p className="text-sm font-medium text-foreground">{change.message}</p>
                   <p className="mt-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
@@ -347,8 +443,8 @@ export function LiveRoutingPanel({
             ) : (
               <div className="rounded-[1rem] border border-dashed border-brand-border/80 px-4 py-6 text-sm text-muted-foreground">
                 {demoPhase === "idle"
-                  ? "Press start to capture a baseline and begin watching for a pod switch."
-                  : "No routing change has been observed yet."}
+                  ? "Start the fallback pod recycle demo to capture a baseline and begin watching the route."
+                  : "No routing handoff has been observed yet."}
               </div>
             )}
           </div>
@@ -404,12 +500,12 @@ function buildPollUrl(pollUrl: string) {
 function buildFlowSteps({
   baselineSnapshot,
   demoPhase,
-  sampleCount,
+  interruptionObserved,
   snapshot,
 }: {
   baselineSnapshot: LiveRoutingSnapshot | null;
   demoPhase: DemoPhase;
-  sampleCount: number;
+  interruptionObserved: boolean;
   snapshot: LiveRoutingSnapshot;
 }) {
   const failoverDetected =
@@ -418,11 +514,11 @@ function buildFlowSteps({
 
   return [
     {
-      title: "Capture baseline",
+      title: "Baseline captured",
       description:
         baselineSnapshot === null
-          ? "Store the active browser-entry pod before anyone recycles it."
-          : `Baseline locked to ${getPrimaryLabel(baselineSnapshot.webRuntime)}.`,
+          ? "Store the active server before the public fallback demo recycles its pod."
+          : `Baseline locked to ${getServerLabel(baselineSnapshot.webRuntime)}.`,
       tone:
         baselineSnapshot === null
           ? demoPhase === "capturingBaseline"
@@ -431,39 +527,42 @@ function buildFlowSteps({
           : "complete",
     },
     {
-      title: "Recycle pod",
+      title: "Failover triggered",
       description:
         demoPhase === "idle"
-          ? "The public demo route will recycle the current web pod after it captures the baseline."
-          : "Recycle the current web pod from the networking control panel.",
+          ? "This audience route can run a fallback pod recycle demo. Use the monitor dashboard for the full server failover presentation path."
+          : "The pod recycle trigger was sent from this public rehearsal screen.",
       tone:
-        demoPhase === "waitingForFailover"
+        demoPhase === "waitingForFailover" || demoPhase === "timeout"
           ? "active"
-          : demoPhase === "completed" || demoPhase === "timeout"
+          : demoPhase === "completed"
             ? "complete"
             : "pending",
     },
     {
-      title: "Watch reroute",
-      description:
-        sampleCount > 0
-          ? `Collected ${sampleCount} live sample${sampleCount === 1 ? "" : "s"} while waiting for a switch.`
-          : "Poll the public route until the browser lands on a new pod.",
-      tone: failoverDetected
-        ? "complete"
-        : demoPhase === "waitingForFailover"
-          ? "active"
-          : demoPhase === "timeout"
-            ? "warning"
+      title: "Disruption observed",
+      description: interruptionObserved
+        ? "Live routing briefly degraded or reconnected before the route settled again."
+        : demoPhase === "waitingForFailover" || demoPhase === "timeout"
+          ? "Watching for a brief interruption while traffic moves to a healthy replacement server."
+          : "The screen will call out any reconnect or API disruption during the run.",
+      tone: interruptionObserved
+        ? failoverDetected
+          ? "complete"
+          : "active"
+        : demoPhase === "timeout"
+          ? "warning"
+          : demoPhase === "waitingForFailover"
+            ? "active"
             : "pending",
     },
     {
-      title: "Confirm replacement",
+      title: "Recovery confirmed",
       description: failoverDetected
-        ? `Traffic moved to ${getPrimaryLabel(snapshot.webRuntime)}.`
+        ? `Traffic recovered on ${getServerLabel(snapshot.webRuntime)}.`
         : demoPhase === "timeout"
-          ? "No replacement pod was detected before the demo timer expired."
-          : "The run finishes once a different browser-entry pod appears.",
+          ? "The guided timer expired, but the page is still polling so the eventual recovery can remain visible."
+          : "The run finishes once the browser route lands on a different server.",
       tone: failoverDetected ? "complete" : demoPhase === "timeout" ? "warning" : "pending",
     },
   ] satisfies Array<{
@@ -476,12 +575,16 @@ function buildFlowSteps({
 function getHeroCopy({
   baselineSnapshot,
   demoPhase,
+  elapsedLabel,
+  interruptionObserved,
   pollState,
   snapshot,
   startedAt,
 }: {
   baselineSnapshot: LiveRoutingSnapshot | null;
   demoPhase: DemoPhase;
+  elapsedLabel: string;
+  interruptionObserved: boolean;
   pollState: PollState;
   snapshot: LiveRoutingSnapshot;
   startedAt: string | null;
@@ -489,16 +592,18 @@ function getHeroCopy({
   const failoverDetected =
     baselineSnapshot !== null &&
     baselineSnapshot.webRuntime.instanceId !== snapshot.webRuntime.instanceId;
+  const currentServer = getServerLabel(snapshot.webRuntime);
+  const baselineServer = getServerLabel(baselineSnapshot?.webRuntime ?? null);
 
   if (demoPhase === "completed" && failoverDetected) {
     return {
-      badge: "Failover confirmed",
+      badge: "Recovery confirmed",
       badgeTone: "success" as const,
-      buttonLabel: "Run again",
-      title: "The public route moved to a replacement pod.",
-      description: `The browser entry changed from ${getPrimaryLabel(baselineSnapshot?.webRuntime ?? null)} to ${getPrimaryLabel(snapshot.webRuntime)} without reloading the page.`,
-      supportingText:
-        "You can start another run at any time to repeat the sequence for the audience.",
+      buttonLabel: "Run pod recycle demo again",
+      headline: currentServer,
+      title: "Traffic recovered on a replacement server.",
+      description: `The browser route moved from ${baselineServer} to ${currentServer}. This run is derived from live routing snapshots, so the screen stays grounded in the same signal the audience is watching.`,
+      supportingText: `Recovery completed in ${elapsedLabel}. You can rerun the public fallback flow at any time, but the presenter console remains the canonical place to trigger the full server failover demo.`,
     };
   }
 
@@ -506,49 +611,59 @@ function getHeroCopy({
     return {
       badge: "Run timed out",
       badgeTone: "warning" as const,
-      buttonLabel: "Try again",
-      title: "The demo window expired before a pod switch was observed.",
+      buttonLabel: "Run pod recycle demo again",
+      headline: currentServer,
+      title: "The guided timer expired before a route handoff was confirmed.",
       description:
-        "The page kept polling, but it never saw the browser entry move to a replacement pod within the current run.",
+        "The page keeps polling the live routing endpoint, so any later recovery still appears on screen even though the guided run has timed out.",
       supportingText:
-        "Check the monitoring dashboard, then restart the demo when you are ready for another pass.",
+        "Use the presenter console to check server readiness, then restart the demo when you are ready for another pass.",
     };
   }
 
   if (demoPhase === "waitingForFailover") {
     return {
-      badge: pollState === "reconnecting" ? "Waiting to reconnect" : "Watching live",
-      badgeTone: pollState === "reconnecting" ? ("warning" as const) : ("success" as const),
-      buttonLabel: "Demo in progress",
-      title: "Baseline captured. Waiting for the failover event.",
-      description: `The run started ${startedAt ? `at ${formatTimestamp(startedAt)}` : "just now"}. Recycle ${getPrimaryLabel(baselineSnapshot?.webRuntime ?? null)} and this page will confirm the replacement pod once it appears.`,
+      badge: pollState === "reconnecting" ? "Disruption observed" : "Watching failover",
+      badgeTone:
+        pollState === "reconnecting" || interruptionObserved
+          ? ("warning" as const)
+          : ("success" as const),
+      buttonLabel: "Pod recycle demo in progress",
+      headline: baselineServer,
+      title:
+        pollState === "reconnecting"
+          ? "The route is reconnecting after the trigger."
+          : "Baseline captured. Waiting for traffic to move.",
+      description: `The run started ${startedAt ? `at ${formatTimestamp(startedAt)}` : "just now"}. This public screen is watching for the browser route to leave ${baselineServer} and settle on a healthy replacement server.`,
       supportingText:
-        "Keep the iframe open while the networking demo triggers the pod recycle from the companion dashboard.",
+        "This page derives its run state from live routing snapshots only. It does not coordinate with a backend run session, so reconnects and elapsed time are tracked client-side.",
     };
   }
 
   if (demoPhase === "capturingBaseline") {
     return {
-      badge: "Preparing run",
+      badge: "Capturing baseline",
       badgeTone: "warning" as const,
-      buttonLabel: "Demo in progress",
-      title: "Capturing the current pod before the failover test begins.",
+      buttonLabel: "Pod recycle demo in progress",
+      headline: getServerLabel(snapshot.webRuntime),
+      title: "Locking the current server before the rehearsal begins.",
       description:
-        "This short setup step stores the pod that is live before the recycle action happens.",
+        "The page is taking one last routing sample so the audience can compare the original server with the eventual recovery target.",
       supportingText:
-        "The run will begin automatically as soon as the latest routing sample arrives.",
+        "As soon as the latest snapshot arrives, this screen will trigger the public fallback pod recycle path.",
     };
   }
 
   return {
     badge: "Ready",
     badgeTone: "warning" as const,
-    buttonLabel: "Start failover demo",
-    title: "The page is standing by for a guided failover run.",
+    buttonLabel: "Run pod recycle demo",
+    headline: currentServer,
+    title: "The audience screen is ready for a guided failover story.",
     description:
-      "Use a single button press to capture the baseline pod, trigger the recycle, and watch for the reroute.",
+      "Use this route to rehearse the public narrative. For the real networking presentation, start the canonical server failover from the monitor dashboard and leave this screen projected for the audience.",
     supportingText:
-      "Nothing is polling yet. Starting the run captures the baseline pod and begins the live checks.",
+      "Nothing is running yet. Starting this fallback path captures the current server, recycles the active pod, and watches for the route to recover.",
   };
 }
 
@@ -577,9 +692,9 @@ function FlowStepCard({
       <div className="flex items-start gap-3">
         <div
           className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold",
+            "flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors",
             tone === "complete" && "bg-success-solid text-white",
-            tone === "active" && "bg-brand text-brand-foreground",
+            tone === "active" && "bg-brand text-brand-foreground animate-pulse",
             tone === "pending" && "bg-brand-border/70 text-brand-foreground",
             tone === "warning" && "bg-warning-solid text-warning-foreground"
           )}
@@ -595,11 +710,12 @@ function FlowStepCard({
   );
 }
 
-function SummaryStat({ label, value }: { label: string; value: string }) {
+function SummaryStat({ detail, label, value }: { detail: string; label: string; value: string }) {
   return (
     <div className="rounded-[1rem] border border-brand-border/80 bg-brand-surface px-4 py-3">
       <dt className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{label}</dt>
-      <dd className="mt-2 break-all text-sm font-semibold text-foreground">{value}</dd>
+      <dd className="mt-2 text-lg font-semibold text-foreground">{value}</dd>
+      <p className="mt-2 text-xs leading-5 text-muted-foreground">{detail}</p>
     </div>
   );
 }
@@ -613,7 +729,7 @@ function RuntimeCard({
   description: string;
   instance: RuntimeInstance | null;
 }) {
-  const instanceLabel = instance ? getPrimaryLabel(instance) : "Unavailable";
+  const serverLabel = getServerLabel(instance);
 
   return (
     <article className="rounded-[1.25rem] border border-brand-border/80 bg-background/70 p-5">
@@ -622,7 +738,8 @@ function RuntimeCard({
           <p className="text-sm font-medium uppercase tracking-[0.16em] text-muted-foreground">
             {title}
           </p>
-          <p className="mt-2 text-2xl font-semibold text-foreground">{instanceLabel}</p>
+          <p className="mt-2 text-2xl font-semibold text-foreground">{serverLabel}</p>
+          <p className="mt-2 text-sm text-muted-foreground">Pod {getTechnicalLabel(instance)}</p>
         </div>
         <StatusBadge
           label={instance?.platform ?? "offline"}
@@ -682,7 +799,7 @@ function collectRoutingChanges(
   if (previousSnapshot.webRuntime.instanceId !== nextSnapshot.webRuntime.instanceId) {
     changes.push({
       id: `web-${recordedAt}`,
-      message: `Browser entry moved from ${getPrimaryLabel(previousSnapshot.webRuntime)} to ${getPrimaryLabel(nextSnapshot.webRuntime)}.`,
+      message: `Traffic moved from ${getServerLabel(previousSnapshot.webRuntime)} (${getTechnicalLabel(previousSnapshot.webRuntime)}) to ${getServerLabel(nextSnapshot.webRuntime)} (${getTechnicalLabel(nextSnapshot.webRuntime)}).`,
       recordedAt,
     });
   }
@@ -693,7 +810,7 @@ function collectRoutingChanges(
   if (previousApiId !== nextApiId && nextApiId) {
     changes.push({
       id: `api-${recordedAt}`,
-      message: `API upstream moved from ${previousApiId ?? "unavailable"} to ${getPrimaryLabel(nextSnapshot.api.runtime)}.`,
+      message: `API upstream moved from ${getServerLabel(previousSnapshot.api.runtime)} to ${getServerLabel(nextSnapshot.api.runtime)}.`,
       recordedAt,
     });
   }
@@ -701,12 +818,49 @@ function collectRoutingChanges(
   return changes;
 }
 
-function getPrimaryLabel(instance: RuntimeInstance | null): string {
+function getServerLabel(instance: RuntimeInstance | null): string {
+  if (!instance) {
+    return "Unavailable";
+  }
+
+  return instance.nodeName ?? instance.podName ?? instance.instanceId;
+}
+
+function getTechnicalLabel(instance: RuntimeInstance | null): string {
   if (!instance) {
     return "Unavailable";
   }
 
   return instance.podName ?? instance.instanceId;
+}
+
+function getElapsedLabel({
+  completedAt,
+  currentPhase,
+  nowMs,
+  startedAt,
+}: {
+  completedAt: string | null;
+  currentPhase: DemoPhase;
+  nowMs: number;
+  startedAt: string | null;
+}) {
+  if (!startedAt) {
+    return currentPhase === "idle" ? "Standing by" : "Starting";
+  }
+
+  const startedAtMs = new Date(startedAt).getTime();
+  if (Number.isNaN(startedAtMs)) {
+    return "Unavailable";
+  }
+
+  const endMs = completedAt ? new Date(completedAt).getTime() : nowMs;
+  const elapsedMs = Math.max(0, endMs - startedAtMs);
+  const totalSeconds = Math.floor(elapsedMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 function formatTimestamp(value: string): string {

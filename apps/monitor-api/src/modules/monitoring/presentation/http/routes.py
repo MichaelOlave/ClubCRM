@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Request, WebSocket
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket
 from pydantic import BaseModel, Field
 from src.bootstrap.dependencies import (
     get_kubernetes_adapter,
@@ -13,6 +14,7 @@ from src.bootstrap.dependencies import (
     require_admin_token,
     require_agent_token,
 )
+from src.config import get_settings
 from src.modules.monitoring.application.services import WebSocketHub
 from src.modules.monitoring.application.state import MonitoringState
 from src.modules.monitoring.domain.models import (
@@ -20,6 +22,7 @@ from src.modules.monitoring.domain.models import (
     ContainerSnapshot,
 )
 from src.modules.monitoring.infrastructure.kubernetes import KubernetesCommandAdapter
+from src.modules.monitoring.infrastructure.live_routing import fetch_live_routing_snapshot
 from src.modules.monitoring.infrastructure.vm_power import VmPowerAdapter
 
 router = APIRouter(tags=["monitoring"])
@@ -72,6 +75,29 @@ class KubernetesRecycleRequest(BaseModel):
 @router.get("/api/snapshot")
 async def get_snapshot(state: MonitoringStateDep) -> dict:
     return await state.snapshot()
+
+
+@router.get("/api/live-routing")
+async def get_live_routing_snapshot() -> dict:
+    try:
+        endpoint, payload = await fetch_live_routing_snapshot(get_settings().clubcrm.demo_url)
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=exc.response.status_code,
+            detail=f"Live routing request failed with HTTP {exc.response.status_code}.",
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to reach the live ClubCRM failover endpoint.",
+        ) from exc
+
+    if isinstance(payload, dict):
+        payload.setdefault("api", {})
+        if isinstance(payload["api"], dict):
+            payload["api"].setdefault("endpoint", endpoint)
+
+    return payload
 
 
 @router.post("/api/agents/{vm_id}/heartbeat", response_model=HeartbeatResponse)

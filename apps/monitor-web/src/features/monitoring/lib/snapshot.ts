@@ -21,6 +21,14 @@ export function createEmptySnapshot(): MonitoringSnapshot {
       pvcs: [],
       longhorn_volumes: [],
     },
+    demo: {
+      failover_target: null,
+      node_vm_map: {},
+      ready_node_names: [],
+      healthy_vm_count: 0,
+      running_web_pods: [],
+      standby_node_names: [],
+    },
     events: [],
     generated_at: new Date(0).toISOString(),
   };

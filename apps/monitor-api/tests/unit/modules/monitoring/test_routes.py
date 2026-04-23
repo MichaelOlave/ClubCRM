@@ -19,10 +19,41 @@ class MonitoringRouteTests(unittest.TestCase):
         self.assertIn("service", payload)
         self.assertIn("vms", payload)
         self.assertIn("kubernetes", payload)
+        self.assertIn("demo", payload)
         self.assertIn("storage_classes", payload["kubernetes"])
         self.assertIn("pvcs", payload["kubernetes"])
         self.assertIn("longhorn_volumes", payload["kubernetes"])
         self.assertIn("events", payload)
+
+    @patch("src.modules.monitoring.presentation.http.routes.fetch_live_routing_snapshot")
+    def test_live_routing_proxies_clubcrm_snapshot(self, mock_fetch_live_routing_snapshot) -> None:
+        mock_fetch_live_routing_snapshot.return_value = (
+            "http://clubcrm.local/system/health/live-routing",
+            {
+                "checkedAt": "2026-04-18T15:30:00.000Z",
+                "webRuntime": {
+                    "service": "clubcrm-web",
+                    "instanceId": "clubcrm-web-abc123",
+                    "podName": "clubcrm-web-abc123",
+                    "namespace": "clubcrm",
+                    "nodeName": "server2",
+                    "platform": "kubernetes",
+                },
+                "api": {
+                    "connected": True,
+                    "status": "ok",
+                    "runtime": None,
+                },
+            },
+        )
+
+        response = self.client.get("/api/live-routing")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["api"]["endpoint"],
+            "http://clubcrm.local/system/health/live-routing",
+        )
 
     def test_heartbeat_requires_agent_token(self) -> None:
         response = self.client.post(

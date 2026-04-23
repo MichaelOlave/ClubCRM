@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+from pathlib import Path
+import shutil
 
 from src.config.settings import SshVmPowerSettings
 from src.modules.monitoring.infrastructure.vm_power import VmPowerActionResult
@@ -12,15 +15,27 @@ class SshVmPowerAdapter:
         self._settings = settings
 
     def _is_configured(self) -> bool:
+        return bool(self._settings.remote_wrapper) and (
+            self._has_remote_wrapper() or self._has_local_wrapper()
+        )
+
+    def _has_remote_wrapper(self) -> bool:
         return bool(
             self._settings.ssh_host
             and self._settings.ssh_user
             and self._settings.remote_wrapper
         )
 
+    def _has_local_wrapper(self) -> bool:
+        if not self._settings.remote_wrapper:
+            return False
+
+        wrapper_path = Path(self._settings.remote_wrapper)
+        return wrapper_path.is_file() and os.access(wrapper_path, os.X_OK)
+
     def _command_prefix(self) -> list[str]:
-        if not self._is_configured():
-            raise RuntimeError("SSH VM power settings are not configured.")
+        if not self._has_remote_wrapper():
+            raise RuntimeError("Remote SSH VM power settings are not configured.")
 
         command = [
             "ssh",
@@ -33,7 +48,18 @@ class SshVmPowerAdapter:
         return command
 
     def _run_wrapper(self, *args: str) -> str:
-        command = [*self._command_prefix(), self._settings.remote_wrapper, *args]
+        if self._has_remote_wrapper():
+            command = [*self._command_prefix(), self._settings.remote_wrapper, *args]
+        elif self._has_local_wrapper():
+            local_python = os.getenv("MONITOR_SSH_VM_POWER_PYTHON")
+            command = [
+                local_python or shutil.which("python3") or "python3",
+                self._settings.remote_wrapper,
+                *args,
+            ]
+        else:
+            raise RuntimeError("SSH VM power settings are not configured.")
+
         completed = subprocess.run(
             command,
             capture_output=True,

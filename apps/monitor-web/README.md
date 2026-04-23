@@ -25,5 +25,10 @@ pnpm test:monitor-web
 For a live-linked local dashboard, copy `.env.monitoring.dashboard.example` to
 `.env.monitoring.dashboard` and run `pnpm dev:monitor-web:live`.
 
+By default, the monitoring dashboard should point at the cluster-facing ClubCRM demo route on
+`http://clubcrm.local/demo/failover`. Only override `NEXT_PUBLIC_CLUBCRM_DEMO_URL` or
+`CLUBCRM_DEMO_URL` with a localhost value when you intentionally want the companion stack to poll a
+local main-web process instead of the cluster ingress.
+
 Set `CONTROL_MODE_PASSWORD` when you want the operational control mode to require a password. The
 unlock is cached in a browser cookie for 12 hours, while demo mode remains available without it.
