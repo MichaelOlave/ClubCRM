@@ -1,14 +1,15 @@
 # Monitor API
 
-Standalone FastAPI control plane for the ClubCRM networking demo.
+Standalone FastAPI event stream for the ClubCRM networking demo.
 
-This app is intentionally separate from the main ClubCRM `apps/api` service. It accepts VM agent
-heartbeats, runs synthetic checks, polls Kubernetes and VM power state, exposes a read-only
-snapshot feed, and handles destructive demo controls behind explicit endpoints.
+This app is intentionally separate from the main ClubCRM `apps/api` service. The live host accepts
+live Kubernetes and Longhorn state via snapshot plus WebSocket event frames for the monitoring
+dashboard.
 
 See [docs/deployment/companion-monitoring-stack.md](../../docs/deployment/companion-monitoring-stack.md)
-for the full architecture and data-flow guide, and
-[docs/deployment/monitoring-stack.md](../../docs/deployment/monitoring-stack.md) for deployment steps.
+for the architecture guide, and
+[docs/deployment/monitoring-stack.md](../../docs/deployment/monitoring-stack.md) for deployment
+steps.
 
 ## Local Commands
 
@@ -17,38 +18,54 @@ From the repository root:
 ```bash
 pnpm bootstrap:monitoring
 pnpm dev:monitor-api
-pnpm dev:monitor-api:live
 pnpm lint:monitor-api
 pnpm check:monitor-api
 pnpm test:monitor-api
 ```
 
+## API Surface
+
+The live API currently exposes:
+
+- `GET /health`
+- `GET /api/snapshot`
+- `WS /ws/stream`
+
+`GET /api/snapshot` returns a live cluster snapshot with these top-level sections:
+
+- `type`
+- `ts`
+- `nodes`
+- `pods`
+- `volumes`
+- `replicas`
+
+The Longhorn collections are additive Phase 2 work:
+
+- `volumes` tracks attachment node, workload correlation, state, robustness, and health
+- `replicas` tracks per-volume replica health and node placement
+
 ## Environment
 
 Important environment variables:
 
+- `MONITOR_API_TITLE`
+- `MONITOR_API_HOST`
 - `MONITOR_API_PORT`
+- `MONITOR_API_BASE_URL`
 - `MONITOR_ADMIN_TOKEN`
-- `MONITOR_AGENT_TOKENS`
-- `MONITOR_TARGET_VMS`
-- `MONITOR_SYNTHETIC_TARGET_URL`
-- `MONITOR_VM_PROVIDER` to select `orbstack`, `proxmox`, or `ssh`
-- `MONITOR_ORBSTACK_SSH_HOST` and `MONITOR_ORBSTACK_SSH_USER` when the monitor API runs on a
-  separate VM
-- local `orbctl` availability when the monitor API runs on the same Mac host as OrbStack
-- `MONITOR_ORBSTACK_REMOTE_WRAPPER`
-- `MONITOR_PROXMOX_BASE_URL`, `MONITOR_PROXMOX_TOKEN_ID`, and `MONITOR_PROXMOX_TOKEN_SECRET`
-  when VM control should go through Proxmox instead of OrbStack
-- `MONITOR_SSH_VM_POWER_HOST`, `MONITOR_SSH_VM_POWER_USER`, and
-  `MONITOR_SSH_VM_POWER_REMOTE_WRAPPER` when VM control should go through a restricted SSH wrapper
-- `MONITOR_K8S_SNAPSHOT_FILE`
+- `CLUSTER_VIEWER_PUBLIC`
+- `MONITOR_CLUSTER_KUBECONFIG`
+- `MONITOR_CLUSTER_CONTEXT`
+- `MONITOR_CLUSTER_IN_CLUSTER`
+- `MONITOR_CLUSTER_SNAPSHOT_FILE`
+- `MONITOR_LONGHORN_ENABLED`
+- `MONITOR_CLUSTER_HEARTBEAT_SECONDS`
+- `MONITOR_CLUSTER_WATCH_TIMEOUT_SECONDS`
+- `MONITOR_DISABLE_BACKGROUND_TASKS`
 
-The app keeps monitoring history in memory in v1. A restart resets the rolling windows and event
+`MONITOR_LONGHORN_ENABLED` defaults to `true`. Disable it when the target cluster does not have the
+Longhorn CRDs installed and you only want node and pod watches.
+
+The app keeps its current cluster state and recent event stream in memory, so a restart resets the
 timeline.
-
-When `kubectl` access is available, the snapshot feed also includes Kubernetes storage details for
-the networking final, including storage classes, PVC status, and Longhorn volume health.
-
-For a full local control plane against the live environment, copy `.env.monitoring.live.example`
-to `.env.monitoring.live` and run `pnpm dev:monitor-api:live` or `pnpm dev:monitor:live`. Live
-VM heartbeat connectors still require the guest agents to reach your local monitor API address.

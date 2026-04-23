@@ -1,1 +1,0 @@
-"""OrbStack adapter tests."""

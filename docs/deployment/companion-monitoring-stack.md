@@ -1,95 +1,85 @@
 # Companion Monitoring Stack Guide
 
-This guide documents the separate monitoring and control plane used for the ClubCRM networking demo.
+This guide documents the separate cluster visualizer used for the ClubCRM networking demo.
 
-It is intentionally not part of the main ClubCRM product surface. The companion stack exists so the
-team can keep a live dashboard available while demo VMs, pods, or storage-backed workloads are
-stopped, restarted, or rescheduled.
+It is intentionally not part of the main ClubCRM product surface. The stack exists so the team can
+watch Kubernetes node health, pod placement, and Longhorn volume behavior from outside the cluster
+while nodes or pods are being disrupted on purpose.
 
-See [Monitoring Stack Deployment](monitoring-stack.md) for the host-level deployment steps and
+See [Monitoring Stack Deployment](monitoring-stack.md) for host-level deployment steps and
 [k3s + Kubero + Longhorn Runbook](k3s-kubero-longhorn.md) for the cluster-side rollout.
 
 ## Why This Stack Exists
 
-- keep the networking demo observable even when the main app is unstable on purpose
-- provide one place to watch VM telemetry, container state, pod state, PVC state, and Longhorn
-  health
-- give the presenters guarded VM, container, and pod controls without exposing arbitrary shell
-- embed the live ClubCRM failover page so the audience can see routing behavior change in real time
+- keep the networking demo observable even when the in-cluster app is unstable on purpose
+- show current node, pod, and Longhorn state in one live dashboard
+- surface pod movement, readiness changes, and storage health events as they happen
+- keep v1 focused on visualization instead of destructive control actions
 
 ## What It Is Not
 
 - not part of the normal ClubCRM devcontainer workflow
 - not the source of truth for ClubCRM business data
 - not a replacement for the main `apps/web` and `apps/api` applications
-- not a generic infrastructure admin console
+- not a VM, container, or general infrastructure admin console
+- not a control plane for powering off nodes or recycling workloads
 
 ## Repo Map
 
-- `apps/monitor-api` is the FastAPI control plane
+- `apps/monitor-api` is the standalone FastAPI cluster-read backend
 - `apps/monitor-web` is the standalone Next.js dashboard
 - `infra/monitoring/docker-compose.monitoring.yml` deploys the pair on a separate host
-- `infra/monitoring/orbstack/clubcrm-monitor-orbstack.sh` is the narrow OrbStack wrapper for
-  remote power control
-- `infra/monitoring/vm-agent/` contains the guest agent, optional dependencies, and sample
-  `systemd` unit
-- `infra/monitoring/fixtures/k8s-snapshot.json` is the repeatable snapshot input for offline or
-  pre-demo rehearsals
+- `infra/monitoring/fixtures/k8s-snapshot.json` is the repeatable offline fixture for rehearsals
 
 ## Runtime Architecture
 
 ```text
-demo browser
-    |
-    v
-monitor-web  ------------------------------> embedded ClubCRM demo URL
-    |                                                   |
-    | initial snapshot + control proxies                | live app surface
-    v                                                   v
-monitor-api -----------------------------> synthetic HTTP check target
-    |                  \
-    |                   \--> kubectl or snapshot file
-    |
-    +--> OrbStack local CLI or SSH wrapper
-    |
-    +<-- VM agent heartbeats from Server1/Server2/Server3
+browser
+   |
+   v
+monitor-web
+   |
+   | initial snapshot + WebSocket stream
+   v
+monitor-api
+   | \
+   |  \--> mounted kubeconfig
+   |
+   +--> optional offline fixture file
 ```
 
-The monitoring stack keeps a single in-memory view of the demo environment and rebroadcasts that
-view to connected browsers once per second.
-
-Current live deployment note:
-
-- the dashboard host is `DemoControlPlaneServer` at `192.168.139.213`
-- `monitor-api` is live on `:8010`
-- the dashboard is served on `:3001`
-- the direct `monitor-web` container is exposed on `:3002`
-- live VM agent IDs are `Server1`, `Server2`, and `Server3`
+The stack keeps a single in-memory cluster view. `monitor-api` sends the initial snapshot over HTTP
+and WebSocket, then broadcasts snapshot heartbeats plus event frames as watch updates arrive.
 
 ## `monitor-api` Responsibilities
 
-`apps/monitor-api` owns the monitoring state and all runtime polling loops.
+At startup `apps/monitor-api` can:
 
-It starts these background tasks during FastAPI startup unless
-`MONITOR_DISABLE_BACKGROUND_TASKS=true`:
+- load an initial fixture from `MONITOR_CLUSTER_SNAPSHOT_FILE`
+- connect to Kubernetes with `MONITOR_CLUSTER_KUBECONFIG` or in-cluster auth
+- watch Kubernetes nodes and pods through the official Kubernetes client
+- watch Longhorn volumes and replicas when `MONITOR_LONGHORN_ENABLED=true`
+- normalize those inputs into a consistent snapshot plus event stream
+- protect viewer access with `MONITOR_ADMIN_TOKEN` when `CLUSTER_VIEWER_PUBLIC=false`
 
-- synthetic HTTP checks against the configured ClubCRM target
-- Kubernetes polling through `kubectl` or a snapshot file
-- OrbStack VM power-state polling
-- WebSocket snapshot broadcasts every second
-
-It also exposes the monitoring API surface:
+Its live API surface is:
 
 - `GET /health`
 - `GET /api/snapshot`
-- `POST /api/agents/{vm_id}/heartbeat`
-- `POST /api/control/vms/{vm_id}/power`
-- `POST /api/control/containers/{vm_id}/{container_name}`
-- `POST /api/control/k8s/pods/{namespace}/{pod_name}/recycle`
 - `WS /ws/stream`
 
-The API keeps history and the event timeline in memory in v1, so restarting `monitor-api` resets
-the rolling charts and recent events.
+The live snapshot currently includes root-level fields:
+
+- `type`
+- `ts`
+- `nodes`
+- `pods`
+- `volumes`
+- `replicas`
+
+`nodes` and `pods` are the Phase 1 visualizer contract. `volumes` and `replicas` are the initial
+Longhorn visibility layer; they track attachment node, workload correlation, robustness, health,
+replica placement, and replica health.
 
 ## `monitor-web` Responsibilities
 
@@ -97,175 +87,43 @@ the rolling charts and recent events.
 
 It is responsible for:
 
-- fetching the first monitoring snapshot on the server
-- connecting to the live WebSocket stream in the browser
-- rendering panels for VM health, Docker/container state, Kubernetes state, storage, latency, and
-  the event timeline
-- proxying destructive actions through internal Next.js route handlers that attach
-  `MONITOR_ADMIN_TOKEN` server-side before forwarding to `monitor-api`
-- resolving the embedded ClubCRM iframe target, preferring `/demo/failover` and falling back to
-  `/system/health` when needed
-
-## Data Sources And Control Paths
-
-### 1. VM Agent Heartbeats
-
-Each demo VM can run `infra/monitoring/vm-agent/monitor_vm_agent.py`.
-
-On every loop, the agent:
-
-- collects CPU and memory utilization
-- collects Docker container state, using the Docker SDK when present and falling back to the Docker
-  CLI when needed
-- posts that data to `POST /api/agents/{vm_id}/heartbeat`
-- receives queued container commands in the heartbeat response
-- executes those commands locally
-- reports command results on the next heartbeat
-
-This is how container-level actions are kept narrow and auditable: the control plane queues a named
-action, and the agent executes only the command type it already understands.
-
-In the current live deployment, the replacement cluster nodes post to:
-
-```text
-http://100.95.238.93:8010
-```
-
-That address is used because the replacement servers could not route to `host.internal` in the
-live environment.
-
-### 2. Synthetic Health Checks
-
-`monitor-api` sends repeated HTTP requests to `MONITOR_SYNTHETIC_TARGET_URL` to answer the simple
-question, "Is the ClubCRM app reachable right now?"
-
-For local development the default target is `http://localhost:8000/health`. For the live
-networking demo it should be changed to `http://clubcrm.local/system/health` so the synthetic path
-travels through ingress and the public web surface.
-
-### 3. Kubernetes Visibility
-
-The monitoring API supports two Kubernetes input modes:
-
-1. live `kubectl` access from the monitoring host
-2. a JSON file defined by `MONITOR_K8S_SNAPSHOT_FILE`
-
-When Kubernetes data is available, the monitoring snapshot includes:
-
-- nodes
-- pods across all namespaces
-- storage classes
-- PVC state merged with backing PV state
-- Longhorn volume state from `volumes.longhorn.io`
-
-Snapshot-file mode is useful when the UI needs to be stable before kubeconfig or live cluster access
-is ready.
-
-### 4. VM Power Control
-
-The monitoring API does not expose arbitrary remote shell access.
-
-Instead, VM power control now supports three backend families:
-
-- OrbStack:
-  local mode calls `orbctl` directly on the monitoring host
-- OrbStack:
-  remote mode SSHes to a dedicated user and invokes
-  `infra/monitoring/orbstack/clubcrm-monitor-orbstack.sh`
-- Proxmox:
-  API mode talks to the Proxmox REST API with an API token when
-  `MONITOR_VM_PROVIDER=proxmox`
-- SSH wrapper:
-  remote mode SSHes to a reachable host and invokes a restricted wrapper when
-  `MONITOR_VM_PROVIDER=ssh`
-
-The OrbStack wrapper intentionally limits the command surface to:
-
-- `list`
-- `power start <machine>`
-- `power stop <machine>`
-- `power restart <machine>`
-
-### 5. Browser Control Flow
-
-The browser talks to `monitor-web`, not directly to `monitor-api`, for destructive actions.
-
-That keeps the admin token on the server side:
-
-1. the user clicks a guarded action in the dashboard
-2. `monitor-web` posts to its own internal `/api/control/...` route
-3. that route forwards the request to `monitor-api` with `Authorization: Bearer <admin token>`
-4. `monitor-api` either executes the action immediately or queues it for the VM agent
-5. the result appears back in the snapshot stream and event timeline
-
-## Local Commands
-
-Run these from the repository root:
-
-```bash
-pnpm bootstrap:monitoring
-pnpm dev:monitor
-pnpm dev:monitor-api
-pnpm dev:monitor-web
-pnpm verify:monitoring
-```
-
-Focused commands also exist for linting, tests, API checks, and the monitor-web production build.
-Those scripts are intentionally separate from the main ClubCRM `pnpm dev`, `pnpm build`, and
-`pnpm verify` flows.
+- fetching the first snapshot on the server
+- connecting browsers to `WS /ws/stream`
+- rendering the cluster graph, pod placement, Longhorn storage panel, and recent event feed
+- showing whether the stream is live, reconnecting, or offline
 
 ## Environment Reference
 
-Most monitoring defaults live in `.env.example`, while deployment-oriented overrides live in
-`.env.production.example`.
+Most defaults live in [`.env.example`](../../.env.example).
 
-| Group                 | Key variables                                                                                                                                                                                                        | Purpose                                                                                                   |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| API and web addresses | `MONITOR_API_PORT`, `MONITOR_API_BASE_URL`, `NEXT_PUBLIC_MONITOR_API_BASE_URL`, `NEXT_PUBLIC_MONITOR_WS_URL`, `MONITOR_WEB_PORT`                                                                                     | control where `monitor-api` listens, where `monitor-web` reaches it, and which WebSocket URL browsers use |
-| Auth                  | `MONITOR_ADMIN_TOKEN`, `CONTROL_MODE_PASSWORD`, `MONITOR_AGENT_TOKENS`, `MONITOR_TARGET_VMS`                                                                                                                         | separate dashboard operator access, admin controls, and per-VM agent authentication                       |
-| Synthetic monitoring  | `MONITOR_SYNTHETIC_TARGET_URL`, `MONITOR_SYNTHETIC_INTERVAL_SECONDS`, `MONITOR_SYNTHETIC_TIMEOUT_SECONDS`, `MONITOR_HISTORY_LIMIT`, `MONITOR_EVENT_LIMIT`, `MONITOR_STALE_AFTER_SECONDS`, `MONITOR_LATENCY_SPIKE_MS` | tune the synthetic health loop and dashboard history windows                                              |
-| VM power provider     | `MONITOR_VM_PROVIDER`                                                                                                                                                                                                | select `orbstack`, `proxmox`, or `ssh` for VM power polling and actions                                   |
-| OrbStack control      | `MONITOR_ORBSTACK_SSH_HOST`, `MONITOR_ORBSTACK_SSH_USER`, `MONITOR_ORBSTACK_SSH_PORT`, `MONITOR_ORBSTACK_SSH_IDENTITY_FILE`, `MONITOR_ORBSTACK_REMOTE_WRAPPER`, `MONITOR_ORBSTACK_POLL_INTERVAL_SECONDS`             | switch between local `orbctl` mode and remote-wrapper mode                                                |
-| Proxmox control       | `MONITOR_PROXMOX_BASE_URL`, `MONITOR_PROXMOX_TOKEN_ID`, `MONITOR_PROXMOX_TOKEN_SECRET`, `MONITOR_PROXMOX_VERIFY_TLS`, `MONITOR_PROXMOX_TIMEOUT_SECONDS`, `MONITOR_PROXMOX_POLL_INTERVAL_SECONDS`                     | use the Proxmox API for VM power polling and actions                                                      |
-| SSH VM control        | `MONITOR_SSH_VM_POWER_HOST`, `MONITOR_SSH_VM_POWER_USER`, `MONITOR_SSH_VM_POWER_PORT`, `MONITOR_SSH_VM_POWER_IDENTITY_FILE`, `MONITOR_SSH_VM_POWER_REMOTE_WRAPPER`, `MONITOR_SSH_VM_POWER_POLL_INTERVAL_SECONDS`     | use a restricted SSH wrapper for VM power polling and actions                                             |
-| Kubernetes and iframe | `MONITOR_K8S_SNAPSHOT_FILE`, `MONITOR_K8S_POLL_INTERVAL_SECONDS`, `NEXT_PUBLIC_CLUBCRM_DEMO_URL`, `CLUBCRM_DEMO_URL`                                                                                                 | control how Kubernetes data is sourced and which ClubCRM page is embedded                                 |
+| Group            | Key variables                                                                                                    | Purpose                                                             |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| API              | `MONITOR_API_TITLE`, `MONITOR_API_HOST`, `MONITOR_API_PORT`, `MONITOR_API_BASE_URL`                              | configure the FastAPI service                                       |
+| Viewer access    | `MONITOR_ADMIN_TOKEN`, `CLUSTER_VIEWER_PUBLIC`                                                                   | optionally require a bearer token for snapshot and dashboard access |
+| Cluster input    | `MONITOR_CLUSTER_KUBECONFIG`, `MONITOR_CLUSTER_CONTEXT`, `MONITOR_CLUSTER_IN_CLUSTER`                            | choose how `monitor-api` connects to Kubernetes                     |
+| Longhorn         | `MONITOR_LONGHORN_ENABLED`                                                                                       | enable or disable Longhorn CRD watches                              |
+| Fallback fixture | `MONITOR_CLUSTER_SNAPSHOT_FILE`                                                                                  | preload a snapshot when live access is unavailable                  |
+| Runtime tuning   | `MONITOR_CLUSTER_HEARTBEAT_SECONDS`, `MONITOR_CLUSTER_WATCH_TIMEOUT_SECONDS`, `MONITOR_DISABLE_BACKGROUND_TASKS` | tune the watch and event loop behavior                              |
+| Frontend         | `MONITOR_WEB_PORT`, `NEXT_PUBLIC_MONITOR_API_BASE_URL`, `NEXT_PUBLIC_MONITOR_WS_URL`                             | configure how browsers reach the API and dashboard                  |
 
 ## Deployment Modes
 
-### Same Mac Host As OrbStack
+### Live Kubeconfig Mode
 
-Use this when `monitor-api` runs on the same machine that already has `orbctl`.
+Use this for the real demo shape.
 
-- simplest control path
-- no SSH wrapper required
-- good for local rehearsal on the OrbStack host
+- `monitor-api` and `monitor-web` run off-cluster on a separate host
+- the monitoring host mounts a kubeconfig into `monitor-api`
+- node and pod watches start automatically
+- Longhorn watches start automatically unless `MONITOR_LONGHORN_ENABLED=false`
 
-### Separate Monitoring VM
+### Snapshot Fixture Mode
 
-Use this for the actual networking demo shape.
+Use this for UI work and rehearsal when cluster access is not ready yet.
 
-- `monitor-api` and `monitor-web` run on a host that stays alive even while cluster VMs are cycled
-- the monitoring host reaches OrbStack through the restricted SSH wrapper
-- the monitoring host also holds `kubectl` access to the cluster or a mounted snapshot file
-
-### Snapshot-Driven Mode
-
-Use this when live kubeconfig is not ready yet.
-
-- point `MONITOR_K8S_SNAPSHOT_FILE` at the sample or generated JSON snapshot
-- keep the dashboard shape stable for UI rehearsals
-- swap to live `kubectl` later without changing the dashboard surface
-
-## Operator Checklist
-
-- start `monitor-api` and `monitor-web`
-- confirm `GET /health` and `GET /api/snapshot` respond
-- confirm all target VMs are present in `MONITOR_TARGET_VMS`
-- confirm guest agents are heartbeating and container state is visible
-- confirm `kubectl` or snapshot-file data is appearing in the Kubernetes panels
-- set `MONITOR_SYNTHETIC_TARGET_URL` and `NEXT_PUBLIC_CLUBCRM_DEMO_URL` for the live environment
-- rehearse one VM power action, one container restart, and one pod recycle
-- remember that restarting `monitor-api` clears in-memory history by design
+- point `MONITOR_CLUSTER_SNAPSHOT_FILE` at the checked-in fixture or another captured snapshot
+- keep the dashboard shape stable during frontend work
+- skip live Kubernetes and Longhorn watches until kubeconfig access is available
 
 ## Troubleshooting
 
@@ -273,24 +131,15 @@ Use this when live kubeconfig is not ready yet.
   Check `MONITOR_API_BASE_URL`, `NEXT_PUBLIC_MONITOR_API_BASE_URL`, and
   `NEXT_PUBLIC_MONITOR_WS_URL`.
 
-- VM tiles never update:
-  Check the guest-agent environment file, `MONITOR_AGENT_VM_ID`, `MONITOR_AGENT_TOKEN`, and reachability
-  to `MONITOR_API_BASE_URL`.
+- Snapshot returns empty state in live mode:
+  Check `MONITOR_CLUSTER_KUBECONFIG`, `MONITOR_CLUSTER_CONTEXT`, and the mounted kubeconfig file.
 
-- The dashboard shows fresh VM heartbeats but the embedded ClubCRM page still points at the retired
-  cluster:
-  Update `/etc/hosts` on `DemoControlPlaneServer` so `clubcrm.local` and `kubero.local` point to
-  `100.122.118.85`.
+- Longhorn fields stay empty while nodes and pods work:
+  Confirm the Longhorn CRDs exist in the target cluster and that `MONITOR_LONGHORN_ENABLED=true`.
+  Set `MONITOR_LONGHORN_ENABLED=false` when the target cluster does not have Longhorn installed.
 
-- Power controls fail:
-  Check whether the monitoring host has local `orbctl` access or a valid SSH path to the wrapper.
-
-- Kubernetes panels show no data:
-  Install `kubectl` with cluster access or set `MONITOR_K8S_SNAPSHOT_FILE` to a readable JSON file.
-
-- The embedded ClubCRM page points to the wrong route:
-  Set `NEXT_PUBLIC_CLUBCRM_DEMO_URL` explicitly. The dashboard will try `/demo/failover` first and
-  then `/system/health`.
+- Live cluster access is not ready yet:
+  Set `MONITOR_CLUSTER_SNAPSHOT_FILE` to a readable JSON file that matches the live snapshot shape.
 
 - History disappears after a restart:
-  That is expected in v1 because `monitor-api` stores snapshot history in memory only.
+  That is expected in v1 because `monitor-api` stores cluster state and recent events in memory.

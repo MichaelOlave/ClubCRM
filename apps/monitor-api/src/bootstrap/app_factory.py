@@ -4,10 +4,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from src.bootstrap.dependencies import (
+    build_cluster_runtime,
+    build_cluster_state,
+    build_event_bus,
     build_kubernetes_adapter,
-    build_monitoring_runtime,
-    build_monitoring_state,
-    build_vm_power_adapter,
     build_websocket_hub,
 )
 from src.config import get_settings
@@ -19,22 +19,24 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        monitoring_state = build_monitoring_state(settings)
+        cluster_state = build_cluster_state()
+        event_bus = build_event_bus()
         websocket_hub = build_websocket_hub()
-        vm_power_adapter = build_vm_power_adapter(settings)
         kubernetes_adapter = build_kubernetes_adapter(settings)
-        runtime = build_monitoring_runtime(
+        runtime = build_cluster_runtime(
             settings=settings,
-            monitoring_state=monitoring_state,
+            state=cluster_state,
+            event_bus=event_bus,
             websocket_hub=websocket_hub,
-            vm_power_adapter=vm_power_adapter,
             kubernetes_adapter=kubernetes_adapter,
         )
-        app.state.monitoring_state = monitoring_state
+
+        app.state.cluster_state = cluster_state
+        app.state.event_bus = event_bus
         app.state.websocket_hub = websocket_hub
-        app.state.vm_power_adapter = vm_power_adapter
         app.state.kubernetes_adapter = kubernetes_adapter
-        app.state.monitoring_runtime = runtime
+        app.state.cluster_runtime = runtime
+
         background_tasks_enabled = (
             os.getenv("MONITOR_DISABLE_BACKGROUND_TASKS", "").strip().lower()
             not in {"1", "true", "yes", "on"}

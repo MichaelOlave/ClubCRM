@@ -14,8 +14,8 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ClubCRM Monitor",
-  description: "Companion monitoring dashboard for the ClubCRM networking demo.",
+  title: "ClubCRM Cluster Visualizer",
+  description: "Companion cluster visualizer for the ClubCRM networking demo.",
 };
 
 export default function RootLayout({
