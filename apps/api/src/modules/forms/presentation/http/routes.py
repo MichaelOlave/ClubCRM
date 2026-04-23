@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, EmailStr
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from src.bootstrap.dependencies import (
+    get_app_settings,
     get_audit_log_repository,
     get_club_repository,
     get_dashboard_summary_cache,
@@ -9,7 +12,9 @@ from src.bootstrap.dependencies import (
     get_join_request_store,
     get_member_repository,
     get_membership_repository,
+    get_redis_client,
 )
+from src.infrastructure.redis.client import RedisClient
 from src.modules.audit.application.ports.audit_log_repository import AuditLogRepository
 from src.modules.audit.presentation.http.helpers import record_audit_action
 from src.modules.auth.domain.entities import AppAccess
@@ -31,6 +36,8 @@ from src.modules.forms.application.queries.list_pending_join_requests import (
     ListPendingJoinRequests,
 )
 from src.modules.forms.domain.entities import JoinRequest
+from src.modules.forms.presentation.http.limits import TEXT_LIMITS
+from src.modules.forms.presentation.http.rate_limit import PublicJoinRequestRateLimiter
 from src.modules.members.application.ports.member_repository import MemberRepository
 from src.modules.memberships.application.ports.membership_repository import MembershipRepository
 from src.presentation.http.request_context import (
@@ -42,11 +49,20 @@ router = APIRouter(prefix="/forms", tags=["forms"])
 
 
 class JoinRequestBody(BaseModel):
-    submitter_name: str
+    submitter_name: Annotated[str, Field(max_length=TEXT_LIMITS["member_name"])]
     submitter_email: EmailStr
-    student_id: str | None = None
-    role: str | None = None
-    message: str | None = None
+    student_id: Annotated[str | None, Field(max_length=TEXT_LIMITS["student_id"])] = None
+    role: Annotated[str | None, Field(max_length=TEXT_LIMITS["join_request_role"])] = None
+    message: Annotated[str | None, Field(max_length=TEXT_LIMITS["join_request_message"])] = None
+
+    @field_validator("submitter_email")
+    @classmethod
+    def validate_submitter_email_length(cls, value: EmailStr) -> EmailStr:
+        if len(str(value)) > TEXT_LIMITS["email"]:
+            raise ValueError(
+                f"Value error, email must have at most {TEXT_LIMITS['email']} characters"
+            )
+        return value
 
 
 class JoinRequestResponse(BaseModel):
@@ -78,6 +94,12 @@ class ReviewResponse(BaseModel):
     status: str
 
 
+class PublicJoinRequestContextResponse(BaseModel):
+    club_id: str
+    club_name: str
+    club_description: str
+
+
 def _normalize_optional_text(value: str | None) -> str | None:
     if value is None:
         return None
@@ -103,17 +125,48 @@ def _to_response(join_request: JoinRequest) -> JoinRequestResponse:
     )
 
 
+@router.get(
+    "/join-request-context/{club_identifier}",
+    response_model=PublicJoinRequestContextResponse,
+)
+def get_public_join_request_context(
+    club_identifier: str,
+    club_repository: ClubRepository = Depends(get_club_repository),  # noqa: B008
+) -> PublicJoinRequestContextResponse:
+    club = club_repository.get_club_by_slug(None, club_identifier)
+    if club is None:
+        club = club_repository.get_club(club_identifier)
+
+    if club is None:
+        raise HTTPException(status_code=404, detail="Club not found")
+
+    return PublicJoinRequestContextResponse(
+        club_id=club.id,
+        club_name=club.name,
+        club_description=club.description,
+    )
+
+
 @router.post("/join-request/{club_id}", response_model=JoinRequestResponse, status_code=201)
 def create_join_request(
     club_id: str,
+    request: Request,
     body: JoinRequestBody,
     store: JoinRequestStore = Depends(get_join_request_store),  # noqa: B008
     publisher: FormSubmissionPublisher = Depends(get_form_submission_publisher),  # noqa: B008
     club_repository: ClubRepository = Depends(get_club_repository),  # noqa: B008
+    redis_client: RedisClient = Depends(get_redis_client),  # noqa: B008
 ) -> JoinRequestResponse:
     club = club_repository.get_club(club_id)
     if club is None:
         raise HTTPException(status_code=404, detail="Club not found")
+
+    rate_limit_settings = get_app_settings().forms.public_join_request_rate_limit
+    PublicJoinRequestRateLimiter(
+        client=redis_client,
+        max_requests=rate_limit_settings.max_requests,
+        window_seconds=rate_limit_settings.window_seconds,
+    ).enforce(request, club_id)
 
     payload: dict[str, str] = {}
 

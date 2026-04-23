@@ -16,6 +16,7 @@ from src.bootstrap.dependencies import (
     get_join_request_store,
     get_member_repository,
     get_membership_repository,
+    get_redis_client,
 )
 from src.modules.auth.domain.entities import AppAccess
 from src.modules.auth.presentation.http.dependencies import require_authorized_access
@@ -24,6 +25,7 @@ from src.modules.clubs.domain.entities import Club
 from src.modules.forms.application.ports.form_submission_publisher import FormSubmissionPublisher
 from src.modules.forms.application.ports.join_request_store import JoinRequestStore
 from src.modules.forms.domain.entities import JoinRequest
+from src.modules.forms.presentation.http.limits import TEXT_LIMITS
 from src.modules.forms.presentation.http.routes import router
 from src.modules.members.application.models import CreateMemberInput, UpdateMemberInput
 from src.modules.members.application.ports.member_repository import MemberRepository
@@ -287,10 +289,43 @@ class FakeFormSubmissionPublisher(FormSubmissionPublisher):
         self.was_called = True
 
 
+class FakeRedisClient:
+    def __init__(self) -> None:
+        self._counts: dict[str, int] = {}
+        self._ttls: dict[str, int] = {}
+
+    def increment(self, key: str, amount: int = 1) -> int:
+        current = self._counts.get(key, 0) + amount
+        self._counts[key] = current
+        return current
+
+    def expire(self, key: str, ttl_seconds: int) -> bool:
+        self._ttls[key] = ttl_seconds
+        return True
+
+    def ttl(self, key: str) -> int:
+        return self._ttls.get(key, -1)
+
+
+class FailingRedisClient:
+    def increment(self, key: str, amount: int = 1) -> int:
+        _ = (key, amount)
+        raise RuntimeError("redis unavailable")
+
+    def expire(self, key: str, ttl_seconds: int) -> bool:
+        _ = (key, ttl_seconds)
+        raise AssertionError("expire should not be called after increment fails")
+
+    def ttl(self, key: str) -> int:
+        _ = key
+        raise AssertionError("ttl should not be called after increment fails")
+
+
 class JoinRequestRouteTests(unittest.TestCase):
     def setUp(self) -> None:
         self.store = FakeJoinRequestStore()
         self.publisher = FakeFormSubmissionPublisher()
+        self.redis_client = FakeRedisClient()
         self.clubs = FakeClubRepository(
             clubs=[
                 Club(
@@ -321,6 +356,7 @@ class JoinRequestRouteTests(unittest.TestCase):
         self.app.dependency_overrides[get_club_repository] = lambda: self.clubs
         self.app.dependency_overrides[get_member_repository] = lambda: self.members
         self.app.dependency_overrides[get_membership_repository] = lambda: self.memberships
+        self.app.dependency_overrides[get_redis_client] = lambda: self.redis_client
         self.app.dependency_overrides[get_audit_log_repository] = lambda: self.audit_repository
         self.app.dependency_overrides[get_authenticated_write_context] = (
             lambda: build_authenticated_request_context()
@@ -344,6 +380,40 @@ class JoinRequestRouteTests(unittest.TestCase):
         body = response.json()
         self.assertEqual(body["id"], "persisted-id-1")
         self.assertEqual(body["status"], "pending")
+
+    def test_public_join_request_context_is_available_without_authentication(self) -> None:
+        self.app.dependency_overrides.pop(require_authorized_access, None)
+
+        response = self.client.get("/forms/join-request-context/chess-club")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "club_id": "club-1",
+                "club_name": "Chess Club",
+                "club_description": "Board games and matches.",
+            },
+        )
+
+    def test_public_join_request_context_supports_club_id_lookup(self) -> None:
+        response = self.client.get("/forms/join-request-context/club-99")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "club_id": "club-99",
+                "club_name": "Robotics Club",
+                "club_description": "Build and compete.",
+            },
+        )
+
+    def test_public_join_request_context_returns_404_for_unknown_club(self) -> None:
+        response = self.client.get("/forms/join-request-context/missing-club")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"detail": "Club not found"})
 
     def test_valid_submission_calls_publisher(self) -> None:
         self.client.post(
@@ -406,6 +476,70 @@ class JoinRequestRouteTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 422)
+
+    def test_submitter_name_over_text_limit_returns_422(self) -> None:
+        response = self.client.post(
+            "/forms/join-request/club-1",
+            json={
+                "submitter_name": "T" * (TEXT_LIMITS["member_name"] + 1),
+                "submitter_email": "taylor@example.edu",
+            },
+        )
+
+        self.assertEqual(response.status_code, 422)
+
+    def test_message_over_text_limit_returns_422(self) -> None:
+        response = self.client.post(
+            "/forms/join-request/club-1",
+            json={
+                "submitter_name": "Taylor Student",
+                "submitter_email": "taylor@example.edu",
+                "message": "x" * (TEXT_LIMITS["join_request_message"] + 1),
+            },
+        )
+
+        self.assertEqual(response.status_code, 422)
+
+    def test_public_join_request_rate_limit_returns_429_after_threshold(self) -> None:
+        for _ in range(5):
+            response = self.client.post(
+                "/forms/join-request/club-1",
+                json={
+                    "submitter_name": "Taylor Student",
+                    "submitter_email": "taylor@example.edu",
+                },
+            )
+            self.assertEqual(response.status_code, 201)
+
+        response = self.client.post(
+            "/forms/join-request/club-1",
+            json={
+                "submitter_name": "Taylor Student",
+                "submitter_email": "taylor@example.edu",
+            },
+        )
+
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(
+            response.json(),
+            {
+                "detail": "Too many join requests from this source. Please try again later.",
+            },
+        )
+        self.assertEqual(response.headers.get("retry-after"), "300")
+
+    def test_public_join_request_rate_limit_fails_open_when_redis_is_unavailable(self) -> None:
+        self.app.dependency_overrides[get_redis_client] = lambda: FailingRedisClient()
+
+        response = self.client.post(
+            "/forms/join-request/club-1",
+            json={
+                "submitter_name": "Taylor Student",
+                "submitter_email": "taylor@example.edu",
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
 
     def test_club_id_comes_from_path(self) -> None:
         captured: list[JoinRequest] = []

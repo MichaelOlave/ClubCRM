@@ -7,6 +7,7 @@ import type {
   BackendDashboardRedisAnalyticsRecord,
   BackendDashboardSummaryRecord,
   BackendEventRecord,
+  BackendJoinRequestContextRecord,
   BackendJoinRequestApprovalRecord,
   BackendJoinRequestModerationRecord,
   BackendJoinRequestRecord,
@@ -217,6 +218,14 @@ export async function listPendingJoinRequestsApi(
   return (
     await fetchApiJson<BackendJoinRequestRecord[]>(`/forms/join-requests/${clubId}/pending`, init)
   ).data;
+}
+
+export async function getJoinRequestContextApi(
+  clubIdentifier: string
+): Promise<BackendJoinRequestContextRecord | null> {
+  return fetchApiJsonOrNull<BackendJoinRequestContextRecord>(
+    `/forms/join-request-context/${clubIdentifier}`
+  );
 }
 
 export async function approveJoinRequestApi(

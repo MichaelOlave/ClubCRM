@@ -33,6 +33,17 @@ class KafkaSettings:
 
 
 @dataclass(frozen=True)
+class PublicJoinRequestRateLimitSettings:
+    max_requests: int
+    window_seconds: int
+
+
+@dataclass(frozen=True)
+class FormsSettings:
+    public_join_request_rate_limit: PublicJoinRequestRateLimitSettings
+
+
+@dataclass(frozen=True)
 class AuthSettings:
     bypass_enabled: bool
     session_cookie_name: str
@@ -68,6 +79,7 @@ class Settings:
     mongodb: MongoDBSettings
     redis: RedisSettings
     kafka: KafkaSettings
+    forms: FormsSettings
 
 
 def _read_bool_env(name: str, default: bool) -> bool:
@@ -127,4 +139,12 @@ def get_settings() -> Settings:
         mongodb=MongoDBSettings(url=os.getenv("MONGODB_URL", "mongodb://mongodb:27017/clubcrm")),
         redis=RedisSettings(url=os.getenv("REDIS_URL", "redis://redis:6379/0")),
         kafka=KafkaSettings(bootstrap_servers=os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")),
+        forms=FormsSettings(
+            public_join_request_rate_limit=PublicJoinRequestRateLimitSettings(
+                max_requests=int(os.getenv("FORMS_JOIN_REQUEST_RATE_LIMIT_MAX_REQUESTS", "5")),
+                window_seconds=int(
+                    os.getenv("FORMS_JOIN_REQUEST_RATE_LIMIT_WINDOW_SECONDS", "300")
+                ),
+            )
+        ),
     )

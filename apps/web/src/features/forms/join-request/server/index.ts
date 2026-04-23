@@ -1,4 +1,8 @@
-import { listPendingJoinRequestsApi, resolveClubApi } from "@/lib/api/clubcrm";
+import {
+  getJoinRequestContextApi,
+  listPendingJoinRequestsApi,
+  resolveClubApi,
+} from "@/lib/api/clubcrm";
 import { canAccessClub } from "@/features/auth/server";
 import type { AuthorizedBackendAuthSession } from "@/features/auth/types";
 import type {
@@ -35,16 +39,16 @@ function mapJoinRequestRecord(joinRequest: BackendJoinRequestRecord) {
 export async function getJoinRequestContext(
   clubIdentifier: string
 ): Promise<JoinRequestContext | null> {
-  const club = await resolveClubApi(clubIdentifier);
+  const club = await getJoinRequestContextApi(clubIdentifier);
 
   if (!club) {
     return null;
   }
 
   return {
-    clubId: club.id,
-    clubName: club.name,
-    clubDescription: club.description,
+    clubId: club.club_id,
+    clubName: club.club_name,
+    clubDescription: club.club_description,
     organizationName: "Champlain College",
     prompt: "Tell the club what you want to contribute and what drew you to this group.",
     roles: ["General member", "Event volunteer", "Communications support", "Leadership interest"],

@@ -143,6 +143,12 @@ export type BackendJoinRequestRecord = {
   status: string;
 };
 
+export type BackendJoinRequestContextRecord = {
+  club_id: string;
+  club_name: string;
+  club_description: string;
+};
+
 export type BackendJoinRequestModerationRecord = {
   join_request_id: string;
   status: string;
