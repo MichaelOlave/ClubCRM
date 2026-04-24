@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 
 import { getAdminApiHeaders } from "@/lib/api/adminAuthHeaders";
 import { requireOrgAdminBackendSession } from "@/features/auth/server";
-import { createMemberApi, updateMemberApi } from "@/lib/api/clubcrm";
+import { createMemberApi, deleteMemberApi, updateMemberApi } from "@/lib/api/clubcrm";
 import { getApiErrorMessage } from "@/lib/api/server-data";
 import { buildPathWithSearchParams, getOptionalString, getRequiredString } from "@/lib/forms";
 
@@ -83,6 +83,36 @@ export async function updateMemberAction(formData: FormData) {
     redirect(
       buildPathWithSearchParams(detailPath, {
         memberUpdateError: getApiErrorMessage(error, "The member could not be updated right now."),
+      })
+    );
+  }
+
+  redirect(successRedirectPath);
+}
+
+export async function deleteMemberAction(formData: FormData) {
+  const memberId = getRequiredString(formData, "memberId", "Member");
+  const memberName = getRequiredString(formData, "memberName", "Member name");
+  const detailPath = `/members/${memberId}`;
+  let successRedirectPath = "/members";
+
+  try {
+    await deleteMemberApi(memberId, {
+      headers: await getAdminApiHeaders({ includeCsrf: true, originPath: detailPath }),
+    });
+
+    revalidatePath("/members");
+    revalidatePath(detailPath);
+    revalidatePath("/clubs");
+    revalidatePath("/dashboard");
+
+    successRedirectPath = buildPathWithSearchParams("/members", {
+      memberDeleted: `${memberName} has been removed.`,
+    });
+  } catch (error) {
+    redirect(
+      buildPathWithSearchParams(detailPath, {
+        memberDeleteError: getApiErrorMessage(error, "The member could not be removed right now."),
       })
     );
   }

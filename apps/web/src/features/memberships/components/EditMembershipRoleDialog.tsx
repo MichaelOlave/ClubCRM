@@ -17,54 +17,55 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/shadcn/too
 import { MembershipRoleSelect } from "@/features/memberships/components/MembershipRoleSelect";
 import type { MembershipRecord } from "@/types/api";
 import type { ActionNotice as ActionNoticeModel } from "@/lib/forms";
+import { cn } from "@/lib/utils";
 
 type Props = {
   action: (formData: FormData) => Promise<void>;
   clubSlug: string;
+  triggerDescription?: string;
+  triggerLabel: string;
+  triggerLabelClassName?: string;
+  triggerClassName?: string;
+  triggerTooltip?: React.ReactNode;
+  triggerAriaLabel: string;
   membership: MembershipRecord;
   notice: ActionNoticeModel | null;
-  trigger?: React.ReactNode;
-  triggerTooltip?: React.ReactNode;
 };
 
 export function EditMembershipRoleDialog({
   action,
   clubSlug,
+  triggerAriaLabel,
+  triggerClassName,
+  triggerDescription,
+  triggerLabel,
+  triggerLabelClassName,
   membership,
   notice,
-  trigger,
   triggerTooltip,
 }: Props) {
   const [open, setOpen] = useState(Boolean(notice && notice.kind === "error"));
-  const baseTrigger = trigger ?? (
-    <Button size="sm" variant="outline">
-      Edit role
-    </Button>
-  );
-  const triggerElement = React.isValidElement(baseTrigger)
-    ? (baseTrigger as React.ReactElement<React.HTMLAttributes<HTMLElement>>)
-    : null;
-  const dialogTrigger = triggerElement ? (
-    React.cloneElement(triggerElement, {
-      "aria-expanded": open,
-      "aria-haspopup": "dialog",
-      onClick: (event: React.MouseEvent<HTMLElement>) => {
-        triggerElement.props.onClick?.(event);
-
-        if (!event.defaultPrevented) {
-          setOpen(true);
-        }
-      },
-    })
-  ) : (
+  const dialogTrigger = (
     <Button
+      aria-label={triggerAriaLabel}
       aria-expanded={open}
       aria-haspopup="dialog"
+      className={cn(
+        "-mx-2 -my-1 rounded-[1rem] px-2 py-1 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        triggerClassName
+      )}
       onClick={() => setOpen(true)}
-      size="sm"
-      variant="outline"
+      type="button"
+      variant="ghost"
     >
-      Edit role
+      <span className={cn("block font-semibold text-foreground", triggerLabelClassName)}>
+        {triggerLabel}
+      </span>
+      {triggerDescription ? (
+        <span className="block text-xs uppercase tracking-[0.14em] text-muted-foreground">
+          {triggerDescription}
+        </span>
+      ) : null}
     </Button>
   );
 

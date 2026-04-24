@@ -5,8 +5,8 @@ from helpers import add_api_root_to_path, collect_import_violations
 
 add_api_root_to_path()
 
-from src.modules.auth.application.commands.start_login import StartLogin
 from src.modules.auth.application.commands.finalize_auth_session import FinalizeAuthSession
+from src.modules.auth.application.commands.start_login import StartLogin
 from src.modules.auth.application.ports.identity_provider import AuthIdentityProvider
 from src.modules.auth.application.queries.get_current_user import GetCurrentUser
 from src.modules.auth.domain.entities import CurrentUser

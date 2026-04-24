@@ -12,7 +12,14 @@ type Props = {
 };
 
 function getStatusVariant(status: MemberRecord["status"]) {
-  return status === "active" ? "success" : "warning";
+  switch (status) {
+    case "active":
+      return "success";
+    case "inactive":
+      return "secondary";
+    default:
+      return "warning";
+  }
 }
 
 const columns: Array<TableColumn<MemberRecord>> = [

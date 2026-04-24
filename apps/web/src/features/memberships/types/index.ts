@@ -8,6 +8,7 @@ export type MembershipTableModel = {
   headerActions?: ReactNode;
   memberships: MembershipRecord[];
   renderAssignment?: (membership: MembershipRecord) => ReactNode;
+  renderMembershipStatus?: (membership: MembershipRecord) => ReactNode;
   renderRole?: (membership: MembershipRecord) => ReactNode;
   renderActions?: (membership: MembershipRecord) => ReactNode;
   title?: string;

@@ -140,7 +140,8 @@ class FakeMembershipRepository(MembershipRepository):
 
     def list_memberships(self, club_id=None, member_id=None) -> list[Membership]:
         return [
-            m for m in self._memberships.values()
+            m
+            for m in self._memberships.values()
             if (club_id is None or m.club_id == club_id)
             and (member_id is None or m.member_id == member_id)
         ]
@@ -214,9 +215,9 @@ class ApproveJoinRequestTests(unittest.TestCase):
     def test_reuses_existing_membership(self):
         existing_member = _make_member(id="m-1")
         existing_membership = _make_membership(member_id="m-1")
-        result = self._command(
-            member=existing_member, membership=existing_membership
-        ).execute("jr-1")
+        result = self._command(member=existing_member, membership=existing_membership).execute(
+            "jr-1"
+        )
 
         self.assertEqual(result.membership.id, "ms-1")
         self.assertFalse(result.membership_created)

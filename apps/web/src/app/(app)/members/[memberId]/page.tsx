@@ -5,8 +5,9 @@ import { ActionNotice } from "@/components/ui/ActionNotice";
 import { Button } from "@/components/shadcn/button";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { requireOrgAdminBackendSession } from "@/features/auth/server";
-import { EditMemberDialog, MemberProfile } from "@/features/members";
-import { getMemberDetail, updateMemberAction } from "@/features/members/server";
+import { DeleteMemberDialog, EditMemberDialog, MemberProfile } from "@/features/members";
+import { deleteMemberAction, getMemberDetail, updateMemberAction } from "@/features/members/server";
+import { updateMembershipStatusAction } from "@/features/memberships/server";
 import { getActionNotice } from "@/lib/forms";
 
 type Props = {
@@ -14,8 +15,11 @@ type Props = {
     memberId: string;
   }>;
   searchParams: Promise<{
+    memberDeleteError?: string | string[];
     memberUpdated?: string | string[];
     memberUpdateError?: string | string[];
+    membershipStatusUpdated?: string | string[];
+    membershipStatusError?: string | string[];
   }>;
 };
 
@@ -32,6 +36,16 @@ export default async function MemberDetailPage({ params, searchParams }: Props) 
   const memberUpdateSuccessNotice =
     memberUpdateNotice?.kind === "success" ? memberUpdateNotice : null;
   const memberUpdateErrorNotice = memberUpdateNotice?.kind === "error" ? memberUpdateNotice : null;
+  const membershipStatusNotice = getActionNotice(
+    query.membershipStatusUpdated,
+    query.membershipStatusError
+  );
+  const membershipStatusSuccessNotice =
+    membershipStatusNotice?.kind === "success" ? membershipStatusNotice : null;
+  const membershipStatusErrorNotice =
+    membershipStatusNotice?.kind === "error" ? membershipStatusNotice : null;
+  const memberDeleteNotice = getActionNotice(undefined, query.memberDeleteError);
+  const memberDeleteErrorNotice = memberDeleteNotice?.kind === "error" ? memberDeleteNotice : null;
 
   return (
     <div className="space-y-8">
@@ -42,6 +56,11 @@ export default async function MemberDetailPage({ params, searchParams }: Props) 
               action={updateMemberAction}
               member={detail.member}
               notice={memberUpdateErrorNotice}
+            />
+            <DeleteMemberDialog
+              action={deleteMemberAction}
+              member={detail.member}
+              notice={memberDeleteErrorNotice}
             />
             <Button asChild variant="secondary">
               <Link href="/members">Back to members</Link>
@@ -59,8 +78,10 @@ export default async function MemberDetailPage({ params, searchParams }: Props) 
       />
 
       <ActionNotice notice={memberUpdateSuccessNotice} />
+      <ActionNotice notice={membershipStatusSuccessNotice} />
+      <ActionNotice notice={membershipStatusErrorNotice} />
 
-      <MemberProfile detail={detail} />
+      <MemberProfile detail={detail} membershipStatusAction={updateMembershipStatusAction} />
     </div>
   );
 }

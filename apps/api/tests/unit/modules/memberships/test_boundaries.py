@@ -118,6 +118,7 @@ class MembershipBoundaryTests(unittest.TestCase):
         updated = UpdateMembership(repository=repository).execute(
             created.id,
             role="vice-president",
+            status="inactive",
         )
         deleted = DeleteMembership(repository=repository).execute(created.id)
 
@@ -125,4 +126,5 @@ class MembershipBoundaryTests(unittest.TestCase):
         self.assertGreaterEqual(len(listed), 1)
         self.assertIsNotNone(fetched)
         self.assertIsNotNone(updated)
+        self.assertEqual(updated.status, "inactive")
         self.assertTrue(deleted)

@@ -30,7 +30,11 @@ import {
   updateClubAction,
   updateEventAction,
 } from "@/features/clubs/server";
-import { AddMemberToClubDialog, EditMembershipRoleDialog } from "@/features/memberships";
+import {
+  AddMemberToClubDialog,
+  EditMembershipRoleDialog,
+  MembershipStatusSelect,
+} from "@/features/memberships";
 import {
   createMembershipAction,
   getAssignableMembersForClub,
@@ -53,6 +57,8 @@ type Props = {
     membershipError?: string | string[];
     membershipUpdated?: string | string[];
     membershipUpdateError?: string | string[];
+    membershipStatusUpdated?: string | string[];
+    membershipStatusError?: string | string[];
     membershipUpdateTarget?: string | string[];
     managerGrantCreated?: string | string[];
     managerGrantDeleted?: string | string[];
@@ -147,6 +153,10 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
   const managerGrantSuccessNotice =
     managerGrantNotice?.kind === "success" ? managerGrantNotice : null;
   const managerGrantErrorNotice = managerGrantNotice?.kind === "error" ? managerGrantNotice : null;
+  const membershipStatusUpdateNotice = getActionNotice(
+    query.membershipStatusUpdated,
+    query.membershipStatusError
+  );
 
   return (
     <div className="space-y-8">
@@ -166,6 +176,7 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
       <ActionNotice notice={announcementDeleteNotice} />
       <ActionNotice notice={membershipUpdateSuccessNotice} />
       <ActionNotice notice={managerGrantSuccessNotice} />
+      <ActionNotice notice={membershipStatusUpdateNotice} />
       <Button
         asChild
         className="px-0 text-muted-foreground hover:text-foreground"
@@ -254,6 +265,7 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
           </>
         }
         memberships={memberships}
+        renderMembershipStatus={(membership) => <MembershipStatusSelect membership={membership} />}
         rosterActions={
           <>
             {isOrgAdmin ? (
@@ -279,19 +291,11 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
             clubSlug={detail.club.slug}
             membership={membership}
             notice={membershipUpdateTarget === membership.id ? membershipUpdateErrorNotice : null}
+            triggerAriaLabel={`Edit ${membership.memberName}'s role`}
+            triggerClassName={membershipEditTriggerClassName}
+            triggerDescription={membership.clubName}
+            triggerLabel={membership.memberName}
             triggerTooltip="Click to edit role"
-            trigger={
-              <button
-                aria-label={`Edit ${membership.memberName}'s role`}
-                className={membershipEditTriggerClassName}
-                type="button"
-              >
-                <span className="block font-semibold text-foreground">{membership.memberName}</span>
-                <span className="block text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                  {membership.clubName}
-                </span>
-              </button>
-            }
           />
         )}
         renderMembershipRole={(membership) => (
@@ -300,16 +304,11 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
             clubSlug={detail.club.slug}
             membership={membership}
             notice={membershipUpdateTarget === membership.id ? membershipUpdateErrorNotice : null}
+            triggerAriaLabel={`Edit ${membership.memberName}'s role`}
+            triggerClassName={membershipEditTriggerClassName}
+            triggerLabel={membership.role}
+            triggerLabelClassName="font-medium"
             triggerTooltip="Click to edit role"
-            trigger={
-              <button
-                aria-label={`Edit ${membership.memberName}'s role`}
-                className={membershipEditTriggerClassName}
-                type="button"
-              >
-                <span className="font-medium text-foreground">{membership.role}</span>
-              </button>
-            }
           />
         )}
       />

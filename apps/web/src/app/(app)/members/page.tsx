@@ -13,6 +13,7 @@ import { getActionNotice } from "@/lib/forms";
 type Props = {
   searchParams: Promise<{
     memberCreated?: string | string[];
+    memberDeleted?: string | string[];
     memberError?: string | string[];
   }>;
 };
@@ -20,7 +21,10 @@ type Props = {
 export default async function MembersPage({ searchParams }: Props) {
   await requireOrgAdminBackendSession();
   const [members, query] = await Promise.all([getMemberList(), searchParams]);
-  const memberNotice = getActionNotice(query.memberCreated, query.memberError);
+  const memberNotice = getActionNotice(
+    query.memberCreated ?? query.memberDeleted,
+    query.memberError
+  );
   const memberSuccessNotice = memberNotice?.kind === "success" ? memberNotice : null;
   const memberErrorNotice = memberNotice?.kind === "error" ? memberNotice : null;
 

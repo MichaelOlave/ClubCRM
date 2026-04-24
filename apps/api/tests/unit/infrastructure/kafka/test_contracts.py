@@ -33,9 +33,7 @@ class KafkaAdapterContractTests(unittest.TestCase):
         self.assertEqual(publisher.published_events[0]["topic"], "club_created")
 
     def test_form_submission_publisher_matches_port(self) -> None:
-        publisher = KafkaFormSubmissionPublisher(
-            KafkaClient(bootstrap_servers="kafka:9092")
-        )
+        publisher = KafkaFormSubmissionPublisher(KafkaClient(bootstrap_servers="kafka:9092"))
         publisher.publish_join_request_submitted(
             JoinRequest(
                 id="join-1",

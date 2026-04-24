@@ -1,7 +1,7 @@
 import unittest
 from dataclasses import asdict
-from uuid import UUID
 from unittest.mock import Mock, patch
+from uuid import UUID
 
 from helpers import add_api_root_to_path
 

@@ -30,7 +30,10 @@ class MongoDBSeedTests(unittest.TestCase):
         collection.count_documents.return_value = 0
         organization = SimpleNamespace(id="org-123")
         club = SimpleNamespace(id="club-123")
-        session.query.return_value.filter.return_value.one_or_none.side_effect = [organization, club]
+        session.query.return_value.filter.return_value.one_or_none.side_effect = [
+            organization,
+            club,
+        ]
 
         seeded = seed(mongodb_client=mongodb_client, postgres_client=postgres_client)
 
@@ -65,7 +68,10 @@ class MongoDBSeedTests(unittest.TestCase):
         mongodb_client, postgres_client, collection, session = self._build_clients()
         collection.count_documents.return_value = 0
         organization = SimpleNamespace(id="org-123")
-        session.query.return_value.filter.return_value.one_or_none.side_effect = [organization, None]
+        session.query.return_value.filter.return_value.one_or_none.side_effect = [
+            organization,
+            None,
+        ]
 
         seeded = seed(mongodb_client=mongodb_client, postgres_client=postgres_client)
 

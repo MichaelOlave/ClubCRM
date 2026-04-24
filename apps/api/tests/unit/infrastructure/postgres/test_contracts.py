@@ -33,8 +33,6 @@ class PostgresAdapterContractTests(unittest.TestCase):
         )
 
     def test_unit_of_work_exposes_relational_contract(self) -> None:
-        unit_of_work = DefaultPostgresUnitOfWork(
-            PostgresClient(dsn="postgresql://example")
-        )
+        unit_of_work = DefaultPostgresUnitOfWork(PostgresClient(dsn="postgresql://example"))
 
         self.assertIsInstance(unit_of_work, PostgresUnitOfWork)

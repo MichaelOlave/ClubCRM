@@ -94,3 +94,69 @@ export async function updateMembershipRoleAction(formData: FormData) {
 
   redirect(successRedirectPath);
 }
+
+export async function updateMembershipStatusClientAction(
+  membershipId: string,
+  status: string,
+  memberId?: string,
+  clubId?: string
+): Promise<{ success: boolean }> {
+  try {
+    await updateMembershipApi(
+      membershipId,
+      { status },
+      {
+        headers: await getAdminApiHeaders({ includeCsrf: true, originPath: "/clubs" }),
+      }
+    );
+
+    revalidatePath("/clubs");
+    revalidatePath("/members");
+    revalidatePath("/dashboard");
+    if (clubId) revalidatePath(`/clubs/${clubId}`);
+    if (memberId) revalidatePath(`/members/${memberId}`);
+
+    return { success: true };
+  } catch {
+    return { success: false };
+  }
+}
+
+export async function updateMembershipStatusAction(formData: FormData) {
+  const membershipId = getRequiredString(formData, "membershipId", "Membership");
+  const status = getRequiredString(formData, "status", "Status");
+  const memberId = getOptionalString(formData, "memberId");
+  const clubId = getOptionalString(formData, "clubId");
+  const redirectPath = getOptionalString(formData, "redirectPath") ?? "/dashboard";
+
+  try {
+    await updateMembershipApi(
+      membershipId,
+      { status },
+      {
+        headers: await getAdminApiHeaders({ includeCsrf: true, originPath: redirectPath }),
+      }
+    );
+
+    revalidatePath("/clubs");
+    revalidatePath("/members");
+    revalidatePath("/dashboard");
+    if (clubId) revalidatePath(`/clubs/${clubId}`);
+    if (memberId) revalidatePath(`/members/${memberId}`);
+
+    redirect(
+      buildPathWithSearchParams(redirectPath, {
+        membershipStatusUpdated: "The membership status has been updated.",
+      })
+    );
+  } catch (error) {
+    redirect(
+      buildPathWithSearchParams(redirectPath, {
+        membershipStatusError: getApiErrorMessage(
+          error,
+          "The membership status could not be updated right now."
+        ),
+      })
+    );
+  }
+}

@@ -6,12 +6,24 @@ import type { MembershipTableModel } from "@/features/memberships/types";
 import { formatDate } from "@/lib/utils/formatters";
 import type { TableColumn } from "@/types/ui";
 
+function getStatusVariant(status: MembershipTableModel["memberships"][number]["status"]) {
+  switch (status) {
+    case "active":
+      return "success";
+    case "inactive":
+      return "secondary";
+    default:
+      return "warning";
+  }
+}
+
 export function MembershipTable({
   actionsHeader = "Actions",
   description = "Membership assignment stays in a reusable table so both club and member detail routes can share it.",
   headerActions,
   memberships,
   renderAssignment,
+  renderMembershipStatus,
   renderRole,
   renderActions,
   title = "Memberships",
@@ -38,11 +50,10 @@ export function MembershipTable({
     {
       key: "status",
       header: "Status",
-      render: (membership) => (
-        <Badge variant={membership.status === "active" ? "success" : "warning"}>
-          {membership.status}
-        </Badge>
-      ),
+      render: (membership) =>
+        renderMembershipStatus?.(membership) ?? (
+          <Badge variant={getStatusVariant(membership.status)}>{membership.status}</Badge>
+        ),
     },
     {
       key: "joined-at",
