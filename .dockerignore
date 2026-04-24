@@ -6,6 +6,11 @@
 !pnpm-lock.yaml
 !pnpm-workspace.yaml
 !tsconfig.base.json
+!README.md
+!docs/
+!docs/**
+!scripts/
+!scripts/**
 !apps/api/
 !apps/api/**
 !apps/web/
