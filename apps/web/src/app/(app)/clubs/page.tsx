@@ -1,10 +1,8 @@
-import Link from "next/link";
-
 import { ActionNotice } from "@/components/ui/ActionNotice";
 import { Alert, AlertDescription } from "@/components/shadcn/alert";
-import { Button } from "@/components/shadcn/button";
 import { Card } from "@/components/shadcn/card";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Pagination } from "@/components/ui/Pagination";
 import {
   isOrgAdminBackendAuthSession,
   requireAuthorizedBackendSession,
@@ -17,39 +15,29 @@ type Props = {
   searchParams: Promise<{
     clubCreated?: string | string[];
     clubError?: string | string[];
+    page?: string | string[];
   }>;
 };
+
+const PAGE_SIZE = 10;
 
 export default async function ClubsPage({ searchParams }: Props) {
   const session = await requireAuthorizedBackendSession();
   const isOrgAdmin = isOrgAdminBackendAuthSession(session);
   const clubs = await getClubList(session);
   const query = await searchParams;
-  const previewJoinHref = clubs[0] ? `/join/${clubs[0].id}` : null;
   const clubNotice = getActionNotice(query.clubCreated, query.clubError);
   const clubSuccessNotice = clubNotice?.kind === "success" ? clubNotice : null;
   const clubErrorNotice = clubNotice?.kind === "error" ? clubNotice : null;
 
+  const currentPage = typeof query.page === "string" ? Math.max(1, parseInt(query.page, 10)) : 1;
+  const totalItems = clubs.length;
+  const totalPages = Math.ceil(totalItems / PAGE_SIZE);
+  const paginatedClubs = clubs.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   return (
     <div className="space-y-8">
       <PageHeader
-        actions={
-          <>
-            {isOrgAdmin ? (
-              <CreateClubDialog action={createClubAction} notice={clubErrorNotice} />
-            ) : null}
-            {isOrgAdmin ? (
-              <Button asChild variant="secondary">
-                <Link href="/members">View members</Link>
-              </Button>
-            ) : null}
-            {previewJoinHref ? (
-              <Button asChild variant="ghost">
-                <Link href={previewJoinHref}>Preview public form</Link>
-              </Button>
-            ) : null}
-          </>
-        }
         description={
           isOrgAdmin
             ? "Create clubs from this directory, then open each club to manage the roster, join requests, and manager access in one shared workspace."
@@ -70,15 +58,30 @@ export default async function ClubsPage({ searchParams }: Props) {
       <ActionNotice notice={clubSuccessNotice} />
 
       <Card className="space-y-6 rounded-[2rem] border p-6 shadow-sm sm:p-8">
-        <div className="space-y-1.5">
-          <h2 className="text-2xl font-semibold text-foreground">Available clubs</h2>
-          <p className="text-sm leading-6 text-muted-foreground">
-            {isOrgAdmin
-              ? "Select a club to manage its roster, scheduled events, and official announcements."
-              : "Access the clubs you manage to review rosters and handle club-specific tasks."}
-          </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1.5">
+            <h2 className="text-2xl font-semibold text-foreground">Available clubs</h2>
+            <p className="text-sm leading-6 text-muted-foreground">
+              {isOrgAdmin
+                ? "Select a club to manage its roster, scheduled events, and official announcements."
+                : "Access the clubs you manage to review rosters and handle club-specific tasks."}
+            </p>
+          </div>
+          {isOrgAdmin && (
+            <div className="shrink-0">
+              <CreateClubDialog action={createClubAction} notice={clubErrorNotice} />
+            </div>
+          )}
         </div>
-        <ClubDirectory clubs={clubs} />
+        <ClubDirectory clubs={paginatedClubs} isOrgAdmin={isOrgAdmin} />
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          baseUrl="/clubs"
+          pageSize={PAGE_SIZE}
+          totalItems={totalItems}
+        />
       </Card>
     </div>
   );

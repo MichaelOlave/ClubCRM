@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Plus } from "lucide-react";
 
 import { ActionNotice } from "@/components/ui/ActionNotice";
 import { Button } from "@/components/shadcn/button";
@@ -32,7 +33,10 @@ export function CreateClubDialog({ action, notice }: Props) {
   return (
     <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>
-        <Button>Create club</Button>
+        <Button className="group gap-2">
+          <Plus className="h-4 w-4 transition-transform group-hover:scale-110" />
+          Create Club
+        </Button>
       </DialogTrigger>
 
       <DialogContent className="max-w-2xl">
@@ -82,7 +86,10 @@ export function CreateClubDialog({ action, notice }: Props) {
             <Button onClick={() => setOpen(false)} type="button" variant="ghost">
               Cancel
             </Button>
-            <Button type="submit">Create club</Button>
+            <Button className="group gap-2" type="submit">
+              <Plus className="h-4 w-4 transition-transform group-hover:scale-110" />
+              Create Club
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

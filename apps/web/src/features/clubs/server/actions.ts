@@ -16,6 +16,8 @@ import {
   updateAnnouncementApi,
   updateClubApi,
   updateEventApi,
+  listMembershipsApi,
+  listClubManagerGrantsApi,
 } from "@/lib/api/clubcrm";
 import { getApiErrorMessage } from "@/lib/api/server-data";
 import { buildPathWithSearchParams, getOptionalString, getRequiredString } from "@/lib/forms";
@@ -96,6 +98,32 @@ function validateDescriptionLength(
       [errorSearchParam]: `${fieldLabel} must be ${DESCRIPTION_MAX_LENGTH} characters or fewer.`,
     })
   );
+}
+
+export async function getClubManagerAccessData(clubId: string) {
+  await requireOrgAdminBackendSession(`/clubs/${clubId}`);
+
+  const [memberships, managerGrants] = await Promise.all([
+    listMembershipsApi({ clubId }),
+    listClubManagerGrantsApi(clubId),
+  ]);
+
+  return {
+    memberships: memberships.map((m) => ({
+      id: m.id,
+      clubId: m.club_id,
+      clubName: m.club_name ?? "",
+      memberId: m.member_id,
+      memberName: m.member_name ?? "",
+      role: m.role,
+      status: (m.status === "inactive" || m.status === "pending" ? m.status : "active") as
+        | "active"
+        | "inactive"
+        | "pending",
+      joinedAt: m.joined_at,
+    })),
+    managerGrants,
+  };
 }
 
 export async function createClubAction(formData: FormData) {

@@ -1,15 +1,17 @@
 import Link from "next/link";
+import { Calendar, Users } from "lucide-react";
 
 import { Badge } from "@/components/shadcn/badge";
-import { Button } from "@/components/shadcn/button";
 import { DataTable } from "@/components/shadcn/data-table";
 import { EmptyState } from "@/components/shadcn/empty-state";
 import type { ClubRecord } from "@/types/api";
 import { formatDateTime } from "@/lib/utils/formatters";
 import type { TableColumn } from "@/types/ui";
+import { ManagerAccessDialog } from "./ManagerAccessDialog";
 
 type Props = {
   clubs: ClubRecord[];
+  isOrgAdmin: boolean;
 };
 
 function getStatusVariant(status: ClubRecord["status"]) {
@@ -25,60 +27,67 @@ function getStatusVariant(status: ClubRecord["status"]) {
   }
 }
 
-const columns: Array<TableColumn<ClubRecord>> = [
+const getColumns = (isOrgAdmin: boolean): Array<TableColumn<ClubRecord>> => [
   {
     key: "club",
     header: "Club",
     render: (club) => (
-      <Link
-        aria-label={`Open ${club.name}`}
-        className="group block max-w-md rounded-[1rem] p-1 -m-1 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        href={`/clubs/${club.slug}`}
-      >
-        <div className="space-y-1">
-          <p className="font-semibold text-foreground transition-colors group-hover:text-brand">
-            {club.name}
-          </p>
-          <p className="text-sm leading-6 text-muted-foreground">{club.description}</p>
-        </div>
-      </Link>
+      <div className="space-y-1 py-1 max-w-sm">
+        <Link
+          href={`/clubs/${club.slug}`}
+          className="font-semibold text-foreground transition-colors hover:text-brand hover:underline"
+        >
+          {club.name}
+        </Link>
+        <p className="text-sm text-muted-foreground line-clamp-2">{club.description}</p>
+      </div>
+    ),
+  },
+  {
+    key: "status",
+    header: "Status",
+    render: (club) => (
+      <Badge variant={getStatusVariant(club.status)} className="capitalize">
+        {club.status}
+      </Badge>
     ),
   },
   {
     key: "manager",
     header: "Manager",
-    render: (club) => (
-      <div className="space-y-1">
-        <p>{club.manager ?? "Unassigned"}</p>
-        <Badge variant={getStatusVariant(club.status)}>{club.status}</Badge>
-      </div>
-    ),
+    render: (club) => <ManagerAccessDialog club={club} isOrgAdmin={isOrgAdmin} />,
   },
   {
     key: "members",
     header: "Members",
-    render: (club) => `${club.memberCount}`,
+    render: (club) => (
+      <div className="flex items-center justify-end gap-1.5 text-sm text-muted-foreground">
+        <Users className="h-4 w-4" />
+        <span className="font-medium text-foreground">{club.memberCount}</span>
+      </div>
+    ),
     align: "right",
   },
   {
     key: "next-event",
-    header: "Next event",
-    render: (club) => (club.nextEventAt ? formatDateTime(club.nextEventAt) : "No event"),
-    align: "right",
-  },
-  {
-    key: "link",
-    header: "Open",
+    header: "Next Event",
     render: (club) => (
-      <Button asChild size="sm" variant="secondary">
-        <Link href={`/clubs/${club.slug}`}>View</Link>
-      </Button>
+      <div className="flex items-center justify-end gap-1.5 text-sm text-muted-foreground whitespace-nowrap">
+        <Calendar className="h-4 w-4" />
+        {club.nextEventAt ? (
+          <span className="text-foreground">{formatDateTime(club.nextEventAt)}</span>
+        ) : (
+          <span className="italic">No event</span>
+        )}
+      </div>
     ),
     align: "right",
   },
 ];
 
-export function ClubDirectory({ clubs }: Props) {
+export function ClubDirectory({ clubs, isOrgAdmin }: Props) {
+  const columns = getColumns(isOrgAdmin);
+
   return (
     <DataTable
       columns={columns}
