@@ -283,10 +283,4 @@ export type ClusterEvent =
 
 export type WsFrame = ClusterSnapshot | { type: "event"; ts: number; event: ClusterEvent };
 
-export type StreamStatus =
-  | "connecting"
-  | "live"
-  | "reconnecting"
-  | "offline"
-  | "replay"
-  | "paused";
+export type StreamStatus = "connecting" | "live" | "reconnecting" | "offline" | "replay" | "paused";

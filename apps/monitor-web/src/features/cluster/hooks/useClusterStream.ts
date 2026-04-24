@@ -160,7 +160,7 @@ export function useClusterStream(
     const previousTs =
       replayIndex === 0
         ? initialSnapshot.ts
-        : replayFrames[replayIndex - 1]?.ts ?? initialSnapshot.ts;
+        : (replayFrames[replayIndex - 1]?.ts ?? initialSnapshot.ts);
     const nextFrame = replayFrames[replayIndex];
     const nextTs = nextFrame?.ts ?? previousTs;
     const delay = Math.min(Math.max((nextTs - previousTs) * 1000, 120), 2000);

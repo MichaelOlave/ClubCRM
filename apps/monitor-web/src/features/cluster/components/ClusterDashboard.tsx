@@ -32,8 +32,9 @@ export function ClusterDashboard({
     streamUrl,
     replaySession
   );
-  const [selectedCategories, setSelectedCategories] =
-    useState<ClusterEventCategory[]>(EVENT_CATEGORIES.slice());
+  const [selectedCategories, setSelectedCategories] = useState<ClusterEventCategory[]>(
+    EVENT_CATEGORIES.slice()
+  );
   const visibleEvents = eventLog.filter((event) => isEventVisible(event, selectedCategories));
   const recentMoves = visibleEvents.filter(
     (event): event is Extract<ClusterEvent, { kind: "POD_MOVED" }> => event.kind === "POD_MOVED"
