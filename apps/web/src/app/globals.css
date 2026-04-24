@@ -76,7 +76,8 @@
   }
 
   @keyframes float {
-    0%, 100% {
+    0%,
+    100% {
       transform: translate(0, 0) scale(1);
     }
     33% {
@@ -88,7 +89,8 @@
   }
 
   @keyframes pulse-subtle {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 0.4;
     }
     50% {

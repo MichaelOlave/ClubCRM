@@ -50,7 +50,7 @@ export function DashboardOverview({ viewModel }: Props) {
         <div className="grid gap-4 sm:grid-cols-2">
           {viewModel.metrics.map((metric) => (
             <Card
-              className="relative overflow-hidden rounded-[1.5rem] border p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] sm:p-8"
+              className="relative overflow-hidden rounded-[1.5rem] border p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] sm:p-6 lg:p-8"
               key={metric.label}
             >
               <div className="flex items-center justify-between">
@@ -58,7 +58,7 @@ export function DashboardOverview({ viewModel }: Props) {
                 <div className="text-muted-foreground/40">{getMetricIcon(metric.label)}</div>
               </div>
               <div className="mt-4 space-y-2">
-                <p className="text-4xl font-semibold tracking-tight text-foreground">
+                <p className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
                   {metric.value}
                 </p>
                 <p className="text-sm leading-relaxed text-muted-foreground line-clamp-2">
@@ -72,11 +72,11 @@ export function DashboardOverview({ viewModel }: Props) {
           ))}
         </div>
 
-        <Card className="rounded-[1.5rem] border p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] sm:p-8">
+        <Card className="rounded-[1.5rem] border p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] sm:p-6 lg:p-8">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+                <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
                   Recent activity
                 </h2>
                 <p className="text-sm text-muted-foreground">
@@ -86,22 +86,22 @@ export function DashboardOverview({ viewModel }: Props) {
             </div>
 
             {viewModel.activity.length ? (
-              <div className="relative space-y-4 before:absolute before:inset-y-0 before:left-4 before:w-0.5 before:bg-muted/50">
+              <div className="relative space-y-4 before:absolute before:inset-y-0 before:left-3 before:w-0.5 before:bg-muted/50 sm:before:left-4">
                 {viewModel.activity.map((item) => (
                   <Link
-                    className="group relative ml-10 block rounded-2xl border border-transparent p-4 transition duration-200 hover:border-border hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="group relative ml-7 block rounded-2xl border border-transparent p-3 transition duration-200 hover:border-border hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:ml-10 sm:p-4"
                     href={item.href}
                     key={item.id}
                   >
-                    <div className="absolute -left-[2.75rem] top-6 flex h-8 w-8 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm transition-colors group-hover:border-brand/40 group-hover:text-brand">
+                    <div className="absolute -left-[2.35rem] top-5 flex h-7 w-7 items-center justify-center rounded-full border bg-background text-muted-foreground shadow-sm transition-colors group-hover:border-brand/40 group-hover:text-brand sm:-left-[2.75rem] sm:top-6 sm:h-8 sm:w-8">
                       {getActivityIcon(item.type)}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/80">
+                      <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80 sm:text-xs">
                         {formatDateTime(item.timestamp)}
                       </p>
                     </div>
-                    <h3 className="mt-2 text-lg font-semibold text-foreground group-hover:text-brand transition-colors">
+                    <h3 className="mt-1 text-base font-semibold text-foreground group-hover:text-brand transition-colors sm:mt-2 sm:text-lg">
                       {item.title}
                     </h3>
                     <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
@@ -121,7 +121,7 @@ export function DashboardOverview({ viewModel }: Props) {
       </div>
 
       <div className="space-y-8">
-        <Card className="rounded-[1.5rem] border p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] sm:p-8 bg-brand/5 border-brand/10">
+        <Card className="rounded-[1.5rem] border p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] sm:p-6 lg:p-8 bg-brand/5 border-brand/10">
           <div className="space-y-6">
             <div className="space-y-1">
               <h2 className="text-xl font-semibold tracking-tight text-foreground">
@@ -155,7 +155,7 @@ export function DashboardOverview({ viewModel }: Props) {
           </div>
         </Card>
 
-        <Card className="rounded-[1.5rem] border p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] sm:p-8">
+        <Card className="rounded-[1.5rem] border p-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] sm:p-6 lg:p-8">
           <div className="space-y-4">
             <h3 className="text-sm font-medium uppercase tracking-[0.2em] text-brand">
               System Status

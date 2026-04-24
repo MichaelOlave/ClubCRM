@@ -9,7 +9,7 @@ type Props = {
 
 export function HealthOverview({ health, refreshHref }: Props) {
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
+    <div className="grid gap-6 lg:grid-cols-[1.6fr_0.4fr]">
       <HealthStatusCard connected={health.connected} details={health.details} />
       <HealthMetaCard endpoint={health.endpoint} refreshHref={refreshHref} status={health.status} />
     </div>

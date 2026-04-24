@@ -81,12 +81,12 @@ export function ClubProfile({
   renderRowWrapper,
 }: Props) {
   return (
-    <div className="space-y-10">
+    <div className="space-y-8 sm:space-y-10">
       <TabScrollHandler />
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="flex flex-col justify-between space-y-6 rounded-[2rem] border p-6 shadow-sm lg:col-span-2 sm:p-8">
+        <Card className="flex flex-col justify-between space-y-6 rounded-[2rem] border p-4 shadow-sm lg:col-span-2 sm:p-6 lg:p-8">
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <Badge variant={getStatusVariant(detail.club.status)}>{detail.club.status}</Badge>
               {detail.club.tags.map((tag) => (
                 <Badge key={tag} variant="muted">
@@ -94,8 +94,10 @@ export function ClubProfile({
                 </Badge>
               ))}
             </div>
-            <div className="space-y-3">
-              <h2 className="text-2xl font-semibold text-foreground">{detail.club.name}</h2>
+            <div className="space-y-2 sm:space-y-3">
+              <h2 className="text-xl font-semibold text-foreground sm:text-2xl">
+                {detail.club.name}
+              </h2>
               <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
                 {detail.club.description}
               </p>
@@ -105,43 +107,43 @@ export function ClubProfile({
         </Card>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-          <Card className="flex items-center gap-4 rounded-[1.5rem] border p-5 shadow-sm">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-              <ShieldCheck className="h-6 w-6" />
+          <Card className="flex items-center gap-3 rounded-[1.5rem] border p-4 shadow-sm sm:gap-4 sm:p-5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand sm:h-12 sm:w-12">
+              <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground">
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground sm:text-xs">
                 Primary Manager
               </p>
-              <p className="mt-0.5 text-base font-semibold text-foreground">
+              <p className="mt-0.5 truncate text-sm font-semibold text-foreground sm:text-base">
                 {detail.club.manager ?? "Unassigned"}
               </p>
             </div>
           </Card>
 
-          <Card className="flex items-center gap-4 rounded-[1.5rem] border p-5 shadow-sm">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-              <Users className="h-6 w-6" />
+          <Card className="flex items-center gap-3 rounded-[1.5rem] border p-4 shadow-sm sm:gap-4 sm:p-5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand sm:h-12 sm:w-12">
+              <Users className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground">
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground sm:text-xs">
                 Total Members
               </p>
-              <p className="mt-0.5 text-base font-semibold text-foreground">
+              <p className="mt-0.5 truncate text-sm font-semibold text-foreground sm:text-base">
                 {detail.club.memberCount} members
               </p>
             </div>
           </Card>
 
-          <Card className="flex items-center gap-4 rounded-[1.5rem] border p-5 shadow-sm sm:col-span-2 lg:col-span-1">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-              <Calendar className="h-6 w-6" />
+          <Card className="flex items-center gap-3 rounded-[1.5rem] border p-4 shadow-sm sm:col-span-2 sm:gap-4 sm:p-5 lg:col-span-1">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand sm:h-12 sm:w-12">
+              <Calendar className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground">
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground sm:text-xs">
                 Next Scheduled Event
               </p>
-              <p className="mt-0.5 text-base font-semibold text-foreground">
+              <p className="mt-0.5 truncate text-sm font-semibold text-foreground sm:text-base">
                 {detail.club.nextEventAt
                   ? formatDateTime(detail.club.nextEventAt)
                   : "No events scheduled"}
@@ -152,24 +154,24 @@ export function ClubProfile({
       </div>
 
       <Tabs className="w-full" defaultValue="roster">
-        <div className="flex mb-10 overflow-x-auto pb-1">
-          <TabsList className="h-14 items-center gap-2 rounded-2xl bg-muted/40 p-2">
+        <div className="flex mb-6 sm:mb-10 overflow-x-auto pb-1 scrollbar-hide">
+          <TabsList className="h-12 sm:h-14 items-center gap-1 sm:gap-2 rounded-2xl bg-muted/40 p-1.5 sm:p-2">
             <TabsTrigger
-              className="group h-10 gap-3 rounded-xl px-6 text-sm font-semibold transition-all duration-500 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground hover:data-[state=inactive]:bg-muted/60"
+              className="group h-9 sm:h-10 gap-2 sm:gap-3 rounded-xl px-4 sm:px-6 text-xs sm:text-sm font-semibold transition-all duration-500 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground hover:data-[state=inactive]:bg-muted/60"
               value="roster"
             >
-              <Users className="h-4.5 w-4.5" />
-              <span>Club Roster</span>
+              <Users className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
+              <span>Roster</span>
             </TabsTrigger>
             <TabsTrigger
-              className="group h-10 gap-3 rounded-xl px-6 text-sm font-semibold transition-all duration-500 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground hover:data-[state=inactive]:bg-muted/60"
+              className="group h-9 sm:h-10 gap-2 sm:gap-3 rounded-xl px-4 sm:px-6 text-xs sm:text-sm font-semibold transition-all duration-500 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground hover:data-[state=inactive]:bg-muted/60"
               value="events"
             >
-              <Calendar className="h-4.5 w-4.5" />
-              <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <span>Events</span>
                 <Badge
-                  className="h-5 min-w-5 justify-center bg-muted/80 px-1 text-[10px] font-bold text-muted-foreground group-data-[state=active]:bg-brand/10 group-data-[state=active]:text-brand"
+                  className="h-4.5 min-w-4.5 sm:h-5 sm:min-w-5 justify-center bg-muted/80 px-1 text-[9px] sm:text-[10px] font-bold text-muted-foreground group-data-[state=active]:bg-brand/10 group-data-[state=active]:text-brand"
                   variant="muted"
                 >
                   {detail.events.length}
@@ -177,14 +179,14 @@ export function ClubProfile({
               </div>
             </TabsTrigger>
             <TabsTrigger
-              className="group h-10 gap-3 rounded-xl px-6 text-sm font-semibold transition-all duration-500 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground hover:data-[state=inactive]:bg-muted/60"
+              className="group h-9 sm:h-10 gap-2 sm:gap-3 rounded-xl px-4 sm:px-6 text-xs sm:text-sm font-semibold transition-all duration-500 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground hover:data-[state=inactive]:bg-muted/60"
               value="announcements"
             >
-              <Megaphone className="h-4.5 w-4.5" />
-              <div className="flex items-center gap-2">
-                <span>Announcements</span>
+              <Megaphone className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span>Updates</span>
                 <Badge
-                  className="h-5 min-w-5 justify-center bg-muted/80 px-1 text-[10px] font-bold text-muted-foreground group-data-[state=active]:bg-brand/10 group-data-[state=active]:text-brand"
+                  className="h-4.5 min-w-4.5 sm:h-5 sm:min-w-5 justify-center bg-muted/80 px-1 text-[9px] sm:text-[10px] font-bold text-muted-foreground group-data-[state=active]:bg-brand/10 group-data-[state=active]:text-brand"
                   variant="muted"
                 >
                   {detail.announcements.length}

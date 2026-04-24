@@ -106,13 +106,13 @@ export function MemberDetailsDialog({
 
       <DialogContent className="max-w-xl rounded-[2rem]">
         <DialogHeader className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand/10 text-brand">
-              <User className="h-8 w-8" />
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand sm:h-16 sm:w-16">
+              <User className="h-6 w-6 sm:h-8 sm:w-8" />
             </div>
-            <div className="space-y-1">
-              <DialogTitle className="text-2xl">Member information</DialogTitle>
-              <DialogDescription>
+            <div className="space-y-0.5 sm:space-y-1">
+              <DialogTitle className="text-xl sm:text-2xl">Member information</DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm">
                 Full directory record for{" "}
                 {detail?.member ? `${detail.member.firstName} ${detail.member.lastName}` : "member"}
                 .
@@ -121,7 +121,7 @@ export function MemberDetailsDialog({
           </div>
         </DialogHeader>
 
-        <div className="mt-4 space-y-6">
+        <div className="mt-2 space-y-4 sm:mt-4 sm:space-y-6">
           {isPending ? (
             <div className="space-y-4">
               <Skeleton className="h-24 w-full rounded-2xl" />
@@ -129,7 +129,7 @@ export function MemberDetailsDialog({
             </div>
           ) : detail ? (
             <>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
                 <CopyableValue
                   value={`${detail.member.firstName} ${detail.member.lastName}`}
                   className="min-w-0"
