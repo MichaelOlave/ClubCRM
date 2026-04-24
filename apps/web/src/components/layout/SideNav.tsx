@@ -101,6 +101,12 @@ export function SideNav({ items, className }: Props) {
               Check our documentation or contact support.
             </p>
             <Link
+              href="/docs"
+              className="mt-3 block text-xs font-medium text-brand hover:underline"
+            >
+              Documentation &rarr;
+            </Link>
+            <Link
               href="/system/health"
               className="mt-3 block text-xs font-medium text-brand hover:underline"
             >
