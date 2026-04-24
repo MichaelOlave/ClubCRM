@@ -41,7 +41,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 -translate-y-1/2 rounded-[1.5rem] border bg-card p-6 text-card-foreground shadow-lg sm:p-8",
+          "fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 -translate-y-1/2 rounded-[1.5rem] border bg-card p-4 text-card-foreground shadow-lg sm:p-6 lg:p-8",
           className
         )}
         {...props}

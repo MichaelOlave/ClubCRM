@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 import type { TableColumn } from "@/types/ui";
 
@@ -24,7 +24,8 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="overflow-hidden rounded-[1.25rem] border border-border">
+    <div className="relative overflow-hidden rounded-[1.25rem] border border-border">
+      <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background/20 to-transparent pointer-events-none lg:hidden" />
       <Table className="min-w-full bg-card">
         <TableHeader className="bg-muted/50">
           <TableRow className="border-border hover:bg-transparent">
@@ -41,8 +42,9 @@ export function DataTable<T>({
         </TableHeader>
         <TableBody>
           {rows.map((row) => {
+            const rowKey = keyExtractor(row);
             const content = (
-              <TableRow className="align-top" key={keyExtractor(row)}>
+              <TableRow className="align-top">
                 {columns.map((column) => (
                   <TableCell
                     className={column.align === "right" ? "text-right" : ""}
@@ -54,7 +56,11 @@ export function DataTable<T>({
               </TableRow>
             );
 
-            return renderRowWrapper ? renderRowWrapper(row, content) : content;
+            return (
+              <Fragment key={rowKey}>
+                {renderRowWrapper ? renderRowWrapper(row, content) : content}
+              </Fragment>
+            );
           })}
         </TableBody>
       </Table>
