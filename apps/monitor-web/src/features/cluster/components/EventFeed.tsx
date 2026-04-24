@@ -14,6 +14,12 @@ const KIND_LABEL: Record<ClusterEvent["kind"], string> = {
   VOLUME_FAULTED: "Volume faulted",
   VOLUME_HEALTH_CHANGED: "Volume health",
   REPLICA_HEALTH_CHANGED: "Replica health",
+  PROBE_OK: "Probe ok",
+  PROBE_DEGRADED: "Probe degraded",
+  PROBE_FAILED: "Probe failed",
+  K8S_WARNING: "K8s warning",
+  CHAOS_STARTED: "Chaos started",
+  CHAOS_ENDED: "Chaos ended",
 };
 
 const KIND_COLOR: Record<ClusterEvent["kind"], string> = {
@@ -30,6 +36,36 @@ const KIND_COLOR: Record<ClusterEvent["kind"], string> = {
   VOLUME_FAULTED: "text-red-300",
   VOLUME_HEALTH_CHANGED: "text-amber-300",
   REPLICA_HEALTH_CHANGED: "text-cyan-300",
+  PROBE_OK: "text-emerald-300",
+  PROBE_DEGRADED: "text-amber-300",
+  PROBE_FAILED: "text-red-300",
+  K8S_WARNING: "text-amber-400",
+  CHAOS_STARTED: "text-purple-400",
+  CHAOS_ENDED: "text-zinc-400",
+};
+
+const CAUSE_TAG: Partial<Record<ClusterEvent["kind"], string>> = {
+  K8S_WARNING: "cause",
+  CHAOS_STARTED: "chaos",
+  CHAOS_ENDED: "chaos",
+  PROBE_DEGRADED: "service",
+  PROBE_FAILED: "service",
+};
+
+const CAUSE_TAG_STYLE: Partial<Record<ClusterEvent["kind"], string>> = {
+  K8S_WARNING: "border-amber-500/40 bg-amber-500/10 text-amber-300",
+  CHAOS_STARTED: "border-purple-500/40 bg-purple-500/10 text-purple-300",
+  CHAOS_ENDED: "border-zinc-500/40 bg-zinc-500/10 text-zinc-400",
+  PROBE_DEGRADED: "border-amber-500/40 bg-amber-500/10 text-amber-300",
+  PROBE_FAILED: "border-red-500/40 bg-red-500/10 text-red-300",
+};
+
+const CAUSE_BORDER: Partial<Record<ClusterEvent["kind"], string>> = {
+  K8S_WARNING: "border-amber-500/30",
+  CHAOS_STARTED: "border-purple-500/30",
+  CHAOS_ENDED: "border-zinc-500/20",
+  PROBE_DEGRADED: "border-amber-500/30",
+  PROBE_FAILED: "border-red-500/30",
 };
 
 export function EventFeed({ events }: { events: ClusterEvent[] }) {
@@ -39,20 +75,34 @@ export function EventFeed({ events }: { events: ClusterEvent[] }) {
 
   return (
     <ul className="flex flex-col gap-2 text-sm">
-      {events.slice(0, 20).map((event, index) => (
-        <li
-          key={`${event.kind}-${event.ts}-${index}`}
-          className="rounded-md border border-white/5 bg-white/[0.02] px-3 py-2"
-        >
-          <div className="flex items-center justify-between text-xs uppercase tracking-wide text-zinc-400">
-            <span className={`font-semibold ${KIND_COLOR[event.kind]}`}>
-              {KIND_LABEL[event.kind]}
-            </span>
-            <time suppressHydrationWarning>{new Date(event.ts * 1000).toLocaleTimeString()}</time>
-          </div>
-          <p className="mt-1 font-mono text-xs text-zinc-200">{summarize(event)}</p>
-        </li>
-      ))}
+      {events.slice(0, 20).map((event, index) => {
+        const causeTag = CAUSE_TAG[event.kind];
+        const causeTagStyle = CAUSE_TAG_STYLE[event.kind];
+        const causeBorder = CAUSE_BORDER[event.kind] ?? "border-white/5";
+        return (
+          <li
+            key={`${event.kind}-${event.ts}-${index}`}
+            className={`rounded-md border ${causeBorder} bg-white/[0.02] px-3 py-2`}
+          >
+            <div className="flex items-center justify-between text-xs uppercase tracking-wide text-zinc-400">
+              <div className="flex items-center gap-2">
+                <span className={`font-semibold ${KIND_COLOR[event.kind]}`}>
+                  {KIND_LABEL[event.kind]}
+                </span>
+                {causeTag && causeTagStyle && (
+                  <span
+                    className={`rounded border px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${causeTagStyle}`}
+                  >
+                    {causeTag}
+                  </span>
+                )}
+              </div>
+              <time suppressHydrationWarning>{new Date(event.ts * 1000).toLocaleTimeString()}</time>
+            </div>
+            <p className="mt-1 font-mono text-xs text-zinc-200">{summarize(event)}</p>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -84,5 +134,17 @@ function summarize(event: ClusterEvent): string {
       return `${event.volume}: ${event.from_health} → ${event.to_health}`;
     case "REPLICA_HEALTH_CHANGED":
       return `${event.replica} (${event.volume}): ${event.from_health} → ${event.to_health}`;
+    case "PROBE_OK":
+      return `${event.service}: ${Math.round(event.latency_ms)} ms (${event.status_code})`;
+    case "PROBE_DEGRADED":
+      return `${event.service}: ${event.reason}`;
+    case "PROBE_FAILED":
+      return `${event.service}: ${event.error}`;
+    case "K8S_WARNING":
+      return `${event.involved_object_kind}/${event.involved_object_name}: ${event.reason} — ${event.message.slice(0, 80)}`;
+    case "CHAOS_STARTED":
+      return `${event.experiment_kind} ${event.namespace}/${event.name}`;
+    case "CHAOS_ENDED":
+      return `${event.experiment_kind} ${event.namespace}/${event.name} ended`;
   }
 }

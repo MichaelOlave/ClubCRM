@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from src.bootstrap.dependencies import (
+    build_cluster_recording_store,
     build_cluster_runtime,
     build_cluster_state,
     build_event_bus,
@@ -23,18 +24,21 @@ def create_app() -> FastAPI:
         event_bus = build_event_bus()
         websocket_hub = build_websocket_hub()
         kubernetes_adapter = build_kubernetes_adapter(settings)
+        recording_store = build_cluster_recording_store(settings)
         runtime = build_cluster_runtime(
             settings=settings,
             state=cluster_state,
             event_bus=event_bus,
             websocket_hub=websocket_hub,
             kubernetes_adapter=kubernetes_adapter,
+            recording_store=recording_store,
         )
 
         app.state.cluster_state = cluster_state
         app.state.event_bus = event_bus
         app.state.websocket_hub = websocket_hub
         app.state.kubernetes_adapter = kubernetes_adapter
+        app.state.cluster_recording_store = recording_store
         app.state.cluster_runtime = runtime
 
         background_tasks_enabled = (

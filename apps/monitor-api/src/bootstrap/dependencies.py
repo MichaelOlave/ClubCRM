@@ -7,6 +7,7 @@ from src.modules.cluster.application.runtime import ClusterRuntime
 from src.modules.cluster.application.state import ClusterState
 from src.modules.cluster.application.websocket_hub import WebSocketHub
 from src.modules.cluster.infrastructure.kubernetes_watch import KubernetesWatchAdapter
+from src.modules.cluster.infrastructure.recording_store import ClusterRecordingStore
 
 
 def build_cluster_state() -> ClusterState:
@@ -25,6 +26,10 @@ def build_kubernetes_adapter(settings: Settings) -> KubernetesWatchAdapter:
     return KubernetesWatchAdapter(settings.cluster)
 
 
+def build_cluster_recording_store(settings: Settings) -> ClusterRecordingStore:
+    return ClusterRecordingStore(settings.cluster.recording_file)
+
+
 def build_cluster_runtime(
     *,
     settings: Settings,
@@ -32,6 +37,7 @@ def build_cluster_runtime(
     event_bus: EventBus,
     websocket_hub: WebSocketHub,
     kubernetes_adapter: KubernetesWatchAdapter,
+    recording_store: ClusterRecordingStore,
 ) -> ClusterRuntime:
     return ClusterRuntime(
         settings=settings.cluster,
@@ -39,6 +45,7 @@ def build_cluster_runtime(
         event_bus=event_bus,
         websocket_hub=websocket_hub,
         kubernetes_adapter=kubernetes_adapter,
+        recording_store=recording_store,
     )
 
 
@@ -56,6 +63,10 @@ def get_websocket_hub(connection: HTTPConnection) -> WebSocketHub:
 
 def get_kubernetes_adapter(connection: HTTPConnection) -> KubernetesWatchAdapter:
     return connection.app.state.kubernetes_adapter
+
+
+def get_cluster_recording_store(connection: HTTPConnection) -> ClusterRecordingStore:
+    return connection.app.state.cluster_recording_store
 
 
 def _extract_bearer_token(request: Request) -> str | None:

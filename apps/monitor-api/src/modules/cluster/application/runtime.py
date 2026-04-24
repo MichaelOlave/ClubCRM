@@ -4,13 +4,18 @@ import asyncio
 import contextlib
 import json
 import logging
-from pathlib import Path
+from collections.abc import Callable
 
 from src.config.settings import ClusterSettings
 from src.modules.cluster.application.event_bus import EventBus
 from src.modules.cluster.application.state import ClusterState
 from src.modules.cluster.application.websocket_hub import WebSocketHub
 from src.modules.cluster.infrastructure.kubernetes_watch import KubernetesWatchAdapter
+from src.modules.cluster.infrastructure.recording_store import (
+    ClusterRecordingStore,
+    resolve_cluster_path,
+)
+from src.modules.cluster.infrastructure.service_probe import ProbeResult, run_probe
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +29,16 @@ class ClusterRuntime:
         event_bus: EventBus,
         websocket_hub: WebSocketHub,
         kubernetes_adapter: KubernetesWatchAdapter,
+        recording_store: ClusterRecordingStore,
+        probe_runner: Callable[..., ProbeResult] = run_probe,
     ) -> None:
         self._settings = settings
         self._state = state
         self._event_bus = event_bus
         self._websocket_hub = websocket_hub
         self._kubernetes_adapter = kubernetes_adapter
+        self._recording_store = recording_store
+        self._probe_runner = probe_runner
         self._tasks: list[asyncio.Task] = []
         self._stop_event = asyncio.Event()
         self._resource_versions: dict[str, str | None] = {
@@ -37,11 +46,20 @@ class ClusterRuntime:
             "pod": None,
             "longhorn_volume": None,
             "longhorn_replica": None,
+            "k8s_event": None,
+            "chaos_podchaos": None,
+            "chaos_networkchaos": None,
         }
 
     async def start(self) -> None:
+        await self._recording_store.reset()
+
         if self._settings.snapshot_file:
             await self._load_snapshot_file()
+
+        if self._settings.probe_targets:
+            await self._state.register_probe_targets(self._settings.probe_targets)
+            await self._record_snapshot()
 
         self._tasks = [
             asyncio.create_task(self._run_node_watch(), name="cluster-node-watch"),
@@ -62,6 +80,23 @@ class ClusterRuntime:
                     ),
                 ]
             )
+        if self._settings.k8s_events_enabled:
+            self._tasks.append(
+                asyncio.create_task(self._run_k8s_events_watch(), name="cluster-k8s-events-watch")
+            )
+        if self._settings.chaos_enabled:
+            for plural in ("podchaos", "networkchaos"):
+                self._tasks.append(
+                    asyncio.create_task(
+                        self._run_chaos_watch(plural),
+                        name=f"cluster-chaos-{plural}-watch",
+                    )
+                )
+
+        if self._settings.probe_targets:
+            self._tasks.append(
+                asyncio.create_task(self._run_probe_loop(), name="cluster-service-probes")
+            )
 
     async def stop(self) -> None:
         self._stop_event.set()
@@ -72,7 +107,7 @@ class ClusterRuntime:
                 await task
 
     async def _load_snapshot_file(self) -> None:
-        path = _resolve_snapshot_path(self._settings.snapshot_file or "")
+        path = resolve_cluster_path(self._settings.snapshot_file or "")
         if not path.is_file():
             logger.warning("Cluster snapshot file not found: %s", path)
             return
@@ -87,15 +122,19 @@ class ClusterRuntime:
         pods = payload.get("pods") or []
         volumes = payload.get("volumes") or []
         replicas = payload.get("replicas") or []
+        probes = payload.get("probes") or []
         if _is_serialized_snapshot(nodes, pods):
             await self._state.replace_serialized_nodes(nodes)
             await self._state.replace_serialized_pods(pods)
             await self._state.replace_serialized_volumes(volumes)
             await self._state.replace_serialized_replicas(replicas)
+            await self._state.replace_serialized_probes(probes)
+            await self._record_snapshot()
             return
 
         await self._state.replace_nodes(nodes)
         await self._state.replace_pods(pods)
+        await self._record_snapshot()
 
     async def _run_node_watch(self) -> None:
         if self._settings.snapshot_file:
@@ -117,6 +156,16 @@ class ClusterRuntime:
             return
         await self._run_watch_loop(resource="longhorn_replica")
 
+    async def _run_k8s_events_watch(self) -> None:
+        if self._settings.snapshot_file:
+            return
+        await self._run_watch_loop(resource="k8s_event")
+
+    async def _run_chaos_watch(self, plural: str) -> None:
+        if self._settings.snapshot_file:
+            return
+        await self._run_watch_loop(resource=f"chaos_{plural}")
+
     async def _run_watch_loop(self, *, resource: str) -> None:
         backoff_seconds = 1.0
         while not self._stop_event.is_set():
@@ -134,14 +183,13 @@ class ClusterRuntime:
                     backoff_seconds,
                 )
                 try:
-                    await asyncio.wait_for(
-                        self._stop_event.wait(), timeout=backoff_seconds
-                    )
+                    await asyncio.wait_for(self._stop_event.wait(), timeout=backoff_seconds)
                     return
                 except TimeoutError:
                     backoff_seconds = min(backoff_seconds * 2, 30.0)
 
     async def _prime_state(self, resource: str) -> None:
+        resource_version: str | None = None
         if resource == "node":
             items, resource_version = await asyncio.to_thread(
                 self._kubernetes_adapter.list_nodes_with_resource_version
@@ -157,12 +205,23 @@ class ClusterRuntime:
                 self._kubernetes_adapter.list_longhorn_volumes_with_resource_version
             )
             await self._state.replace_longhorn_volumes(items)
-        else:
+        elif resource == "longhorn_replica":
             items, resource_version = await asyncio.to_thread(
                 self._kubernetes_adapter.list_longhorn_replicas_with_resource_version
             )
             await self._state.replace_longhorn_replicas(items)
+        elif resource == "k8s_event":
+            _, resource_version = await asyncio.to_thread(
+                self._kubernetes_adapter.list_k8s_events_with_resource_version
+            )
+        elif resource.startswith("chaos_"):
+            plural = resource.removeprefix("chaos_")
+            _, resource_version = await asyncio.to_thread(
+                self._kubernetes_adapter.list_chaos_experiments_with_resource_version, plural
+            )
         self._resource_versions[resource] = resource_version
+        if resource in {"node", "pod", "longhorn_volume", "longhorn_replica"}:
+            await self._record_snapshot()
 
     def _consume_stream(self, resource: str, loop: asyncio.AbstractEventLoop) -> None:
         if resource == "node":
@@ -177,10 +236,22 @@ class ClusterRuntime:
             stream = self._kubernetes_adapter.stream_longhorn_volumes(
                 resource_version=self._resource_versions.get(resource)
             )
-        else:
+        elif resource == "longhorn_replica":
             stream = self._kubernetes_adapter.stream_longhorn_replicas(
                 resource_version=self._resource_versions.get(resource)
             )
+        elif resource == "k8s_event":
+            stream = self._kubernetes_adapter.stream_k8s_events(
+                resource_version=self._resource_versions.get(resource)
+            )
+        elif resource.startswith("chaos_"):
+            plural = resource.removeprefix("chaos_")
+            stream = self._kubernetes_adapter.stream_chaos_experiments(
+                plural=plural,
+                resource_version=self._resource_versions.get(resource),
+            )
+        else:
+            return
         for event_type, raw in stream:
             if self._stop_event.is_set():
                 return
@@ -201,13 +272,32 @@ class ClusterRuntime:
             events = await self._state.apply_pod_event(event_type, raw)
         elif resource == "longhorn_volume":
             events = await self._state.apply_longhorn_volume_event(event_type, raw)
-        else:
+        elif resource == "longhorn_replica":
             events = await self._state.apply_longhorn_replica_event(event_type, raw)
+        elif resource == "k8s_event":
+            from src.modules.cluster.infrastructure.k8s_event_normalizer import parse_k8s_warning
+
+            k8s_event = parse_k8s_warning(raw)
+            if k8s_event is not None:
+                await self._publish_frame(
+                    {"type": "event", "ts": k8s_event.ts, "event": k8s_event.to_dict()}
+                )
+            return
+        elif resource.startswith("chaos_"):
+            from src.modules.cluster.infrastructure.chaos_normalizer import parse_chaos_event
+
+            plural = resource.removeprefix("chaos_")
+            chaos_event = parse_chaos_event(raw, event_type, _plural_to_kind(plural))
+            if chaos_event is not None:
+                await self._publish_frame(
+                    {"type": "event", "ts": chaos_event.ts, "event": chaos_event.to_dict()}
+                )
+            return
+        else:
+            return
 
         for event in events:
-            await self._event_bus.publish(
-                {"type": "event", "ts": event.ts, "event": event.to_dict()}
-            )
+            await self._publish_frame({"type": "event", "ts": event.ts, "event": event.to_dict()})
 
     async def _run_broadcast_loop(self) -> None:
         async with self._event_bus.subscribe() as queue:
@@ -226,7 +316,56 @@ class ClusterRuntime:
                 return
             except TimeoutError:
                 snapshot = await self._state.snapshot()
-                await self._websocket_hub.broadcast(snapshot)
+                await self._broadcast_snapshot(snapshot)
+
+    async def _run_probe_loop(self) -> None:
+        interval = max(self._settings.probe_interval_seconds, 1.0)
+        while not self._stop_event.is_set():
+            await self._run_probe_cycle()
+            try:
+                await asyncio.wait_for(self._stop_event.wait(), timeout=interval)
+                return
+            except TimeoutError:
+                continue
+
+    async def _run_probe_cycle(self) -> None:
+        for target in self._settings.probe_targets:
+            result = await asyncio.to_thread(
+                self._probe_runner,
+                target,
+                timeout_seconds=self._settings.probe_timeout_seconds,
+                degraded_latency_ms=self._settings.probe_degraded_latency_ms,
+            )
+            event = await self._state.apply_probe_result(result)
+            if event is not None:
+                await self._publish_frame(
+                    {"type": "event", "ts": event.ts, "event": event.to_dict()}
+                )
+            if self._stop_event.is_set():
+                return
+
+    async def _publish_frame(self, frame: dict) -> None:
+        await self._recording_store.record_frame(frame)
+        await self._event_bus.publish(frame)
+
+    async def _broadcast_snapshot(self, snapshot: dict) -> None:
+        await self._recording_store.record_frame(snapshot)
+        await self._websocket_hub.broadcast(snapshot)
+
+    async def _record_snapshot(self) -> None:
+        snapshot = await self._state.snapshot()
+        await self._recording_store.record_frame(snapshot)
+
+
+def _plural_to_kind(plural: str) -> str:
+    _MAP = {
+        "podchaos": "PodChaos",
+        "networkchaos": "NetworkChaos",
+        "stresschaos": "StressChaos",
+        "iochaos": "IOChaos",
+        "httpchaos": "HTTPChaos",
+    }
+    return _MAP.get(plural, plural)
 
 
 def _is_serialized_snapshot(nodes: list[dict], pods: list[dict]) -> bool:
@@ -239,20 +378,3 @@ def _is_serialized_snapshot(nodes: list[dict], pods: list[dict]) -> bool:
         if isinstance(first_pod, dict) and "namespace" in first_pod and "name" in first_pod:
             return True
     return False
-
-
-def _resolve_snapshot_path(snapshot_file: str) -> Path:
-    path = Path(snapshot_file)
-    if path.is_absolute():
-        return path
-
-    cwd_path = Path.cwd() / path
-    if cwd_path.is_file():
-        return cwd_path
-
-    for parent in Path(__file__).resolve().parents:
-        candidate = parent / path
-        if candidate.is_file():
-            return candidate
-
-    return cwd_path

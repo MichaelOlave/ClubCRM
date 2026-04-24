@@ -9,6 +9,7 @@ from src.config.settings import ClusterSettings
 class KubernetesClientProtocol(Protocol):
     def list_node(self, **kwargs) -> object: ...
     def list_pod_for_all_namespaces(self, **kwargs) -> object: ...
+    def list_event_for_all_namespaces(self, **kwargs) -> object: ...
 
 
 class CustomObjectsClientProtocol(Protocol):
@@ -91,6 +92,19 @@ class KubernetesWatchAdapter:
     def list_longhorn_replicas_with_resource_version(self) -> tuple[list[dict], str | None]:
         return self._list_longhorn_custom_objects(plural="replicas")
 
+    def list_k8s_events_with_resource_version(self) -> tuple[list[dict], str | None]:
+        core_v1 = self.load_client()
+        response = core_v1.list_event_for_all_namespaces()
+        metadata = getattr(response, "metadata", None)
+        items = [self._to_api_dict(item) for item in response.items]
+        warning_items = [item for item in items if item.get("type") == "Warning"]
+        return warning_items, getattr(metadata, "resource_version", None)
+
+    def list_chaos_experiments_with_resource_version(
+        self, plural: str
+    ) -> tuple[list[dict], str | None]:
+        return self._list_chaos_custom_objects(plural=plural)
+
     def stream_nodes(
         self, *, resource_version: str | None = None
     ) -> Iterator[tuple[str, dict]]:
@@ -109,6 +123,30 @@ class KubernetesWatchAdapter:
     ) -> Iterator[tuple[str, dict]]:
         return self._stream(resource="longhorn_replica", resource_version=resource_version)
 
+    def stream_k8s_events(
+        self, *, resource_version: str | None = None
+    ) -> Iterator[tuple[str, dict]]:
+        return self._stream(resource="k8s_event", resource_version=resource_version)
+
+    def stream_chaos_experiments(
+        self, *, plural: str, resource_version: str | None = None
+    ) -> Iterator[tuple[str, dict]]:
+        from kubernetes import watch  # type: ignore[import-not-found]
+
+        custom_objects = self.load_custom_objects_client()
+        watcher = watch.Watch()
+        for event in watcher.stream(
+            custom_objects.list_cluster_custom_object,
+            group="chaos-mesh.org",
+            version="v1alpha1",
+            plural=plural,
+            resource_version=resource_version,
+            timeout_seconds=self._settings.watch_timeout_seconds,
+        ):
+            event_type = event.get("type", "UNKNOWN")
+            raw = self._to_api_dict(event.get("object"))
+            yield event_type, raw
+
     def _stream(
         self, *, resource: str, resource_version: str | None = None
     ) -> Iterator[tuple[str, dict]]:
@@ -121,6 +159,9 @@ class KubernetesWatchAdapter:
             kwargs = {}
         elif resource == "pod":
             func = core_v1.list_pod_for_all_namespaces
+            kwargs = {}
+        elif resource == "k8s_event":
+            func = core_v1.list_event_for_all_namespaces
             kwargs = {}
         else:
             custom_objects = self.load_custom_objects_client()
@@ -140,6 +181,22 @@ class KubernetesWatchAdapter:
             event_type = event.get("type", "UNKNOWN")
             raw = self._to_api_dict(event.get("object"))
             yield event_type, raw
+
+    def _list_chaos_custom_objects(self, *, plural: str) -> tuple[list[dict], str | None]:
+        custom_objects = self.load_custom_objects_client()
+        response = custom_objects.list_cluster_custom_object(
+            group="chaos-mesh.org",
+            version="v1alpha1",
+            plural=plural,
+        )
+        metadata = response.get("metadata") or {}
+        items = response.get("items") or []
+        return (
+            [item for item in items if isinstance(item, dict)],
+            metadata.get("resourceVersion")
+            if isinstance(metadata.get("resourceVersion"), str)
+            else None,
+        )
 
     def _list_longhorn_custom_objects(self, *, plural: str) -> tuple[list[dict], str | None]:
         custom_objects = self.load_custom_objects_client()

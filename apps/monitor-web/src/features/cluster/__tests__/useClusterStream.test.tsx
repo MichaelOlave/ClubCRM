@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useClusterStream } from "@/features/cluster/hooks/useClusterStream";
-import type { ClusterSnapshot, WsFrame } from "@/features/cluster/types";
+import type { ClusterReplay, ClusterSnapshot, WsFrame } from "@/features/cluster/types";
 
 const INITIAL_SNAPSHOT: ClusterSnapshot = {
   type: "snapshot",
@@ -17,6 +17,38 @@ const INITIAL_SNAPSHOT: ClusterSnapshot = {
   ],
   volumes: [],
   replicas: [],
+  probes: [],
+};
+
+const REPLAY_SESSION: ClusterReplay = {
+  type: "replay",
+  source: "/tmp/cluster-session.jsonl",
+  initial_snapshot: INITIAL_SNAPSHOT,
+  frames: [
+    {
+      type: "event",
+      ts: 1001,
+      event: {
+        kind: "NODE_READY",
+        ts: 1001,
+        node: "server2",
+      },
+    },
+    {
+      type: "event",
+      ts: 1002,
+      event: {
+        kind: "POD_MOVED",
+        ts: 1002,
+        namespace: "clubcrm",
+        name: "api-1",
+        from_node: "server1",
+        to_node: "server2",
+      },
+    },
+  ],
+  started_at: 1000,
+  ended_at: 1002,
 };
 
 class MockWebSocket {
@@ -117,6 +149,7 @@ describe("useClusterStream", () => {
         ],
         volumes: [],
         replicas: [],
+        probes: [],
       });
       socket.emitFrame({
         type: "event",
@@ -130,6 +163,17 @@ describe("useClusterStream", () => {
           to_node: "server2",
         },
       });
+      socket.emitFrame({
+        type: "event",
+        ts: 1250,
+        event: {
+          kind: "PROBE_FAILED",
+          ts: 1250,
+          service: "clubcrm-web",
+          url: "https://clubcrm.local/login",
+          error: "timed out",
+        },
+      });
       socket.emitRaw("{not-json");
     });
 
@@ -138,7 +182,8 @@ describe("useClusterStream", () => {
       expect(result.current.cluster.pods.find((pod) => pod.name === "api-1")?.node_name).toBe(
         "server2"
       );
-      expect(result.current.eventLog[0]?.kind).toBe("POD_MOVED");
+      expect(result.current.cluster.probes[0]?.status).toBe("failed");
+      expect(result.current.eventLog[0]?.kind).toBe("PROBE_FAILED");
     });
   });
 
@@ -179,5 +224,85 @@ describe("useClusterStream", () => {
     unmount();
 
     expect(secondSocket.close).toHaveBeenCalledTimes(1);
+  });
+
+  it("buffers live frames while paused and flushes them on resume", async () => {
+    const { result } = renderHook(() =>
+      useClusterStream(INITIAL_SNAPSHOT, "ws://localhost:8001/ws/cluster")
+    );
+
+    const socket = MockWebSocket.instances[0];
+
+    act(() => {
+      socket.emitOpen();
+    });
+
+    await waitFor(() => {
+      expect(result.current.streamStatus).toBe("live");
+    });
+
+    act(() => {
+      result.current.streamControls.togglePaused();
+    });
+
+    expect(result.current.streamStatus).toBe("paused");
+
+    act(() => {
+      socket.emitFrame({
+        type: "event",
+        ts: 1200,
+        event: {
+          kind: "POD_MOVED",
+          ts: 1200,
+          namespace: "clubcrm",
+          name: "api-1",
+          from_node: "server1",
+          to_node: "server2",
+        },
+      });
+    });
+
+    expect(result.current.streamControls.queuedFrames).toBe(1);
+    expect(result.current.cluster.pods.find((pod) => pod.name === "api-1")?.node_name).toBe(
+      "server1"
+    );
+
+    act(() => {
+      result.current.streamControls.togglePaused();
+    });
+
+    await waitFor(() => {
+      expect(result.current.streamStatus).toBe("live");
+      expect(result.current.streamControls.queuedFrames).toBe(0);
+      expect(result.current.cluster.pods.find((pod) => pod.name === "api-1")?.node_name).toBe(
+        "server2"
+      );
+    });
+  });
+
+  it("replays recorded frames without opening a websocket", async () => {
+    vi.useFakeTimers();
+
+    const { result } = renderHook(() => useClusterStream(INITIAL_SNAPSHOT, "", REPLAY_SESSION));
+
+    expect(MockWebSocket.instances).toHaveLength(0);
+    expect(result.current.streamStatus).toBe("replay");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    expect(result.current.eventLog[0]?.kind).toBe("NODE_READY");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    expect(result.current.cluster.pods.find((pod) => pod.name === "api-1")?.node_name).toBe(
+      "server2"
+    );
+    expect(result.current.replay.currentFrame).toBe(2);
+    expect(result.current.replay.paused).toBe(true);
+    expect(result.current.streamControls.paused).toBe(true);
   });
 });

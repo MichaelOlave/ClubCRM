@@ -4,6 +4,7 @@ import type {
   ClusterPod,
   ClusterReplica,
   ClusterSnapshot,
+  ServiceProbe,
   ClusterVolume,
 } from "@/features/cluster/types";
 
@@ -13,6 +14,7 @@ export interface ClusterStateShape {
   pods: ClusterPod[];
   volumes: ClusterVolume[];
   replicas: ClusterReplica[];
+  probes: ServiceProbe[];
 }
 
 export function snapshotToState(snapshot: ClusterSnapshot): ClusterStateShape {
@@ -22,6 +24,7 @@ export function snapshotToState(snapshot: ClusterSnapshot): ClusterStateShape {
     pods: snapshot.pods,
     volumes: snapshot.volumes,
     replicas: snapshot.replicas,
+    probes: snapshot.probes,
   };
 }
 
@@ -152,6 +155,55 @@ export function applyEvent(state: ClusterStateShape, event: ClusterEvent): Clust
           health: event.to_health,
         }),
       };
+    case "PROBE_OK":
+      return {
+        ...state,
+        ts: event.ts,
+        probes: upsertProbe(state.probes, {
+          service: event.service,
+          url: event.url,
+          status: "ok",
+          last_checked_at: event.ts,
+          last_transition_at: event.ts,
+          last_latency_ms: event.latency_ms,
+          last_status_code: event.status_code,
+          last_error: null,
+        }),
+      };
+    case "PROBE_DEGRADED":
+      return {
+        ...state,
+        ts: event.ts,
+        probes: upsertProbe(state.probes, {
+          service: event.service,
+          url: event.url,
+          status: "degraded",
+          last_checked_at: event.ts,
+          last_transition_at: event.ts,
+          last_latency_ms: event.latency_ms,
+          last_status_code: event.status_code,
+          last_error: event.reason,
+        }),
+      };
+    case "PROBE_FAILED":
+      return {
+        ...state,
+        ts: event.ts,
+        probes: upsertProbe(state.probes, {
+          service: event.service,
+          url: event.url,
+          status: "failed",
+          last_checked_at: event.ts,
+          last_transition_at: event.ts,
+          last_latency_ms: null,
+          last_status_code: null,
+          last_error: event.error,
+        }),
+      };
+    case "K8S_WARNING":
+    case "CHAOS_STARTED":
+    case "CHAOS_ENDED":
+      return { ...state, ts: event.ts };
     default:
       return state;
   }
@@ -207,5 +259,15 @@ function upsertReplica(replicas: ClusterReplica[], replica: ClusterReplica): Clu
   }
   const next = replicas.slice();
   next[index] = { ...next[index], ...replica };
+  return next;
+}
+
+function upsertProbe(probes: ServiceProbe[], probe: ServiceProbe): ServiceProbe[] {
+  const index = probes.findIndex((existing) => existing.service === probe.service);
+  if (index === -1) {
+    return [...probes, probe];
+  }
+  const next = probes.slice();
+  next[index] = { ...next[index], ...probe };
   return next;
 }

@@ -36,6 +36,19 @@ export interface ClusterReplica {
   health: string;
 }
 
+export type ProbeStatus = "unknown" | "ok" | "degraded" | "failed";
+
+export interface ServiceProbe {
+  service: string;
+  url: string;
+  status: ProbeStatus;
+  last_checked_at: number | null;
+  last_transition_at: number | null;
+  last_latency_ms: number | null;
+  last_status_code: number | null;
+  last_error: string | null;
+}
+
 export interface ClusterSnapshot {
   type: "snapshot";
   ts: number;
@@ -43,6 +56,16 @@ export interface ClusterSnapshot {
   pods: ClusterPod[];
   volumes: ClusterVolume[];
   replicas: ClusterReplica[];
+  probes: ServiceProbe[];
+}
+
+export interface ClusterReplay {
+  type: "replay";
+  source: string | null;
+  initial_snapshot: ClusterSnapshot;
+  frames: WsFrame[];
+  started_at: number | null;
+  ended_at: number | null;
 }
 
 export type ClusterEventKind =
@@ -58,7 +81,13 @@ export type ClusterEventKind =
   | "VOLUME_REATTACHED"
   | "VOLUME_FAULTED"
   | "VOLUME_HEALTH_CHANGED"
-  | "REPLICA_HEALTH_CHANGED";
+  | "REPLICA_HEALTH_CHANGED"
+  | "PROBE_OK"
+  | "PROBE_DEGRADED"
+  | "PROBE_FAILED"
+  | "K8S_WARNING"
+  | "CHAOS_STARTED"
+  | "CHAOS_ENDED";
 
 export interface NodeReadyEvent {
   kind: "NODE_READY";
@@ -178,6 +207,59 @@ export interface ReplicaHealthChangedEvent {
   to_health: string;
 }
 
+export interface ProbeOkEvent {
+  kind: "PROBE_OK";
+  ts: number;
+  service: string;
+  url: string;
+  latency_ms: number;
+  status_code: number;
+}
+
+export interface ProbeDegradedEvent {
+  kind: "PROBE_DEGRADED";
+  ts: number;
+  service: string;
+  url: string;
+  reason: string;
+  latency_ms: number | null;
+  status_code: number | null;
+}
+
+export interface ProbeFailedEvent {
+  kind: "PROBE_FAILED";
+  ts: number;
+  service: string;
+  url: string;
+  error: string;
+}
+
+export interface K8sWarningEvent {
+  kind: "K8S_WARNING";
+  ts: number;
+  involved_object_kind: string;
+  involved_object_namespace: string | null;
+  involved_object_name: string;
+  reason: string;
+  message: string;
+}
+
+export interface ChaosStartedEvent {
+  kind: "CHAOS_STARTED";
+  ts: number;
+  experiment_kind: string;
+  name: string;
+  namespace: string;
+}
+
+export interface ChaosEndedEvent {
+  kind: "CHAOS_ENDED";
+  ts: number;
+  experiment_kind: string;
+  name: string;
+  namespace: string;
+}
+
 export type ClusterEvent =
   | NodeReadyEvent
   | NodeDownEvent
@@ -191,8 +273,20 @@ export type ClusterEvent =
   | VolumeReattachedEvent
   | VolumeFaultedEvent
   | VolumeHealthChangedEvent
-  | ReplicaHealthChangedEvent;
+  | ReplicaHealthChangedEvent
+  | ProbeOkEvent
+  | ProbeDegradedEvent
+  | ProbeFailedEvent
+  | K8sWarningEvent
+  | ChaosStartedEvent
+  | ChaosEndedEvent;
 
 export type WsFrame = ClusterSnapshot | { type: "event"; ts: number; event: ClusterEvent };
 
-export type StreamStatus = "connecting" | "live" | "reconnecting" | "offline";
+export type StreamStatus =
+  | "connecting"
+  | "live"
+  | "reconnecting"
+  | "offline"
+  | "replay"
+  | "paused";

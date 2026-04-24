@@ -123,9 +123,15 @@ MONITOR_CLUSTER_KUBECONFIG=/etc/clubcrm-monitor/kubeconfig
 MONITOR_CLUSTER_CONTEXT=
 MONITOR_CLUSTER_IN_CLUSTER=false
 MONITOR_CLUSTER_SNAPSHOT_FILE=
+MONITOR_CLUSTER_RECORDING_FILE=/var/lib/clubcrm-monitor/cluster-session.jsonl
 MONITOR_LONGHORN_ENABLED=true
 MONITOR_CLUSTER_HEARTBEAT_SECONDS=5
 MONITOR_CLUSTER_WATCH_TIMEOUT_SECONDS=300
+MONITOR_PROBE_TARGETS=clubcrm-web=https://clubcrm.local/login,clubcrm-api=https://clubcrm.local/api/health
+MONITOR_PROBE_INTERVAL_SECONDS=5
+MONITOR_PROBE_TIMEOUT_SECONDS=2
+MONITOR_PROBE_DEGRADED_LATENCY_MS=1200
+MONITOR_REPLAY_MODE=false
 NEXT_PUBLIC_MONITOR_API_BASE_URL=http://192.168.139.213:8010
 NEXT_PUBLIC_MONITOR_WS_URL=ws://192.168.139.213:8010/ws/stream
 ```
@@ -135,6 +141,7 @@ For offline rehearsal or frontend work without live cluster access:
 ```dotenv
 MONITOR_CLUSTER_KUBECONFIG=
 MONITOR_CLUSTER_SNAPSHOT_FILE=/workspace/infra/monitoring/fixtures/k8s-snapshot.json
+MONITOR_REPLAY_MODE=true
 ```
 
 The container image also includes the checked-in fixture at

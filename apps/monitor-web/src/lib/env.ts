@@ -31,3 +31,18 @@ export function getMonitorAdminToken(): string | null {
   const token = process.env.MONITOR_ADMIN_TOKEN?.trim();
   return token && token.length > 0 ? token : null;
 }
+
+export function getMonitorReplayApiUrl() {
+  const explicitUrl =
+    process.env.MONITOR_REPLAY_API_URL ?? process.env.NEXT_PUBLIC_MONITOR_REPLAY_API_URL;
+  if (explicitUrl) {
+    return trimTrailingSlash(explicitUrl);
+  }
+  return `${getMonitorApiBaseUrl()}/api/replay`;
+}
+
+export function isMonitorReplayModeEnabled() {
+  const value =
+    process.env.MONITOR_REPLAY_MODE ?? process.env.NEXT_PUBLIC_MONITOR_REPLAY_MODE ?? "false";
+  return value.trim().toLowerCase() === "true";
+}

@@ -79,6 +79,30 @@ class VolumeReplicaState:
 
 
 @dataclass(frozen=True)
+class ServiceProbeState:
+    service: str
+    url: str
+    status: Literal["unknown", "ok", "degraded", "failed"] = "unknown"
+    last_checked_at: float | None = None
+    last_transition_at: float | None = None
+    last_latency_ms: float | None = None
+    last_status_code: int | None = None
+    last_error: str | None = None
+
+    def to_dict(self) -> dict:
+        return {
+            "service": self.service,
+            "url": self.url,
+            "status": self.status,
+            "last_checked_at": self.last_checked_at,
+            "last_transition_at": self.last_transition_at,
+            "last_latency_ms": self.last_latency_ms,
+            "last_status_code": self.last_status_code,
+            "last_error": self.last_error,
+        }
+
+
+@dataclass(frozen=True)
 class NodeReady:
     node: str
     ts: float
@@ -332,6 +356,124 @@ class ReplicaHealthChanged:
         }
 
 
+@dataclass(frozen=True)
+class K8sWarning:
+    involved_object_kind: str
+    involved_object_namespace: str | None
+    involved_object_name: str
+    reason: str
+    message: str
+    ts: float
+    kind: Literal["K8S_WARNING"] = "K8S_WARNING"
+
+    def to_dict(self) -> dict:
+        return {
+            "kind": self.kind,
+            "ts": self.ts,
+            "involved_object_kind": self.involved_object_kind,
+            "involved_object_namespace": self.involved_object_namespace,
+            "involved_object_name": self.involved_object_name,
+            "reason": self.reason,
+            "message": self.message,
+        }
+
+
+@dataclass(frozen=True)
+class ChaosStarted:
+    experiment_kind: str
+    name: str
+    namespace: str
+    ts: float
+    kind: Literal["CHAOS_STARTED"] = "CHAOS_STARTED"
+
+    def to_dict(self) -> dict:
+        return {
+            "kind": self.kind,
+            "ts": self.ts,
+            "experiment_kind": self.experiment_kind,
+            "name": self.name,
+            "namespace": self.namespace,
+        }
+
+
+@dataclass(frozen=True)
+class ChaosEnded:
+    experiment_kind: str
+    name: str
+    namespace: str
+    ts: float
+    kind: Literal["CHAOS_ENDED"] = "CHAOS_ENDED"
+
+    def to_dict(self) -> dict:
+        return {
+            "kind": self.kind,
+            "ts": self.ts,
+            "experiment_kind": self.experiment_kind,
+            "name": self.name,
+            "namespace": self.namespace,
+        }
+
+
+@dataclass(frozen=True)
+class ProbeOk:
+    service: str
+    url: str
+    latency_ms: float
+    status_code: int
+    ts: float
+    kind: Literal["PROBE_OK"] = "PROBE_OK"
+
+    def to_dict(self) -> dict:
+        return {
+            "kind": self.kind,
+            "ts": self.ts,
+            "service": self.service,
+            "url": self.url,
+            "latency_ms": self.latency_ms,
+            "status_code": self.status_code,
+        }
+
+
+@dataclass(frozen=True)
+class ProbeDegraded:
+    service: str
+    url: str
+    reason: str
+    latency_ms: float | None
+    status_code: int | None
+    ts: float
+    kind: Literal["PROBE_DEGRADED"] = "PROBE_DEGRADED"
+
+    def to_dict(self) -> dict:
+        return {
+            "kind": self.kind,
+            "ts": self.ts,
+            "service": self.service,
+            "url": self.url,
+            "reason": self.reason,
+            "latency_ms": self.latency_ms,
+            "status_code": self.status_code,
+        }
+
+
+@dataclass(frozen=True)
+class ProbeFailed:
+    service: str
+    url: str
+    error: str
+    ts: float
+    kind: Literal["PROBE_FAILED"] = "PROBE_FAILED"
+
+    def to_dict(self) -> dict:
+        return {
+            "kind": self.kind,
+            "ts": self.ts,
+            "service": self.service,
+            "url": self.url,
+            "error": self.error,
+        }
+
+
 ClusterEvent = (
     NodeReady
     | NodeDown
@@ -346,4 +488,10 @@ ClusterEvent = (
     | VolumeFaulted
     | VolumeHealthChanged
     | ReplicaHealthChanged
+    | K8sWarning
+    | ChaosStarted
+    | ChaosEnded
+    | ProbeOk
+    | ProbeDegraded
+    | ProbeFailed
 )

@@ -85,6 +85,7 @@ describe("ClusterGraph", () => {
         },
       ],
       replicas: [],
+      probes: [],
     };
 
     const recentMoves: PodMovedEvent[] = [
