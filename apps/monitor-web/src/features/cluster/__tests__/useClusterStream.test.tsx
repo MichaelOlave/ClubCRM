@@ -226,6 +226,60 @@ describe("useClusterStream", () => {
     expect(secondSocket.close).toHaveBeenCalledTimes(1);
   });
 
+  it("buffers live frames while paused and flushes them on resume", async () => {
+    const { result } = renderHook(() =>
+      useClusterStream(INITIAL_SNAPSHOT, "ws://localhost:8001/ws/cluster")
+    );
+
+    const socket = MockWebSocket.instances[0];
+
+    act(() => {
+      socket.emitOpen();
+    });
+
+    await waitFor(() => {
+      expect(result.current.streamStatus).toBe("live");
+    });
+
+    act(() => {
+      result.current.streamControls.togglePaused();
+    });
+
+    expect(result.current.streamStatus).toBe("paused");
+
+    act(() => {
+      socket.emitFrame({
+        type: "event",
+        ts: 1200,
+        event: {
+          kind: "POD_MOVED",
+          ts: 1200,
+          namespace: "clubcrm",
+          name: "api-1",
+          from_node: "server1",
+          to_node: "server2",
+        },
+      });
+    });
+
+    expect(result.current.streamControls.queuedFrames).toBe(1);
+    expect(result.current.cluster.pods.find((pod) => pod.name === "api-1")?.node_name).toBe(
+      "server1"
+    );
+
+    act(() => {
+      result.current.streamControls.togglePaused();
+    });
+
+    await waitFor(() => {
+      expect(result.current.streamStatus).toBe("live");
+      expect(result.current.streamControls.queuedFrames).toBe(0);
+      expect(result.current.cluster.pods.find((pod) => pod.name === "api-1")?.node_name).toBe(
+        "server2"
+      );
+    });
+  });
+
   it("replays recorded frames without opening a websocket", async () => {
     vi.useFakeTimers();
 
@@ -249,5 +303,6 @@ describe("useClusterStream", () => {
     );
     expect(result.current.replay.currentFrame).toBe(2);
     expect(result.current.replay.paused).toBe(true);
+    expect(result.current.streamControls.paused).toBe(true);
   });
 });

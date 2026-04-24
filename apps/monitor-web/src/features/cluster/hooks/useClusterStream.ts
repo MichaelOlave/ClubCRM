@@ -53,6 +53,11 @@ export interface UseClusterStreamResult {
   cluster: ClusterStateShape;
   eventLog: ClusterEvent[];
   streamStatus: StreamStatus;
+  streamControls: {
+    paused: boolean;
+    queuedFrames: number;
+    togglePaused: () => void;
+  };
   replay: {
     active: boolean;
     currentFrame: number;
@@ -78,10 +83,14 @@ export function useClusterStream(
   const [liveStreamStatus, setLiveStreamStatus] = useState<StreamStatus>(
     streamUrl ? "connecting" : "offline"
   );
+  const [livePaused, setLivePaused] = useState(false);
+  const [queuedFrames, setQueuedFrames] = useState(0);
   const [replayPaused, setReplayPaused] = useState(false);
   const [replayIndex, setReplayIndex] = useState(0);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<number | null>(null);
+  const livePausedRef = useRef(false);
+  const queuedFramesRef = useRef<WsFrame[]>([]);
   const replayTimerRef = useRef<number | null>(null);
 
   const handleFrame = useCallback((frame: WsFrame) => {
@@ -101,6 +110,34 @@ export function useClusterStream(
   const toggleReplayPaused = useCallback(() => {
     setReplayPaused((current) => !current);
   }, []);
+
+  const toggleLivePaused = useCallback(() => {
+    if (livePausedRef.current) {
+      livePausedRef.current = false;
+      setLivePaused(false);
+
+      const pendingFrames = queuedFramesRef.current.splice(0);
+      if (pendingFrames.length === 0) {
+        setQueuedFrames(0);
+        return;
+      }
+
+      queueMicrotask(() => {
+        pendingFrames.forEach((frame) => {
+          handleFrame(frame);
+        });
+        setQueuedFrames(0);
+      });
+      return;
+    }
+
+    livePausedRef.current = true;
+    setLivePaused(true);
+  }, [handleFrame]);
+
+  useEffect(() => {
+    livePausedRef.current = livePaused;
+  }, [livePaused]);
 
   useEffect(() => {
     if (!replayMode) {
@@ -168,6 +205,12 @@ export function useClusterStream(
       socket.onmessage = (event) => {
         try {
           const frame = JSON.parse(event.data) as WsFrame;
+          if (livePausedRef.current) {
+            queuedFramesRef.current.push(frame);
+            setQueuedFrames(queuedFramesRef.current.length);
+            return;
+          }
+
           handleFrame(frame);
         } catch {
           // ignore malformed frames
@@ -192,6 +235,8 @@ export function useClusterStream(
       if (reconnectTimerRef.current !== null) {
         window.clearTimeout(reconnectTimerRef.current);
       }
+      queuedFramesRef.current = [];
+      setQueuedFrames(0);
       socket?.close();
       setLiveStreamStatus("offline");
     };
@@ -201,12 +246,19 @@ export function useClusterStream(
     ? replayPaused || replayIndex >= replayFrames.length
       ? "paused"
       : "replay"
-    : liveStreamStatus;
+    : livePaused && liveStreamStatus !== "offline"
+      ? "paused"
+      : liveStreamStatus;
 
   return {
     cluster: state.cluster,
     eventLog: state.eventLog,
     streamStatus,
+    streamControls: {
+      paused: replayMode ? replayPaused || replayIndex >= replayFrames.length : livePaused,
+      queuedFrames: replayMode ? 0 : queuedFrames,
+      togglePaused: replayMode ? toggleReplayPaused : toggleLivePaused,
+    },
     replay: {
       active: replayMode,
       currentFrame: replayIndex,

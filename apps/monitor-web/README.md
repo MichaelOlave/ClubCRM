@@ -45,5 +45,9 @@ to fetch a captured session from `MONITOR_REPLAY_API_URL` or
 `NEXT_PUBLIC_MONITOR_REPLAY_API_URL`. If neither replay URL is set, the dashboard defaults to
 `${MONITOR_API_BASE_URL}/api/replay`.
 
+The dashboard now includes shared timeline controls for both live and replay sessions. Operators can
+pause the live stream without dropping incoming frames, resume from the buffered backlog, and filter
+the event feed by nodes, pods, storage, services, or cause markers during demos and rehearsals.
+
 `MONITOR_ADMIN_TOKEN` is optional. Set it only when `CLUSTER_VIEWER_PUBLIC=false` on the API and
 the server-rendered snapshot fetch must include `Authorization: Bearer <token>`.
