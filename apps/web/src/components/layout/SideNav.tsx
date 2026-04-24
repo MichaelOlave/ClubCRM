@@ -2,84 +2,111 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Activity,
+  Calendar,
+  LayoutDashboard,
+  ShieldCheck,
+  UserCircle,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 import { Badge } from "@/components/shadcn/badge";
-import { useActivePath } from "@/hooks/useActivePath";
 import { cn } from "@/lib/utils/cn";
 import type { NavItem } from "@/types/ui";
 
-type Props = {
-  items: NavItem[];
+const ICON_MAP: Record<string, LucideIcon> = {
+  "layout-dashboard": LayoutDashboard,
+  "user-circle": UserCircle,
+  calendar: Calendar,
+  users: Users,
+  "shield-check": ShieldCheck,
+  activity: Activity,
 };
 
-export function SideNav({ items }: Props) {
-  const isActivePath = useActivePath();
+type Props = {
+  items: NavItem[];
+  className?: string;
+};
+
+export function SideNav({ items, className }: Props) {
+  const pathname = usePathname();
 
   return (
-    <aside className="w-full shrink-0 lg:max-w-72">
-      <div className="sticky top-4 rounded-[2rem] border border-border bg-card/90 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur">
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Badge variant="warning">Admin MVP</Badge>
+    <aside className={cn("flex w-full flex-col lg:w-72", className)}>
+      <div className="flex flex-col gap-6 rounded-[2rem] border border-border bg-card/90 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.08)] backdrop-blur lg:sticky lg:top-4">
+        <div className="space-y-6">
+          <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[1.25rem] border border-brand-border bg-brand-surface shadow-sm">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-brand-border bg-brand-surface shadow-sm">
                 <Image
                   alt="ClubCRM logo"
-                  className="h-10 w-10 scale-110 rounded-lg"
-                  height={40}
+                  className="h-8 w-8 rounded-lg"
+                  height={32}
                   priority
                   src="/favicon.ico"
-                  width={40}
+                  width={32}
                 />
               </div>
               <div>
-                <p className="text-sm font-medium uppercase tracking-[0.24em] text-brand">
-                  ClubCRM
-                </p>
-                <h1 className="mt-2 text-2xl font-semibold text-foreground">Workspace</h1>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand">ClubCRM</p>
+                <h1 className="text-lg font-semibold text-foreground">Workspace</h1>
               </div>
             </div>
-            <p className="text-sm leading-6 text-muted-foreground">
-              Lightweight route groups, feature folders, and reusable primitives for the first admin
-              flows.
-            </p>
+            <Badge className="w-fit" variant="warning">
+              Admin MVP
+            </Badge>
           </div>
 
-          <nav aria-label="Primary" className="space-y-2">
+          <nav aria-label="Primary" className="space-y-1">
             {items.map((item) => {
-              const active = isActivePath(item.href);
+              const active =
+                pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+              const Icon = item.icon ? ICON_MAP[item.icon] : null;
 
               return (
                 <Link
                   className={cn(
-                    "block rounded-[1.25rem] border px-4 py-3 transition",
+                    "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                     active
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-transparent bg-muted/40 text-foreground hover:border-border hover:bg-card"
+                      ? "bg-primary text-background shadow-sm"
+                      : "text-foreground/70 hover:bg-muted hover:text-foreground"
                   )}
                   href={item.href}
                   key={item.href}
                 >
-                  <p
-                    className={cn(
-                      "text-sm font-semibold",
-                      active ? "text-primary-foreground" : "text-brand"
-                    )}
-                  >
-                    {item.label}
-                  </p>
-                  <p
-                    className={cn(
-                      "mt-1 text-sm leading-5",
-                      active ? "text-primary-foreground/80" : "text-muted-foreground"
-                    )}
-                  >
-                    {item.description}
-                  </p>
+                  {Icon && (
+                    <Icon
+                      className={cn(
+                        "h-5 w-5 transition-colors",
+                        active
+                          ? "text-background"
+                          : "text-foreground/60 group-hover:text-foreground"
+                      )}
+                    />
+                  )}
+                  <span className={cn(active ? "text-background" : "")}>{item.label}</span>
                 </Link>
               );
             })}
           </nav>
+        </div>
+
+        <div className="mt-auto pt-6">
+          <div className="rounded-2xl bg-muted/50 p-4">
+            <p className="text-xs font-semibold text-foreground">Need help?</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Check our documentation or contact support.
+            </p>
+            <Link
+              href="/system/health"
+              className="mt-3 block text-xs font-medium text-brand hover:underline"
+            >
+              System Health &rarr;
+            </Link>
+          </div>
         </div>
       </div>
     </aside>
