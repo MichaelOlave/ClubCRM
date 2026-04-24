@@ -4,6 +4,7 @@ export type NavItem = {
   href: string;
   label: string;
   description: string;
+  icon?: string;
 };
 
 export type TableColumn<T> = {
