@@ -42,6 +42,9 @@ export function PublicShell({ children, isAuthorized = false }: Props) {
           <div className="flex flex-wrap items-center gap-3">
             <ModeToggle />
             <Button asChild variant="outline">
+              <Link href="/docs">Docs</Link>
+            </Button>
+            <Button asChild variant="outline">
               <Link href="/testing">Tester guide</Link>
             </Button>
             <Button asChild className={authActionClassName} variant={authActionVariant}>
