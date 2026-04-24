@@ -21,6 +21,7 @@ COPY apps/monitor-api/requirements.txt ./requirements.txt
 RUN uv pip install --system -r requirements.txt
 
 COPY apps/monitor-api/src ./src
+COPY infra/monitoring/fixtures ./infra/monitoring/fixtures
 
 EXPOSE 8010
 

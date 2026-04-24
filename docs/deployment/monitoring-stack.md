@@ -90,8 +90,8 @@ By default it runs:
 - `monitor-api` on `8010`
 - `monitor-web` on `3001`
 
-The compose deployment mounts a kubeconfig into `monitor-api`. Override these values on the host as
-needed:
+The compose deployment starts in fixture mode when no live kubeconfig values are provided. For a
+live monitoring host, override these values so `monitor-api` mounts and reads a real kubeconfig:
 
 - `MONITOR_CLUSTER_KUBECONFIG_HOST_PATH`
 - `MONITOR_CLUSTER_KUBECONFIG`
@@ -133,6 +133,10 @@ For offline rehearsal or frontend work without live cluster access:
 MONITOR_CLUSTER_KUBECONFIG=
 MONITOR_CLUSTER_SNAPSHOT_FILE=/workspace/infra/monitoring/fixtures/k8s-snapshot.json
 ```
+
+The container image also includes the checked-in fixture at
+`/app/infra/monitoring/fixtures/k8s-snapshot.json`, which is the Compose default when
+`MONITOR_CLUSTER_SNAPSHOT_FILE` is not set.
 
 ## Snapshot Fixture
 
