@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/shadcn/button";
+import { ModeToggle } from "@/components/mode-toggle";
 
 type Props = Readonly<{
   children: React.ReactNode;
@@ -38,7 +39,8 @@ export function PublicShell({ children, isAuthorized = false }: Props) {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <ModeToggle />
             <Button asChild variant="outline">
               <Link href="/testing">Tester guide</Link>
             </Button>
