@@ -80,10 +80,12 @@ The monitoring host needs:
 Bring the monitoring stack up with:
 
 ```bash
-docker compose -f infra/monitoring/docker-compose.monitoring.yml up -d --build
+docker compose --env-file .env -f infra/monitoring/docker-compose.monitoring.yml up -d --build
 ```
 
-The Compose file loads defaults from `.env.example` and then overlays `.env` when present.
+The Compose file loads container defaults from `.env.example` and then overlays `.env` when
+present. Pass `--env-file .env` from the repository root so Compose interpolation also sees live
+host paths such as `MONITOR_CLUSTER_KUBECONFIG_HOST_PATH`.
 
 By default it runs:
 
@@ -91,7 +93,8 @@ By default it runs:
 - `monitor-web` on `3001`
 
 The compose deployment starts in fixture mode when no live kubeconfig values are provided. For a
-live monitoring host, override these values so `monitor-api` mounts and reads a real kubeconfig:
+live monitoring host, override these values so `monitor-api` mounts and reads a real kubeconfig.
+Set `MONITOR_CLUSTER_SNAPSHOT_FILE=` to an intentionally blank value to disable fixture mode:
 
 - `MONITOR_CLUSTER_KUBECONFIG_HOST_PATH`
 - `MONITOR_CLUSTER_KUBECONFIG`
@@ -135,8 +138,8 @@ MONITOR_CLUSTER_SNAPSHOT_FILE=/workspace/infra/monitoring/fixtures/k8s-snapshot.
 ```
 
 The container image also includes the checked-in fixture at
-`/app/infra/monitoring/fixtures/k8s-snapshot.json`, which is the Compose default when
-`MONITOR_CLUSTER_SNAPSHOT_FILE` is not set.
+`/app/infra/monitoring/fixtures/k8s-snapshot.json`, which is the Compose default only when
+`MONITOR_CLUSTER_SNAPSHOT_FILE` is unset.
 
 ## Snapshot Fixture
 

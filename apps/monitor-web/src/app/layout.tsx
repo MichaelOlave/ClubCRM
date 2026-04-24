@@ -16,6 +16,9 @@ const ibmPlexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "ClubCRM Cluster Visualizer",
   description: "Companion cluster visualizer for the ClubCRM networking demo.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
