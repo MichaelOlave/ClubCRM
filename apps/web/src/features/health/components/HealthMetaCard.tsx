@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Activity, Globe, RefreshCcw } from "lucide-react";
 
 import { Button } from "@/components/shadcn/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/shadcn/card";
+import { Card, CardContent, CardHeader } from "@/components/shadcn/card";
 
 type Props = {
   status: string;

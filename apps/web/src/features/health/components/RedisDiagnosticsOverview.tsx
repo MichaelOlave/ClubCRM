@@ -1,9 +1,8 @@
 import { Database, Server, Zap, History, LayoutDashboard, Info } from "lucide-react";
 import { Badge } from "@/components/shadcn/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/shadcn/card";
+import { Card, CardContent, CardHeader } from "@/components/shadcn/card";
 import { EmptyState } from "@/components/shadcn/empty-state";
 import type { RedisDiagnosticsViewModel } from "@/features/health/types";
-import { cn } from "@/lib/utils";
 
 type Props = {
   views: RedisDiagnosticsViewModel;

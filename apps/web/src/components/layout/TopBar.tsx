@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import * as React from "react";
 import { Menu } from "lucide-react";
 
 import { Badge } from "@/components/shadcn/badge";
@@ -25,9 +25,9 @@ type Props = {
 };
 
 export function TopBar({ logoutAction, subtitle, title, navItems }: Props) {
-  const [mounted, setMounted] = useState(false);
+  const [mounted, setMounted] = React.useState(false);
 
-  useEffect(() => {
+  React.useEffect(() => {
     setMounted(true);
   }, []);
 
