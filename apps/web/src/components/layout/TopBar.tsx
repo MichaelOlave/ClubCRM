@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Badge } from "@/components/shadcn/badge";
 import { Button } from "@/components/shadcn/button";
+import { ModeToggle } from "@/components/mode-toggle";
 
 type Props = {
   logoutAction: () => Promise<void>;
@@ -18,6 +19,7 @@ export function TopBar({ logoutAction, subtitle, title }: Props) {
       </div>
 
       <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
+        <ModeToggle />
         <Badge className="px-3.5 py-1.5" variant="success">
           Backend auth required
         </Badge>
