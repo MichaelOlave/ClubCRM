@@ -47,7 +47,9 @@ export function TimelineControls({
             {isReplay ? "Replay controls" : "Live controls"}
           </p>
           <h3 className="text-sm font-semibold text-zinc-100">
-            {isReplay ? `${currentFrame} of ${totalFrames} frames` : "Freeze the dashboard without losing frames"}
+            {isReplay
+              ? `${currentFrame} of ${totalFrames} frames`
+              : "Freeze the dashboard without losing frames"}
           </h3>
           <p className="text-sm text-zinc-400">
             {isReplay

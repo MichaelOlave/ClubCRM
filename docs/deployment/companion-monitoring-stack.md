@@ -96,17 +96,17 @@ It is responsible for:
 
 Most defaults live in [`.env.example`](../../.env.example).
 
-| Group            | Key variables                                                                                                    | Purpose                                                             |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| API              | `MONITOR_API_TITLE`, `MONITOR_API_HOST`, `MONITOR_API_PORT`, `MONITOR_API_BASE_URL`                              | configure the FastAPI service                                       |
-| Viewer access    | `MONITOR_ADMIN_TOKEN`, `CLUSTER_VIEWER_PUBLIC`                                                                   | optionally require a bearer token for snapshot and dashboard access |
-| Cluster input    | `MONITOR_CLUSTER_KUBECONFIG`, `MONITOR_CLUSTER_CONTEXT`, `MONITOR_CLUSTER_IN_CLUSTER`                            | choose how `monitor-api` connects to Kubernetes                     |
-| Longhorn         | `MONITOR_LONGHORN_ENABLED`                                                                                       | enable or disable Longhorn CRD watches                              |
-| Fallback fixture | `MONITOR_CLUSTER_SNAPSHOT_FILE`                                                                                  | preload a snapshot when live access is unavailable                  |
+| Group            | Key variables                                                                                                                                              | Purpose                                                             |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| API              | `MONITOR_API_TITLE`, `MONITOR_API_HOST`, `MONITOR_API_PORT`, `MONITOR_API_BASE_URL`                                                                        | configure the FastAPI service                                       |
+| Viewer access    | `MONITOR_ADMIN_TOKEN`, `CLUSTER_VIEWER_PUBLIC`                                                                                                             | optionally require a bearer token for snapshot and dashboard access |
+| Cluster input    | `MONITOR_CLUSTER_KUBECONFIG`, `MONITOR_CLUSTER_CONTEXT`, `MONITOR_CLUSTER_IN_CLUSTER`                                                                      | choose how `monitor-api` connects to Kubernetes                     |
+| Longhorn         | `MONITOR_LONGHORN_ENABLED`                                                                                                                                 | enable or disable Longhorn CRD watches                              |
+| Fallback fixture | `MONITOR_CLUSTER_SNAPSHOT_FILE`                                                                                                                            | preload a snapshot when live access is unavailable                  |
 | Replay capture   | `MONITOR_CLUSTER_RECORDING_FILE`, `MONITOR_REPLAY_MODE`, `MONITOR_REPLAY_API_URL`, `NEXT_PUBLIC_MONITOR_REPLAY_MODE`, `NEXT_PUBLIC_MONITOR_REPLAY_API_URL` | record live sessions and switch the dashboard into replay mode      |
-| Service probes   | `MONITOR_PROBE_TARGETS`, `MONITOR_PROBE_INTERVAL_SECONDS`, `MONITOR_PROBE_TIMEOUT_SECONDS`, `MONITOR_PROBE_DEGRADED_LATENCY_MS` | probe application URLs and surface continuity status                |
-| Runtime tuning   | `MONITOR_CLUSTER_HEARTBEAT_SECONDS`, `MONITOR_CLUSTER_WATCH_TIMEOUT_SECONDS`, `MONITOR_DISABLE_BACKGROUND_TASKS` | tune the watch, heartbeat, and background-loop behavior             |
-| Frontend         | `MONITOR_WEB_PORT`, `NEXT_PUBLIC_MONITOR_API_BASE_URL`, `NEXT_PUBLIC_MONITOR_WS_URL`                             | configure how browsers reach the API and dashboard                  |
+| Service probes   | `MONITOR_PROBE_TARGETS`, `MONITOR_PROBE_INTERVAL_SECONDS`, `MONITOR_PROBE_TIMEOUT_SECONDS`, `MONITOR_PROBE_DEGRADED_LATENCY_MS`                            | probe application URLs and surface continuity status                |
+| Runtime tuning   | `MONITOR_CLUSTER_HEARTBEAT_SECONDS`, `MONITOR_CLUSTER_WATCH_TIMEOUT_SECONDS`, `MONITOR_DISABLE_BACKGROUND_TASKS`                                           | tune the watch, heartbeat, and background-loop behavior             |
+| Frontend         | `MONITOR_WEB_PORT`, `NEXT_PUBLIC_MONITOR_API_BASE_URL`, `NEXT_PUBLIC_MONITOR_WS_URL`                                                                       | configure how browsers reach the API and dashboard                  |
 
 ## Deployment Modes
 

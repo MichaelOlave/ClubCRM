@@ -31,7 +31,10 @@ export function ServiceHealthPanel({ probes }: { probes: ServiceProbe[] }) {
       ) : (
         <ul className="mt-3 flex flex-col gap-3">
           {sortProbes(probes).map((probe) => (
-            <li key={probe.service} className="rounded-xl border border-white/5 bg-white/[0.02] p-3">
+            <li
+              key={probe.service}
+              className="rounded-xl border border-white/5 bg-white/[0.02] p-3"
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold text-zinc-100">{probe.service}</p>
