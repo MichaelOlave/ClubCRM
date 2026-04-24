@@ -14,8 +14,9 @@ src/
     dependencies.py
   presentation/
     http/
-      router.py
       exception_handlers.py
+      request_context.py
+      router.py
   modules/
     system/
       presentation/
@@ -44,20 +45,64 @@ src/
       presentation/
         http/
     members/
+      domain/
+      application/
+        commands/
+        queries/
+        ports/
+      presentation/
+        http/
     memberships/
+      domain/
+      application/
+        commands/
+        queries/
+        ports/
+      presentation/
+        http/
     events/
+      domain/
+      application/
+        commands/
+        queries/
+        ports/
+      presentation/
+        http/
     announcements/
+      domain/
+      application/
+        commands/
+        queries/
+        ports/
+      presentation/
+        http/
     forms/
+      domain/
+      application/
+        commands/
+        queries/
+        ports/
+      presentation/
+        http/
     auth/
+      domain/
+      application/
+        commands/
+        queries/
+        ports/
+      presentation/
+        http/
   infrastructure/
     auth/
       providers/
     postgres/
       client.py
       unit_of_work.py
+      models/
       repositories/
     mongodb/
       client.py
+      seed.py
       stores/
     redis/
       client.py
@@ -123,12 +168,15 @@ port if `8000` is already in use. The resolved binding is written to
 - `GET /health` powers the web diagnostics page at `/system/health`
 - `/auth/*` owns login, callback, session, and logout for the backend-owned auth flow
 - `GET /audit-logs` returns the protected admin audit trail used by `/system/audit`
-- `GET /dashboard/summary/{club_id}` returns dashboard summary data for an authorized club
-- `/forms/*` owns public join-request submission plus protected pending, approve, and deny flows;
-  the public join-request POST now mirrors the web text limits server-side and applies a basic
-  Redis-backed rate limit
+- `GET /dashboard/summary`, `GET /dashboard/summary/{club_id}`, and
+  `GET /dashboard/redis-analytics/{club_id}` provide org-level, club-level, and cache analytics
+  summary data
+- `/forms/*` owns public join-request context, public join-request submission, and protected
+  pending, approve, and deny flows. The public join-request POST now mirrors the web text limits
+  server-side and applies a basic Redis-backed rate limit.
 - `/clubs/*` includes CRUD plus club-manager grant management, now exposing stable club `slug`
-  values alongside internal IDs and enforcing per-organization uniqueness for club URL slugs
+  values alongside internal IDs and enforcing per-organization uniqueness for club URL slugs.
+  `GET /clubs/slug/{club_slug}` resolves public club URLs.
 - `/members/*` and `/memberships/*` provide the current roster-management surface
 - `/events/*` and `/announcements/*` provide the current club activity surface
 

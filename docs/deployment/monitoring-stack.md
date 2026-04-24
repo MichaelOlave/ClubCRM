@@ -158,10 +158,13 @@ The container image also includes the checked-in fixture at
 - root `pods`
 - root `volumes`
 - root `replicas`
+- root `probes`
 
 The `volumes` collection represents Longhorn volume state, including PVC and workload correlation,
 attachment node, state, robustness, and health. The `replicas` collection represents Longhorn
 replica placement and health per volume.
+The `probes` collection represents configured service probes, including current status, latency,
+last success, and last failure details.
 
 Keep fixture captures aligned to that root-level shape so `monitor-api` can load them directly.
 

@@ -86,7 +86,8 @@ Use this guide for manual smoke testing on the production ClubCRM site after dep
 - Confirm the pending request count reflects the new submission.
 - Confirm the new request card shows the submitter name, email, requested role, student ID when provided, and personal note.
 - Refresh the review page and confirm the submitted request still appears.
-- Do not expect an approval button in the web UI yet unless the team explicitly says that part has shipped.
+- Approve the request with a club role and confirm the success message appears and the member/roster state updates.
+- Submit a separate test request if needed, deny it from the review page, and confirm it disappears from the pending list or updates status.
 
 ### 8. Signed-Out Protection
 
@@ -110,5 +111,5 @@ Use this guide for manual smoke testing on the production ClubCRM site after dep
 - Dashboard, profile, clubs, members, audit, and diagnostics all load after sign-in.
 - Member creation, club creation, and club activity creation save successfully.
 - The public join form accepts a submission and returns a success state with a reference ID.
-- The matching club join-request review page shows the new pending submission in the admin shell.
+- The matching club join-request review page shows the new pending submission and supports approve/deny review actions in the admin shell.
 - No uncaught error pages, broken links, or obviously stale data remain after refresh.

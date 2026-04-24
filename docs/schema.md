@@ -34,6 +34,7 @@ These tables should live in PostgreSQL as the primary system of record.
 
 - `id`
 - `organization_id`
+- `slug`
 - `name`
 - `description`
 - `status`
@@ -106,6 +107,23 @@ These tables should live in PostgreSQL as the primary system of record.
 - `published_at`
 - `created_by`
 
+### `audit_logs`
+
+- `id`
+- `occurred_at`
+- `actor_sub`
+- `actor_email`
+- `actor_name`
+- `action`
+- `resource_type`
+- `resource_id`
+- `resource_label`
+- `api_route`
+- `http_method`
+- `origin_path`
+- `request_id`
+- `summary_json`
+
 ## PostgreSQL Constraints
 
 Recommended constraints:
@@ -114,8 +132,12 @@ Recommended constraints:
 - foreign keys from `members.organization_id` to `organizations.id`
 - foreign keys from `memberships.club_id` to `clubs.id`
 - foreign keys from `memberships.member_id` to `members.id`
+- foreign keys from `events.club_id` to `clubs.id`
+- foreign keys from `announcements.club_id` to `clubs.id`
+- unique constraint on `(organization_id, slug)` in `clubs`
 - foreign keys from `auth_user_bindings.admin_user_id` to `admin_users.id`
 - foreign keys from `auth_user_bindings.member_id` to `members.id`
+- unique constraint on `admin_users.email`
 - unique constraint on member email within an organization
 - unique constraint on `(club_id, member_id)` in `memberships`
 - unique constraint on `(club_id, member_id)` in `club_manager_roles`
@@ -168,10 +190,12 @@ Redis should store cache-oriented data only.
 
 Suggested keys:
 
+- `auth:session:{session_id}`
 - `dashboard:org:{organization_id}:summary`
 - `dashboard:club:{club_id}:activity`
 - `club:{club_id}:lookup`
 - `member:{member_id}:lookup`
+- `forms:join-request:{club_id}:{client_ip}:rate`
 
 ## Kafka Events
 
