@@ -1,5 +1,4 @@
 import fs from "fs";
-import path from "path";
 import { Book, FileText, Gavel, Layout, ScrollText } from "lucide-react";
 import { DocsPageClient } from "./DocsPageClient";
 
@@ -8,8 +7,8 @@ async function getDocContent(fileName: string) {
 
   // Locations to check for docs, ordered by production standalone path and local dev path.
   const possiblePaths = [
-    path.join(/*turbopackIgnore: true*/ process.cwd(), "apps/web/public/docs", syncedFileName), // Standalone prod
-    path.join(/*turbopackIgnore: true*/ process.cwd(), "public/docs", syncedFileName), // Local dev after sync
+    `apps/web/public/docs/${syncedFileName}`, // Standalone prod
+    `public/docs/${syncedFileName}`, // Local dev after sync
   ];
 
   for (const filePath of possiblePaths) {
