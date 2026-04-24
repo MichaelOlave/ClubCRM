@@ -79,6 +79,8 @@ def _settings(*, snapshot_file: str | None = None) -> ClusterSettings:
         in_cluster=False,
         snapshot_file=snapshot_file,
         longhorn_enabled=True,
+        k8s_events_enabled=False,
+        chaos_enabled=False,
         heartbeat_seconds=60.0,
         watch_timeout_seconds=300,
     )

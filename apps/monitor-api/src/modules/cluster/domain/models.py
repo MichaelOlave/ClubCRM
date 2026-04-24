@@ -332,6 +332,64 @@ class ReplicaHealthChanged:
         }
 
 
+@dataclass(frozen=True)
+class K8sWarning:
+    involved_object_kind: str
+    involved_object_namespace: str | None
+    involved_object_name: str
+    reason: str
+    message: str
+    ts: float
+    kind: Literal["K8S_WARNING"] = "K8S_WARNING"
+
+    def to_dict(self) -> dict:
+        return {
+            "kind": self.kind,
+            "ts": self.ts,
+            "involved_object_kind": self.involved_object_kind,
+            "involved_object_namespace": self.involved_object_namespace,
+            "involved_object_name": self.involved_object_name,
+            "reason": self.reason,
+            "message": self.message,
+        }
+
+
+@dataclass(frozen=True)
+class ChaosStarted:
+    experiment_kind: str
+    name: str
+    namespace: str
+    ts: float
+    kind: Literal["CHAOS_STARTED"] = "CHAOS_STARTED"
+
+    def to_dict(self) -> dict:
+        return {
+            "kind": self.kind,
+            "ts": self.ts,
+            "experiment_kind": self.experiment_kind,
+            "name": self.name,
+            "namespace": self.namespace,
+        }
+
+
+@dataclass(frozen=True)
+class ChaosEnded:
+    experiment_kind: str
+    name: str
+    namespace: str
+    ts: float
+    kind: Literal["CHAOS_ENDED"] = "CHAOS_ENDED"
+
+    def to_dict(self) -> dict:
+        return {
+            "kind": self.kind,
+            "ts": self.ts,
+            "experiment_kind": self.experiment_kind,
+            "name": self.name,
+            "namespace": self.namespace,
+        }
+
+
 ClusterEvent = (
     NodeReady
     | NodeDown
@@ -346,4 +404,7 @@ ClusterEvent = (
     | VolumeFaulted
     | VolumeHealthChanged
     | ReplicaHealthChanged
+    | K8sWarning
+    | ChaosStarted
+    | ChaosEnded
 )

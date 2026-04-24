@@ -37,6 +37,9 @@ class ClusterRuntime:
             "pod": None,
             "longhorn_volume": None,
             "longhorn_replica": None,
+            "k8s_event": None,
+            "chaos_podchaos": None,
+            "chaos_networkchaos": None,
         }
 
     async def start(self) -> None:
@@ -62,6 +65,20 @@ class ClusterRuntime:
                     ),
                 ]
             )
+        if self._settings.k8s_events_enabled:
+            self._tasks.append(
+                asyncio.create_task(
+                    self._run_k8s_events_watch(), name="cluster-k8s-events-watch"
+                )
+            )
+        if self._settings.chaos_enabled:
+            for plural in ("podchaos", "networkchaos"):
+                self._tasks.append(
+                    asyncio.create_task(
+                        self._run_chaos_watch(plural),
+                        name=f"cluster-chaos-{plural}-watch",
+                    )
+                )
 
     async def stop(self) -> None:
         self._stop_event.set()
@@ -117,6 +134,16 @@ class ClusterRuntime:
             return
         await self._run_watch_loop(resource="longhorn_replica")
 
+    async def _run_k8s_events_watch(self) -> None:
+        if self._settings.snapshot_file:
+            return
+        await self._run_watch_loop(resource="k8s_event")
+
+    async def _run_chaos_watch(self, plural: str) -> None:
+        if self._settings.snapshot_file:
+            return
+        await self._run_watch_loop(resource=f"chaos_{plural}")
+
     async def _run_watch_loop(self, *, resource: str) -> None:
         backoff_seconds = 1.0
         while not self._stop_event.is_set():
@@ -142,6 +169,7 @@ class ClusterRuntime:
                     backoff_seconds = min(backoff_seconds * 2, 30.0)
 
     async def _prime_state(self, resource: str) -> None:
+        resource_version: str | None = None
         if resource == "node":
             items, resource_version = await asyncio.to_thread(
                 self._kubernetes_adapter.list_nodes_with_resource_version
@@ -157,11 +185,20 @@ class ClusterRuntime:
                 self._kubernetes_adapter.list_longhorn_volumes_with_resource_version
             )
             await self._state.replace_longhorn_volumes(items)
-        else:
+        elif resource == "longhorn_replica":
             items, resource_version = await asyncio.to_thread(
                 self._kubernetes_adapter.list_longhorn_replicas_with_resource_version
             )
             await self._state.replace_longhorn_replicas(items)
+        elif resource == "k8s_event":
+            _, resource_version = await asyncio.to_thread(
+                self._kubernetes_adapter.list_k8s_events_with_resource_version
+            )
+        elif resource.startswith("chaos_"):
+            plural = resource.removeprefix("chaos_")
+            _, resource_version = await asyncio.to_thread(
+                self._kubernetes_adapter.list_chaos_experiments_with_resource_version, plural
+            )
         self._resource_versions[resource] = resource_version
 
     def _consume_stream(self, resource: str, loop: asyncio.AbstractEventLoop) -> None:
@@ -177,10 +214,22 @@ class ClusterRuntime:
             stream = self._kubernetes_adapter.stream_longhorn_volumes(
                 resource_version=self._resource_versions.get(resource)
             )
-        else:
+        elif resource == "longhorn_replica":
             stream = self._kubernetes_adapter.stream_longhorn_replicas(
                 resource_version=self._resource_versions.get(resource)
             )
+        elif resource == "k8s_event":
+            stream = self._kubernetes_adapter.stream_k8s_events(
+                resource_version=self._resource_versions.get(resource)
+            )
+        elif resource.startswith("chaos_"):
+            plural = resource.removeprefix("chaos_")
+            stream = self._kubernetes_adapter.stream_chaos_experiments(
+                plural=plural,
+                resource_version=self._resource_versions.get(resource),
+            )
+        else:
+            return
         for event_type, raw in stream:
             if self._stop_event.is_set():
                 return
@@ -201,8 +250,29 @@ class ClusterRuntime:
             events = await self._state.apply_pod_event(event_type, raw)
         elif resource == "longhorn_volume":
             events = await self._state.apply_longhorn_volume_event(event_type, raw)
-        else:
+        elif resource == "longhorn_replica":
             events = await self._state.apply_longhorn_replica_event(event_type, raw)
+        elif resource == "k8s_event":
+            from src.modules.cluster.infrastructure.k8s_event_normalizer import parse_k8s_warning
+
+            k8s_event = parse_k8s_warning(raw)
+            if k8s_event is not None:
+                await self._event_bus.publish(
+                    {"type": "event", "ts": k8s_event.ts, "event": k8s_event.to_dict()}
+                )
+            return
+        elif resource.startswith("chaos_"):
+            from src.modules.cluster.infrastructure.chaos_normalizer import parse_chaos_event
+
+            plural = resource.removeprefix("chaos_")
+            chaos_event = parse_chaos_event(raw, event_type, _plural_to_kind(plural))
+            if chaos_event is not None:
+                await self._event_bus.publish(
+                    {"type": "event", "ts": chaos_event.ts, "event": chaos_event.to_dict()}
+                )
+            return
+        else:
+            return
 
         for event in events:
             await self._event_bus.publish(
@@ -227,6 +297,17 @@ class ClusterRuntime:
             except TimeoutError:
                 snapshot = await self._state.snapshot()
                 await self._websocket_hub.broadcast(snapshot)
+
+
+def _plural_to_kind(plural: str) -> str:
+    _MAP = {
+        "podchaos": "PodChaos",
+        "networkchaos": "NetworkChaos",
+        "stresschaos": "StressChaos",
+        "iochaos": "IOChaos",
+        "httpchaos": "HTTPChaos",
+    }
+    return _MAP.get(plural, plural)
 
 
 def _is_serialized_snapshot(nodes: list[dict], pods: list[dict]) -> bool:

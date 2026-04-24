@@ -152,6 +152,10 @@ export function applyEvent(state: ClusterStateShape, event: ClusterEvent): Clust
           health: event.to_health,
         }),
       };
+    case "K8S_WARNING":
+    case "CHAOS_STARTED":
+    case "CHAOS_ENDED":
+      return { ...state, ts: event.ts };
     default:
       return state;
   }

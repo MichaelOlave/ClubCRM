@@ -13,6 +13,8 @@ def _settings() -> ClusterSettings:
         in_cluster=False,
         snapshot_file=None,
         longhorn_enabled=True,
+        k8s_events_enabled=True,
+        chaos_enabled=False,
         heartbeat_seconds=5.0,
         watch_timeout_seconds=300,
     )

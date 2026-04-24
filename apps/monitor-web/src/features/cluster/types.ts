@@ -58,7 +58,10 @@ export type ClusterEventKind =
   | "VOLUME_REATTACHED"
   | "VOLUME_FAULTED"
   | "VOLUME_HEALTH_CHANGED"
-  | "REPLICA_HEALTH_CHANGED";
+  | "REPLICA_HEALTH_CHANGED"
+  | "K8S_WARNING"
+  | "CHAOS_STARTED"
+  | "CHAOS_ENDED";
 
 export interface NodeReadyEvent {
   kind: "NODE_READY";
@@ -178,6 +181,32 @@ export interface ReplicaHealthChangedEvent {
   to_health: string;
 }
 
+export interface K8sWarningEvent {
+  kind: "K8S_WARNING";
+  ts: number;
+  involved_object_kind: string;
+  involved_object_namespace: string | null;
+  involved_object_name: string;
+  reason: string;
+  message: string;
+}
+
+export interface ChaosStartedEvent {
+  kind: "CHAOS_STARTED";
+  ts: number;
+  experiment_kind: string;
+  name: string;
+  namespace: string;
+}
+
+export interface ChaosEndedEvent {
+  kind: "CHAOS_ENDED";
+  ts: number;
+  experiment_kind: string;
+  name: string;
+  namespace: string;
+}
+
 export type ClusterEvent =
   | NodeReadyEvent
   | NodeDownEvent
@@ -191,7 +220,10 @@ export type ClusterEvent =
   | VolumeReattachedEvent
   | VolumeFaultedEvent
   | VolumeHealthChangedEvent
-  | ReplicaHealthChangedEvent;
+  | ReplicaHealthChangedEvent
+  | K8sWarningEvent
+  | ChaosStartedEvent
+  | ChaosEndedEvent;
 
 export type WsFrame = ClusterSnapshot | { type: "event"; ts: number; event: ClusterEvent };
 

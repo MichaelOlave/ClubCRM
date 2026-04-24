@@ -24,6 +24,8 @@ class ClusterSettings:
     in_cluster: bool
     snapshot_file: str | None
     longhorn_enabled: bool
+    k8s_events_enabled: bool
+    chaos_enabled: bool
     heartbeat_seconds: float
     watch_timeout_seconds: int
 
@@ -87,6 +89,8 @@ def get_settings() -> Settings:
             in_cluster=_read_bool_env("MONITOR_CLUSTER_IN_CLUSTER", False),
             snapshot_file=_read_optional_env("MONITOR_CLUSTER_SNAPSHOT_FILE"),
             longhorn_enabled=_read_bool_env("MONITOR_LONGHORN_ENABLED", True),
+            k8s_events_enabled=_read_bool_env("MONITOR_K8S_EVENTS_ENABLED", True),
+            chaos_enabled=_read_bool_env("MONITOR_CHAOS_ENABLED", False),
             heartbeat_seconds=_read_float_env("MONITOR_CLUSTER_HEARTBEAT_SECONDS", 5.0),
             watch_timeout_seconds=_read_int_env("MONITOR_CLUSTER_WATCH_TIMEOUT_SECONDS", 300),
         ),
