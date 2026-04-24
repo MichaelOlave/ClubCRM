@@ -1,3 +1,5 @@
+"use client";
+
 import { Alert, AlertDescription, AlertTitle } from "@/components/shadcn/alert";
 import type { ActionNotice as ActionNoticeModel } from "@/lib/forms";
 

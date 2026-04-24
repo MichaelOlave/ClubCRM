@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useState } from "react";
 
 import { ActionNotice } from "@/components/ui/ActionNotice";
@@ -20,16 +21,15 @@ import { TEXT_LIMITS } from "@/lib/textLimits";
 type Props = {
   action: (formData: FormData) => Promise<void>;
   notice: ActionNoticeModel | null;
+  children?: ReactNode;
 };
 
-export function CreateMemberDialog({ action, notice }: Props) {
+export function CreateMemberDialog({ action, notice, children }: Props) {
   const [open, setOpen] = useState(Boolean(notice && notice.kind === "error"));
 
   return (
     <Dialog onOpenChange={setOpen} open={open}>
-      <DialogTrigger asChild>
-        <Button>Create member</Button>
-      </DialogTrigger>
+      <DialogTrigger asChild>{children ?? <Button>Create member</Button>}</DialogTrigger>
 
       <DialogContent className="max-w-2xl">
         <DialogHeader>

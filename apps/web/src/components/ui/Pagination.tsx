@@ -9,15 +9,37 @@ type Props = {
   baseUrl: string;
   pageSize: number;
   totalItems: number;
+  searchParams?: Record<string, string | string[] | undefined>;
 };
 
-export function Pagination({ currentPage, totalPages, baseUrl, pageSize, totalItems }: Props) {
+export function Pagination({
+  currentPage,
+  totalPages,
+  baseUrl,
+  pageSize,
+  totalItems,
+  searchParams,
+}: Props) {
   if (totalPages <= 1) return null;
 
   const getPageUrl = (page: number) => {
-    const url = new URL(baseUrl, "http://localhost"); // base doesn't matter for searchParams
-    url.searchParams.set("page", page.toString());
-    return url.search + url.hash;
+    const params = new URLSearchParams();
+
+    // Preserve existing search params except for 'page'
+    if (searchParams) {
+      for (const [key, value] of Object.entries(searchParams)) {
+        if (key !== "page" && value !== undefined) {
+          if (Array.isArray(value)) {
+            value.forEach((v) => params.append(key, v));
+          } else {
+            params.set(key, value);
+          }
+        }
+      }
+    }
+
+    params.set("page", page.toString());
+    return `${baseUrl}?${params.toString()}`;
   };
 
   return (
