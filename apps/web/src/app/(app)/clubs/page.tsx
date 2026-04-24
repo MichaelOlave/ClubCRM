@@ -69,13 +69,13 @@ export default async function ClubsPage({ searchParams }: Props) {
 
       <ActionNotice notice={clubSuccessNotice} />
 
-      <Card className="space-y-5 rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
-        <div className="space-y-2">
-          <h2 className="text-2xl font-semibold text-foreground">All clubs</h2>
+      <Card className="space-y-6 rounded-[2rem] border p-6 shadow-sm sm:p-8">
+        <div className="space-y-1.5">
+          <h2 className="text-2xl font-semibold text-foreground">Available clubs</h2>
           <p className="text-sm leading-6 text-muted-foreground">
             {isOrgAdmin
-              ? "Use this directory to jump into each club after creation and manage the roster from its detail view."
-              : "Use this directory to jump directly into the clubs you manage and handle club-specific workflows from the detail view."}
+              ? "Select a club to manage its roster, scheduled events, and official announcements."
+              : "Access the clubs you manage to review rosters and handle club-specific tasks."}
           </p>
         </div>
         <ClubDirectory clubs={clubs} />

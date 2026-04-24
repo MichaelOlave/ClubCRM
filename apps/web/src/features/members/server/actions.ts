@@ -119,3 +119,8 @@ export async function deleteMemberAction(formData: FormData) {
 
   redirect(successRedirectPath);
 }
+
+export async function getMemberDetailAction(memberId: string) {
+  const { getMemberDetail } = await import("./index");
+  return getMemberDetail(memberId);
+}

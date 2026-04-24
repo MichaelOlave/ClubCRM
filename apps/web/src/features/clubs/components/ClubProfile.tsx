@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Calendar, Info, Megaphone, ShieldCheck, Users } from "lucide-react";
 
 import type { ClubDetailViewModel } from "@/features/clubs/types";
 import { MembershipTable } from "@/features/memberships";
@@ -7,19 +8,23 @@ import { Badge } from "@/components/shadcn/badge";
 import { Card } from "@/components/shadcn/card";
 import { EmptyState } from "@/components/shadcn/empty-state";
 import { formatDateTime } from "@/lib/utils/formatters";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/shadcn/tabs";
+import { TabScrollHandler } from "./TabScrollHandler";
 
 type Props = {
   announcementActions?: (announcement: ClubDetailViewModel["announcements"][number]) => ReactNode;
   detail: ClubDetailViewModel;
   eventActions?: (event: ClubDetailViewModel["events"][number]) => ReactNode;
   headerActions?: ReactNode;
-  activityActions?: ReactNode;
+  eventCreateAction?: ReactNode;
+  announcementCreateAction?: ReactNode;
   membershipActions?: (membership: MembershipRecord) => ReactNode;
   memberships: MembershipRecord[];
   rosterActions?: ReactNode;
   renderMembershipAssignment?: (membership: MembershipRecord) => ReactNode;
   renderMembershipRole?: (membership: MembershipRecord) => ReactNode;
   renderMembershipStatus?: (membership: MembershipRecord) => ReactNode;
+  renderRowWrapper?: (membership: MembershipRecord, children: ReactNode) => ReactNode;
 };
 
 function getStatusVariant(status: ClubDetailViewModel["club"]["status"]) {
@@ -65,198 +70,263 @@ export function ClubProfile({
   detail,
   eventActions,
   headerActions,
-  activityActions,
+  eventCreateAction,
+  announcementCreateAction,
   membershipActions,
   memberships,
   rosterActions,
   renderMembershipAssignment,
   renderMembershipRole,
   renderMembershipStatus,
+  renderRowWrapper,
 }: Props) {
   return (
-    <div className="space-y-6">
-      <Card className="space-y-5 rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
-        <div className="flex flex-wrap items-center gap-3">
-          <Badge variant={getStatusVariant(detail.club.status)}>{detail.club.status}</Badge>
-          {detail.club.tags.map((tag) => (
-            <Badge key={tag} variant="muted">
-              {tag}
-            </Badge>
-          ))}
-        </div>
-        <div className="grid gap-5 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <h2 className="text-2xl font-semibold text-foreground">{detail.club.name}</h2>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
-              {detail.club.description}
-            </p>
-            {headerActions ? (
-              <div className="mt-5 flex flex-wrap gap-2">{headerActions}</div>
-            ) : null}
-          </div>
-          <div className="space-y-3 rounded-[1.25rem] border border-border bg-muted/40 p-4">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                Manager
+    <div className="space-y-10">
+      <TabScrollHandler />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="flex flex-col justify-between space-y-6 rounded-[2rem] border p-6 shadow-sm lg:col-span-2 sm:p-8">
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant={getStatusVariant(detail.club.status)}>{detail.club.status}</Badge>
+              {detail.club.tags.map((tag) => (
+                <Badge key={tag} variant="muted">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+            <div className="space-y-3">
+              <h2 className="text-2xl font-semibold text-foreground">{detail.club.name}</h2>
+              <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
+                {detail.club.description}
               </p>
-              <p className="mt-1 text-sm font-semibold text-foreground">
+            </div>
+          </div>
+          {headerActions ? <div className="flex flex-wrap gap-3 pt-2">{headerActions}</div> : null}
+        </Card>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+          <Card className="flex items-center gap-4 rounded-[1.5rem] border p-5 shadow-sm">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand">
+              <ShieldCheck className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground">
+                Primary Manager
+              </p>
+              <p className="mt-0.5 text-base font-semibold text-foreground">
                 {detail.club.manager ?? "Unassigned"}
               </p>
             </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                Members
-              </p>
-              <p className="mt-1 text-sm font-semibold text-foreground">
-                {detail.club.memberCount}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                Next event
-              </p>
-              <p className="mt-1 text-sm font-semibold text-foreground">
-                {detail.club.nextEventAt
-                  ? formatDateTime(detail.club.nextEventAt)
-                  : "No event scheduled"}
-              </p>
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <MembershipTable
-        actionsHeader="Roster actions"
-        description="This shared membership table can be reused by club detail, member detail, and future review workflows."
-        headerActions={rosterActions}
-        memberships={memberships}
-        renderMembershipStatus={renderMembershipStatus}
-        renderAssignment={renderMembershipAssignment}
-        renderRole={renderMembershipRole}
-        renderActions={membershipActions}
-        title="Club roster"
-      />
-
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="space-y-1">
-            <h3 className="text-xl font-semibold text-foreground">Activity</h3>
-            <p className="text-sm leading-6 text-muted-foreground">
-              Events and announcements now live directly on the overview page instead of a separate
-              tab.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            {activityActions}
-            <Badge variant="muted">
-              {detail.events.length + detail.announcements.length} items
-            </Badge>
-          </div>
-        </div>
-
-        <div className="grid gap-6 xl:grid-cols-2">
-          <Card className="space-y-4 rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
-            <div>
-              <h4 className="text-xl font-semibold text-foreground">Events</h4>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Upcoming, in-progress, and past club events stay inside the club detail route for
-                the MVP instead of becoming a separate top-level page.
-              </p>
-            </div>
-
-            {detail.events.length ? (
-              <div className="space-y-4">
-                {detail.events.map((event) => (
-                  <div className="rounded-[1.25rem] border border-border p-4" key={event.id}>
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="space-y-3">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <Badge variant={getEventVariant(event.status)}>{event.status}</Badge>
-                          <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                            {formatEventWindow(event)}
-                          </p>
-                        </div>
-                        <div>
-                          <h5 className="text-base font-semibold text-foreground">{event.title}</h5>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {event.location ?? "Location TBD"}
-                          </p>
-                        </div>
-                        <p className="text-sm leading-6 text-muted-foreground">
-                          {event.description}
-                        </p>
-                      </div>
-
-                      {eventActions ? (
-                        <div className="flex flex-wrap gap-2">{eventActions(event)}</div>
-                      ) : null}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                description="Use the add event action on this page to schedule the club's next activity."
-                title="No events yet"
-              />
-            )}
           </Card>
 
-          <Card className="space-y-4 rounded-[1.5rem] border p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
+          <Card className="flex items-center gap-4 rounded-[1.5rem] border p-5 shadow-sm">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand">
+              <Users className="h-6 w-6" />
+            </div>
             <div>
-              <h4 className="text-xl font-semibold text-foreground">Announcements</h4>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                Announcement management also stays scoped to the selected club in this MVP.
+              <p className="text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground">
+                Total Members
+              </p>
+              <p className="mt-0.5 text-base font-semibold text-foreground">
+                {detail.club.memberCount} members
               </p>
             </div>
+          </Card>
 
-            {detail.announcements.length ? (
-              <div className="space-y-4">
-                {detail.announcements.map((announcement) => (
-                  <div className="rounded-[1.25rem] border border-border p-4" key={announcement.id}>
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="space-y-3">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <Badge variant={getAnnouncementVariant(announcement.status)}>
-                            {announcement.status}
-                          </Badge>
-                          <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                            {formatDateTime(announcement.publishedAt)}
+          <Card className="flex items-center gap-4 rounded-[1.5rem] border p-5 shadow-sm sm:col-span-2 lg:col-span-1">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand">
+              <Calendar className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.1em] text-muted-foreground">
+                Next Scheduled Event
+              </p>
+              <p className="mt-0.5 text-base font-semibold text-foreground">
+                {detail.club.nextEventAt
+                  ? formatDateTime(detail.club.nextEventAt)
+                  : "No events scheduled"}
+              </p>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      <Tabs className="w-full" defaultValue="roster">
+        <div className="flex mb-10 overflow-x-auto pb-1">
+          <TabsList className="h-14 items-center gap-2 rounded-2xl bg-muted/40 p-2">
+            <TabsTrigger
+              className="group h-10 gap-3 rounded-xl px-6 text-sm font-semibold transition-all duration-500 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground hover:data-[state=inactive]:bg-muted/60"
+              value="roster"
+            >
+              <Users className="h-4.5 w-4.5" />
+              <span>Club Roster</span>
+            </TabsTrigger>
+            <TabsTrigger
+              className="group h-10 gap-3 rounded-xl px-6 text-sm font-semibold transition-all duration-500 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground hover:data-[state=inactive]:bg-muted/60"
+              value="events"
+            >
+              <Calendar className="h-4.5 w-4.5" />
+              <div className="flex items-center gap-2">
+                <span>Events</span>
+                <Badge
+                  className="h-5 min-w-5 justify-center bg-muted/80 px-1 text-[10px] font-bold text-muted-foreground group-data-[state=active]:bg-brand/10 group-data-[state=active]:text-brand"
+                  variant="muted"
+                >
+                  {detail.events.length}
+                </Badge>
+              </div>
+            </TabsTrigger>
+            <TabsTrigger
+              className="group h-10 gap-3 rounded-xl px-6 text-sm font-semibold transition-all duration-500 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground hover:data-[state=inactive]:bg-muted/60"
+              value="announcements"
+            >
+              <Megaphone className="h-4.5 w-4.5" />
+              <div className="flex items-center gap-2">
+                <span>Announcements</span>
+                <Badge
+                  className="h-5 min-w-5 justify-center bg-muted/80 px-1 text-[10px] font-bold text-muted-foreground group-data-[state=active]:bg-brand/10 group-data-[state=active]:text-brand"
+                  variant="muted"
+                >
+                  {detail.announcements.length}
+                </Badge>
+              </div>
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="roster">
+          <MembershipTable
+            actionsHeader="Roster management"
+            description="View and manage the members assigned to this club, their roles, and current statuses."
+            headerActions={rosterActions}
+            memberships={memberships}
+            renderMembershipStatus={renderMembershipStatus}
+            renderAssignment={renderMembershipAssignment}
+            renderRole={renderMembershipRole}
+            renderActions={membershipActions}
+            renderRowWrapper={renderRowWrapper}
+            title="Club roster"
+          />
+        </TabsContent>
+
+        <TabsContent className="space-y-6" value="events">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="text-xl font-semibold text-foreground">Upcoming events</h3>
+              <p className="text-sm text-muted-foreground">
+                Schedule and manage activities for your club members.
+              </p>
+            </div>
+            {eventCreateAction}
+          </div>
+
+          {detail.events.length ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              {detail.events.map((event) => (
+                <Card
+                  className="group relative overflow-hidden rounded-[1.5rem] border p-0 shadow-sm transition-all hover:shadow-md"
+                  key={event.id}
+                >
+                  <div className="flex flex-col">
+                    <div className="flex items-center justify-between border-b border-border bg-muted/30 px-5 py-3">
+                      <Badge variant={getEventVariant(event.status)}>{event.status}</Badge>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {formatEventWindow(event)}
+                      </p>
+                    </div>
+                    <div className="p-5">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="space-y-2">
+                          <h5 className="text-base font-semibold text-foreground">{event.title}</h5>
+                          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                            <Info className="h-3.5 w-3.5" />
+                            <span>{event.location ?? "Location TBD"}</span>
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                            {event.description}
                           </p>
                         </div>
-                        <div>
+
+                        {eventActions ? (
+                          <div className="flex shrink-0 flex-wrap gap-2">{eventActions(event)}</div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              description="Schedule the club's next activity to get started."
+              title="No events yet"
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent className="space-y-6" value="announcements">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="text-xl font-semibold text-foreground">Club announcements</h3>
+              <p className="text-sm text-muted-foreground">
+                Keep your members informed with the latest updates and news.
+              </p>
+            </div>
+            {announcementCreateAction}
+          </div>
+
+          {detail.announcements.length ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              {detail.announcements.map((announcement) => (
+                <Card
+                  className="group relative overflow-hidden rounded-[1.5rem] border p-0 shadow-sm transition-all hover:shadow-md"
+                  key={announcement.id}
+                >
+                  <div className="flex flex-col">
+                    <div className="flex items-center justify-between border-b border-border bg-muted/30 px-5 py-3">
+                      <Badge variant={getAnnouncementVariant(announcement.status)}>
+                        {announcement.status}
+                      </Badge>
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {formatDateTime(announcement.publishedAt)}
+                      </p>
+                    </div>
+                    <div className="p-5">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="space-y-2">
                           <h5 className="text-base font-semibold text-foreground">
                             {announcement.title}
                           </h5>
                           {announcement.createdBy ? (
-                            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                              Created by {announcement.createdBy}
-                            </p>
+                            <div className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                              <Users className="h-3 w-3" />
+                              <span>Created by {announcement.createdBy}</span>
+                            </div>
                           ) : null}
+                          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                            {announcement.body}
+                          </p>
                         </div>
-                        <p className="text-sm leading-6 text-muted-foreground">
-                          {announcement.body}
-                        </p>
-                      </div>
 
-                      {announcementActions ? (
-                        <div className="flex flex-wrap gap-2">
-                          {announcementActions(announcement)}
-                        </div>
-                      ) : null}
+                        {announcementActions ? (
+                          <div className="flex shrink-0 flex-wrap gap-2">
+                            {announcementActions(announcement)}
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                description="Use the add announcement action on this page to publish or schedule an update."
-                title="No announcements yet"
-              />
-            )}
-          </Card>
-        </div>
-      </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              description="Post a new announcement to notify your club members."
+              title="No announcements yet"
+            />
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
