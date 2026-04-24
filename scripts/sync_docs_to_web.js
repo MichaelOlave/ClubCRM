@@ -23,9 +23,7 @@ if (existsSync(docsDir)) {
 
 if (existsSync(readmeFile)) {
   copyFileSync(readmeFile, resolve(targetDir, "ROOT-README.md"));
-  console.log(
-    `Synced ${readmeFile} to ${resolve(targetDir, "ROOT-README.md")}`,
-  );
+  console.log(`Synced ${readmeFile} to ${resolve(targetDir, "ROOT-README.md")}`);
 } else {
   console.log(`Root README.md not found at ${readmeFile}`);
 }
