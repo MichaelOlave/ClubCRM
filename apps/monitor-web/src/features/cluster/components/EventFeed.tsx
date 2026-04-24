@@ -70,36 +70,60 @@ const CAUSE_BORDER: Partial<Record<ClusterEvent["kind"], string>> = {
 
 export function EventFeed({ events }: { events: ClusterEvent[] }) {
   if (events.length === 0) {
-    return <p className="text-sm text-zinc-400">Waiting for cluster activity&hellip;</p>;
+    return (
+      <div className="flex h-full flex-col items-center justify-center space-y-2 opacity-50">
+        <p className="text-sm font-medium text-zinc-400">Listening for cluster activity</p>
+        <p className="text-[10px] uppercase tracking-widest text-zinc-600">waiting for frames...</p>
+      </div>
+    );
   }
 
   return (
-    <ul className="flex flex-col gap-2 text-sm">
-      {events.slice(0, 20).map((event, index) => {
+    <ul className="flex flex-col gap-1.5 overflow-visible">
+      {events.slice(0, 50).map((event, index) => {
         const causeTag = CAUSE_TAG[event.kind];
         const causeTagStyle = CAUSE_TAG_STYLE[event.kind];
         const causeBorder = CAUSE_BORDER[event.kind] ?? "border-white/5";
         return (
           <li
             key={`${event.kind}-${event.ts}-${index}`}
-            className={`rounded-md border ${causeBorder} bg-white/[0.02] px-3 py-2`}
+            className={`group relative flex flex-col gap-1.5 rounded-lg border ${causeBorder} bg-zinc-900/40 p-3 transition-all hover:bg-zinc-900/60`}
           >
-            <div className="flex items-center justify-between text-xs uppercase tracking-wide text-zinc-400">
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className={`font-semibold ${KIND_COLOR[event.kind]}`}>
+                <span
+                  className={`text-[10px] font-bold uppercase tracking-[0.1em] ${KIND_COLOR[event.kind]}`}
+                >
                   {KIND_LABEL[event.kind]}
                 </span>
                 {causeTag && causeTagStyle && (
                   <span
-                    className={`rounded border px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${causeTagStyle}`}
+                    className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${causeTagStyle}`}
                   >
                     {causeTag}
                   </span>
                 )}
               </div>
-              <time suppressHydrationWarning>{new Date(event.ts * 1000).toLocaleTimeString()}</time>
+              <time
+                suppressHydrationWarning
+                className="font-mono text-[9px] font-medium text-zinc-600 transition-colors group-hover:text-zinc-400"
+              >
+                {new Date(event.ts * 1000).toLocaleTimeString([], {
+                  hour12: false,
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </time>
             </div>
-            <p className="mt-1 font-mono text-xs text-zinc-200">{summarize(event)}</p>
+            <p className="font-mono text-[11px] leading-relaxed text-zinc-200 antialiased">
+              {summarize(event)}
+            </p>
+
+            {/* Subtle left border for severity */}
+            <div
+              className={`absolute left-0 top-2 bottom-2 w-0.5 rounded-r ${KIND_COLOR[event.kind].replace("text-", "bg-").split("/")[0]}`}
+            />
           </li>
         );
       })}

@@ -46,3 +46,11 @@ export function isMonitorReplayModeEnabled() {
     process.env.MONITOR_REPLAY_MODE ?? process.env.NEXT_PUBLIC_MONITOR_REPLAY_MODE ?? "false";
   return value.trim().toLowerCase() === "true";
 }
+
+export function getClubCrmDemoUrl() {
+  return (
+    process.env.NEXT_PUBLIC_CLUBCRM_DEMO_URL ??
+    process.env.CLUBCRM_DEMO_URL ??
+    "http://clubcrm.local/demo/failover"
+  );
+}

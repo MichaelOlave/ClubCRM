@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloudflared-credentials
+  namespace: clubcrm
+type: Opaque
+stringData:
+  credentials.json: |
+    {
+      "AccountTag": "ad66684d103d81b5cc0716c6e088d0eb",
+      "TunnelID": "80cd2ef3-1758-41a9-909f-dedf9f9d990c",
+      "TunnelSecret": "M2YzMjNhZTYtMjFiOC00N2Q3LTg4NDAtNGFkMzAxYzljNjZm"
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: clubcrm
+data:
+  config.yaml: |
+    tunnel: 80cd2ef3-1758-41a9-909f-dedf9f9d990c
+    credentials-file: /etc/cloudflared/credentials.json
+    no-autoupdate: true
+    ingress:
+      - hostname: demo.clubcrm.org
+        service: http://traefik.kube-system.svc.cluster.local:80
+        originRequest:
+          httpHostHeader: clubcrm.local
+      - service: http_status:404

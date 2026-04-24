@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
 from urllib import error, request
 from urllib.parse import urlparse
@@ -13,6 +13,7 @@ ProbeStatus = Literal["ok", "degraded", "failed"]
 class ProbeTarget:
     service: str
     url: str
+    headers: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -41,7 +42,13 @@ def parse_probe_targets(raw: str | None) -> list[ProbeTarget]:
         if not url or url in seen:
             continue
         seen.add(url)
-        targets.append(ProbeTarget(service=service, url=url))
+
+        # Automatically inject Host header for cluster IPs to ensure correct routing
+        headers = {}
+        if any(ip in url for ip in ["100.122.118.85", "100.67.65.5", "100.99.187.90"]):
+            headers["Host"] = "clubcrm.local"
+
+        targets.append(ProbeTarget(service=service, url=url, headers=headers))
     return targets
 
 
@@ -56,8 +63,12 @@ def run_probe(
     status_code: int | None = None
 
     try:
+        req = request.Request(target.url, method="GET")
+        for key, value in target.headers.items():
+            req.add_header(key, value)
+
         response = request.urlopen(
-            request.Request(target.url, method="GET"),
+            req,
             timeout=timeout_seconds,
         )
         with response:

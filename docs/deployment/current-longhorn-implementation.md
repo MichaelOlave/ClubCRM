@@ -118,16 +118,14 @@ Longhorn diagnosis; use the dedicated cluster checks in this runbook for that.
 ## Current Live Cluster State
 
 The following combines the April 7, 2026 SSH validation and the April 12, 2026 smoke-test rerun on
-the real `server1`/`server2`/`server3` cluster.
+the real `server1`/`server2`/`server3` control-plane cluster.
 
 ### Cluster shape
 
 The live `k3s` cluster currently reports:
 
-- `server1` as the control-plane node
-- `server2` and `server3` as worker nodes
+- `server1`, `server2`, and `server3` as control-plane nodes
 - all three nodes `Ready`
-- `server1` marked `Ready,SchedulingDisabled`
 
 Longhorn itself is installed and its core pods are up in `longhorn-system`.
 

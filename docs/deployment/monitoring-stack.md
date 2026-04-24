@@ -69,6 +69,8 @@ Current host mapping for the networking environment:
 - `Server3` -> `100.99.187.90`
 - `DemoControlPlaneServer` -> `192.168.139.213`
 
+All three `Server*` nodes are part of the control plane in the current cluster config.
+
 The monitoring host needs:
 
 - Docker and Docker Compose
