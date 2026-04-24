@@ -23,13 +23,15 @@ type Props = {
   action: (formData: FormData) => Promise<void>;
   clubSlug: string;
   triggerDescription?: string;
-  triggerLabel: string;
+  triggerLabel?: string;
   triggerLabelClassName?: string;
   triggerClassName?: string;
   triggerTooltip?: React.ReactNode;
-  triggerAriaLabel: string;
+  triggerAriaLabel?: string;
   membership: MembershipRecord;
   notice: ActionNoticeModel | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 export function EditMembershipRoleDialog({
@@ -43,9 +45,14 @@ export function EditMembershipRoleDialog({
   membership,
   notice,
   triggerTooltip,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: Props) {
-  const [open, setOpen] = useState(Boolean(notice && notice.kind === "error"));
-  const dialogTrigger = (
+  const [internalOpen, setInternalOpen] = useState(Boolean(notice && notice.kind === "error"));
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = controlledOnOpenChange ?? setInternalOpen;
+
+  const dialogTrigger = triggerLabel ? (
     <Button
       aria-label={triggerAriaLabel}
       aria-expanded={open}
@@ -67,20 +74,22 @@ export function EditMembershipRoleDialog({
         </span>
       ) : null}
     </Button>
-  );
+  ) : null;
 
   return (
     <Dialog onOpenChange={setOpen} open={open}>
-      {triggerTooltip ? (
-        <Tooltip>
-          <TooltipTrigger asChild>{dialogTrigger}</TooltipTrigger>
-          <TooltipContent side="top" sideOffset={8}>
-            {triggerTooltip}
-          </TooltipContent>
-        </Tooltip>
-      ) : (
-        dialogTrigger
-      )}
+      {dialogTrigger ? (
+        triggerTooltip ? (
+          <Tooltip>
+            <TooltipTrigger asChild>{dialogTrigger}</TooltipTrigger>
+            <TooltipContent side="top" sideOffset={8}>
+              {triggerTooltip}
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          dialogTrigger
+        )
+      ) : null}
 
       <DialogContent className="max-w-lg">
         <DialogHeader>

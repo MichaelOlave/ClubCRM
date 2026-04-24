@@ -9,9 +9,16 @@ type DataTableProps<T> = {
   emptyState?: ReactNode;
   keyExtractor: (row: T) => string;
   rows: T[];
+  renderRowWrapper?: (row: T, children: ReactNode) => ReactNode;
 };
 
-export function DataTable<T>({ columns, emptyState, keyExtractor, rows }: DataTableProps<T>) {
+export function DataTable<T>({
+  columns,
+  emptyState,
+  keyExtractor,
+  rows,
+  renderRowWrapper,
+}: DataTableProps<T>) {
   if (!rows.length) {
     return emptyState ? <>{emptyState}</> : null;
   }
@@ -33,18 +40,22 @@ export function DataTable<T>({ columns, emptyState, keyExtractor, rows }: DataTa
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((row) => (
-            <TableRow className="align-top" key={keyExtractor(row)}>
-              {columns.map((column) => (
-                <TableCell
-                  className={column.align === "right" ? "text-right" : ""}
-                  key={column.key}
-                >
-                  {column.render(row)}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
+          {rows.map((row) => {
+            const content = (
+              <TableRow className="align-top" key={keyExtractor(row)}>
+                {columns.map((column) => (
+                  <TableCell
+                    className={column.align === "right" ? "text-right" : ""}
+                    key={column.key}
+                  >
+                    {column.render(row)}
+                  </TableCell>
+                ))}
+              </TableRow>
+            );
+
+            return renderRowWrapper ? renderRowWrapper(row, content) : content;
+          })}
         </TableBody>
       </Table>
     </div>

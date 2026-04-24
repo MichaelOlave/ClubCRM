@@ -109,11 +109,7 @@ export function AuditLogOverview({ viewModel }: Props) {
             <span className="text-xs font-medium uppercase tracking-wider">
               {isFiltersOpen ? "Hide filters" : "Show filters"}
             </span>
-            {isFiltersOpen ? (
-              <ChevronUp className="size-5" />
-            ) : (
-              <ChevronDown className="size-5" />
-            )}
+            {isFiltersOpen ? <ChevronUp className="size-5" /> : <ChevronDown className="size-5" />}
           </div>
         </button>
 
@@ -268,10 +264,7 @@ export function AuditLogOverview({ viewModel }: Props) {
                         <span>{limit} per page</span>
                       ) : (
                         <Link
-                          href={buildAuditLogHref(
-                            { ...viewModel.filters, limit: `${limit}` },
-                            1
-                          )}
+                          href={buildAuditLogHref({ ...viewModel.filters, limit: `${limit}` }, 1)}
                         >
                           {limit}
                         </Link>

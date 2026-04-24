@@ -33,8 +33,10 @@ import {
 import {
   AddMemberToClubDialog,
   EditMembershipRoleDialog,
+  MembershipRowActions,
   MembershipStatusSelect,
 } from "@/features/memberships";
+import { MemberDetailsDialog } from "@/features/members";
 import {
   createMembershipAction,
   getAssignableMembersForClub,
@@ -160,11 +162,24 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        description="Club detail owns the MVP surface for memberships, events, and announcements so we can reuse the same shell and avoid extra top-level routes too early."
-        eyebrow="Club detail"
-        title={detail.club.name}
-      />
+      <div className="space-y-4">
+        <Button
+          asChild
+          className="-ml-4 h-auto px-4 py-2 text-muted-foreground hover:text-foreground"
+          size="sm"
+          variant="ghost"
+        >
+          <Link className="flex items-center gap-2" href="/clubs">
+            <span className="text-lg">←</span>
+            <span>Back to clubs</span>
+          </Link>
+        </Button>
+        <PageHeader
+          description={`Comprehensive overview of ${detail.club.name}, including active roster, upcoming events, and recent announcements.`}
+          eyebrow="Club Directory"
+          title={detail.club.name}
+        />
+      </div>
 
       <ActionNotice notice={clubUpdateSuccessNotice} />
       <ActionNotice notice={assignmentSuccessNotice} />
@@ -177,14 +192,6 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
       <ActionNotice notice={membershipUpdateSuccessNotice} />
       <ActionNotice notice={managerGrantSuccessNotice} />
       <ActionNotice notice={membershipStatusUpdateNotice} />
-      <Button
-        asChild
-        className="px-0 text-muted-foreground hover:text-foreground"
-        size="sm"
-        variant="link"
-      >
-        <Link href="/clubs">Back to clubs</Link>
-      </Button>
 
       <ClubProfile
         announcementActions={(announcement) => (
@@ -248,24 +255,35 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
             ) : null}
           </>
         }
-        activityActions={
-          <>
-            <CreateEventDialog
-              action={createEventAction}
-              clubId={detail.club.id}
-              clubSlug={detail.club.slug}
-              notice={eventCreateErrorNotice}
-            />
-            <CreateAnnouncementDialog
-              action={createAnnouncementAction}
-              clubId={detail.club.id}
-              clubSlug={detail.club.slug}
-              notice={announcementCreateErrorNotice}
-            />
-          </>
+        announcementCreateAction={
+          <CreateAnnouncementDialog
+            action={createAnnouncementAction}
+            clubId={detail.club.id}
+            clubSlug={detail.club.slug}
+            notice={announcementCreateErrorNotice}
+          />
+        }
+        eventCreateAction={
+          <CreateEventDialog
+            action={createEventAction}
+            clubId={detail.club.id}
+            clubSlug={detail.club.slug}
+            notice={eventCreateErrorNotice}
+          />
         }
         memberships={memberships}
         renderMembershipStatus={(membership) => <MembershipStatusSelect membership={membership} />}
+        renderRowWrapper={(membership, children) => (
+          <MembershipRowActions
+            clubSlug={detail.club.slug}
+            membership={membership}
+            membershipUpdateTarget={membershipUpdateTarget}
+            updateRoleAction={updateMembershipRoleAction}
+            updateRoleNotice={membershipUpdateErrorNotice}
+          >
+            {children}
+          </MembershipRowActions>
+        )}
         rosterActions={
           <>
             {isOrgAdmin ? (
@@ -286,16 +304,11 @@ export default async function ClubDetailPage({ params, searchParams }: Props) {
           </>
         }
         renderMembershipAssignment={(membership) => (
-          <EditMembershipRoleDialog
-            action={updateMembershipRoleAction}
-            clubSlug={detail.club.slug}
-            membership={membership}
-            notice={membershipUpdateTarget === membership.id ? membershipUpdateErrorNotice : null}
-            triggerAriaLabel={`Edit ${membership.memberName}'s role`}
-            triggerClassName={membershipEditTriggerClassName}
-            triggerDescription={membership.clubName}
+          <MemberDetailsDialog
+            currentClubId={detail.club.id}
+            memberId={membership.memberId}
+            triggerClassName="-mx-2 -my-1 rounded-[1rem] px-2 py-1"
             triggerLabel={membership.memberName}
-            triggerTooltip="Click to edit role"
           />
         )}
         renderMembershipRole={(membership) => (

@@ -11,6 +11,7 @@ export type MembershipTableModel = {
   renderMembershipStatus?: (membership: MembershipRecord) => ReactNode;
   renderRole?: (membership: MembershipRecord) => ReactNode;
   renderActions?: (membership: MembershipRecord) => ReactNode;
+  renderRowWrapper?: (membership: MembershipRecord, children: ReactNode) => ReactNode;
   title?: string;
 };
 
