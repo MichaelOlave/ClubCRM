@@ -29,6 +29,7 @@ The live API currently exposes:
 
 - `GET /health`
 - `GET /api/snapshot`
+- `GET /api/replay`
 - `WS /ws/stream`
 
 `GET /api/snapshot` returns a live cluster snapshot with these top-level sections:
@@ -39,11 +40,13 @@ The live API currently exposes:
 - `pods`
 - `volumes`
 - `replicas`
+- `probes`
 
 The Longhorn collections are additive Phase 2 work:
 
 - `volumes` tracks attachment node, workload correlation, state, robustness, and health
 - `replicas` tracks per-volume replica health and node placement
+- `probes` tracks configured service probe status, latency, and recent failures
 
 ## Environment
 
@@ -61,6 +64,8 @@ Important environment variables:
 - `MONITOR_CLUSTER_SNAPSHOT_FILE`
 - `MONITOR_CLUSTER_RECORDING_FILE`
 - `MONITOR_LONGHORN_ENABLED`
+- `MONITOR_K8S_EVENTS_ENABLED`
+- `MONITOR_CHAOS_ENABLED`
 - `MONITOR_CLUSTER_HEARTBEAT_SECONDS`
 - `MONITOR_CLUSTER_WATCH_TIMEOUT_SECONDS`
 - `MONITOR_PROBE_TARGETS`

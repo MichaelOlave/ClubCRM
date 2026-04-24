@@ -54,12 +54,18 @@ Expected output for API health:
   "checks": {
     "redis": {
       "status": "ok",
-      "enabled": true
+      "enabled": true,
+      "details": {
+        "version": "7.x"
+      }
     }
   },
   "runtime": {
     "service": "clubcrm-api",
+    "instance_id": "clubcrm-api-...",
+    "pod_name": "clubcrm-api-...",
     "namespace": "clubcrm",
+    "node_name": "server1",
     "platform": "kubernetes"
   }
 }

@@ -8,8 +8,8 @@ async function getDocContent(fileName: string) {
 
   // Locations to check for docs, ordered by production standalone path and local dev path.
   const possiblePaths = [
-    path.join(process.cwd(), "apps/web/public/docs", syncedFileName), // Standalone prod
-    path.join(process.cwd(), "public/docs", syncedFileName), // Local dev after sync
+    path.join(/*turbopackIgnore: true*/ process.cwd(), "apps/web/public/docs", syncedFileName), // Standalone prod
+    path.join(/*turbopackIgnore: true*/ process.cwd(), "public/docs", syncedFileName), // Local dev after sync
   ];
 
   for (const filePath of possiblePaths) {

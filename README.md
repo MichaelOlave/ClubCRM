@@ -7,11 +7,11 @@ ClubCRM is a devcontainer-first monorepo for a club management platform with:
 - PostgreSQL for relational data
 - MongoDB for document-style form submissions
 - Redis for caching and short-lived data
-- Kafka for domain events and async workflows
+- Kafka as the intended async event boundary, with current publishers still scaffolded
 
 Current implementation status:
 
-- `apps/web` now provides a UI-first MVP: `/` sends authorized users to `/dashboard`, authenticated-but-unprovisioned users to `/not-provisioned`, and everyone else to `/login`; admin pages live under `src/app/(app)`, public entry points live under `src/app/(public)`, and auth proxy handlers live at `/api/auth/login` and `/auth/callback`
+- `apps/web` now provides a UI-first MVP: `/` sends authorized users to `/dashboard`, authenticated-but-unprovisioned users to `/not-provisioned`, and everyone else to `/login`; admin pages live under `src/app/(app)`, protected system pages live under `src/app/system`, public entry points live under `src/app/(public)`, and auth proxy handlers live at `/api/auth/login` and `/auth/callback`
 - the frontend currently includes dashboard, profile, audit, club and member directory/detail pages, club and member creation and update flows, roster assignment plus event and announcement management from club detail, public join-request submission plus club-level join-request review, a `/login` route that hands off to backend-owned auth, and a dedicated `/system/health` diagnostics route
 - `apps/api` now includes bootstrap, config, infrastructure, module, and test layers, with live routes for system health, backend-owned auth, audit logs, dashboard summaries, clubs, members, memberships, announcements, events, and join-request flows
 - the admin route group now checks the backend session before rendering and serves a role-aware shell for organization admins and club managers

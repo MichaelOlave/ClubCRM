@@ -29,11 +29,11 @@ This file applies to the entire repository unless a deeper `AGENTS.md` overrides
 - `pnpm-workspace.yaml` includes `apps/*` and `packages/*`.
 - The backend is intended to grow as a modular monolith with clean architecture style. Use `docs/architecture.md` as the source of truth for structural decisions.
 
-Current implementation is still early-stage:
+Current implementation is still growing, but it has live product flows:
 
-- `apps/web` now ships a UI-first MVP: `/` checks the backend auth session and redirects to `/dashboard` or `/login`, the admin shell includes dashboard, profile, clubs, members, and `/system/health`, and the public surface currently covers `/login` and `/join/[clubId]`.
-- `apps/api` now includes bootstrap, config, infrastructure, module, and test layers plus live routes under `/health`, `/auth`, `/clubs`, `/members`, `/memberships`, `/events`, `/announcements`, and `/dashboard`; `/forms` is registered but still has no HTTP handlers.
-- Most frontend data currently comes from server-side view-model modules in `apps/web/src/features/*/server`, but auth/session checks, diagnostics, dashboard aggregation, and club/member/membership admin flows now call live backend endpoints.
+- `apps/web` now ships a UI-first MVP: `/` checks the backend auth session and redirects to `/dashboard`, `/not-provisioned`, or `/login`; the admin shell includes dashboard, profile, clubs, members, `/system/audit`, and `/system/health`; and the public surface includes `/login`, `/not-provisioned`, `/docs`, `/testing`, `/join/[clubId]`, and the networking-demo `/demo/failover` route.
+- `apps/api` now includes bootstrap, config, infrastructure, module, and test layers plus live routes under `/health`, `/auth`, `/audit-logs`, `/clubs`, `/members`, `/memberships`, `/events`, `/announcements`, `/dashboard`, and `/forms`.
+- Most frontend data still flows through server-side view-model modules in `apps/web/src/features/*/server`, but auth/session checks, diagnostics, dashboard aggregation, audit logs, club/member/membership admin flows, event and announcement management, and join-request submission/review now call live backend endpoints.
 
 Do not casually rewrite repo structure, ports, service assumptions, or the diagnostics and health-check flow unless the task explicitly calls for it.
 
@@ -50,6 +50,9 @@ Run shared commands from the repository root unless there is a strong reason to 
 - `pnpm format` runs formatting across the repo.
 - `pnpm format:check` checks formatting across the repo.
 - `pnpm lint:web` runs frontend ESLint checks.
+- `pnpm lint:api` runs Ruff checks for the backend.
+- `pnpm format:api` formats the backend with Ruff.
+- `pnpm format:api:check` checks backend Ruff formatting.
 - `pnpm check:api` bytecode-compiles `apps/api/src` for a quick backend sanity check.
 - `pnpm lint` runs the shared lint pipeline.
 - `pnpm verify` runs the CI-facing verification pipeline.

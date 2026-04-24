@@ -54,6 +54,8 @@ Important files:
 - `apps/web/src/app/layout.tsx`
 - `apps/web/src/app/page.tsx`
 - `apps/web/src/app/globals.css`
+- `apps/web/src/app/system/health/page.tsx`
+- `apps/web/src/app/system/audit/page.tsx`
 - `apps/api/src/main.py`
 - `apps/api/src/presentation/http/router.py`
 - `apps/api/src/modules/system/presentation/http/routes.py`
@@ -103,10 +105,10 @@ Current app behavior to keep in mind:
 
 - `src/app/page.tsx` currently redirects authorized users to `/dashboard`, authenticated-but-unprovisioned users to `/not-provisioned`, and everyone else to `/login`.
 - Admin routes live under `src/app/(app)`, public entry points live under `src/app/(public)`, and the auth proxy handlers live at `/api/auth/login` and `/auth/callback`.
-- The current admin MVP includes dashboard, profile, clubs, members, `/system/audit`, and `/system/health`; public routes currently cover `/login`, `/join/[clubId]`, and `/not-provisioned`.
+- The current admin MVP includes dashboard, profile, clubs, members, club-level join-request review, `/system/audit`, and `/system/health`; public routes currently cover `/login`, `/not-provisioned`, `/docs`, `/testing`, `/join/[clubId]`, and the networking-demo `/demo/failover` route.
 - The admin shell is role-aware: org admins see the full workspace, while club managers get a reduced shell for assigned clubs.
-- Most feature data currently comes from server-side view-model modules in `src/features/*/server`, so the frontend is ahead of the backend contract.
-- `src/app/(app)/system/health/page.tsx` preserves the admin diagnostics flow, and `src/app/demo/failover/page.tsx` provides the public failover-monitor route for the networking demo.
+- Most feature data currently flows through server-side modules in `src/features/*/server`; many of those modules now call live backend endpoints while a smaller amount of route composition still stays web-side.
+- `src/app/system/health/page.tsx` preserves the admin diagnostics flow, `src/app/system/audit/page.tsx` preserves the admin audit flow, and `src/app/demo/failover/page.tsx` provides the public failover-monitor route for the networking demo.
 - The diagnostics flow probes the API using `API_BASE_URL`, then `WEB_API_PUBLIC_BASE_URL`, then `http://api:8000`, then `http://localhost:8000`.
 - The expected backend response comes from `apps/api/src/modules/system/presentation/http/routes.py` and returns top-level `status: "ok"` plus nested health-check details such as `checks.redis`.
 - The diagnostics page exports `dynamic = "force-dynamic"` and uses `fetch(..., { cache: "no-store" })`.
@@ -120,33 +122,40 @@ The web app uses a **feature-first** layout under `src/`:
 ```
 src/
   app/                    # Routes, layouts, and metadata — composition only
-    api/auth/login/       # Server route handler for backend-owned login handoff
     (app)/                # Admin shell route group
       dashboard/
       profile/
       clubs/
         [clubId]/
+          join-requests/
       members/
         [memberId]/
-      system/
-        audit/
-        health/
+    system/               # Protected diagnostics and audit pages using their own layout
+      audit/
+      health/
+        live-routing/
     (public)/             # Public entry points
+      docs/
       login/
       not-provisioned/
+      testing/
       join/[clubId]/
     api/auth/login/       # Same-origin auth handoff proxy
     auth/callback/        # Same-origin auth callback proxy
+    demo/failover/        # Public networking-demo failover monitor and recycle action
   features/               # Default home for business-facing feature code
     audit/
     auth/
     clubs/
     dashboard/
+    docs/
     forms/join-request/
     health/
+    landing/
     members/
     memberships/
     profile/
+    testing/
     <feature>/
       components/         # Feature-specific presentational components
       server/             # Server-only loaders/actions for App Router server components

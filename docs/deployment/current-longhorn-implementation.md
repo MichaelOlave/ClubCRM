@@ -308,16 +308,15 @@ Impact:
 
 ### 4. The monitoring fixture no longer matches the manifests or the live cluster
 
-`infra/monitoring/fixtures/k8s-snapshot.json` currently models:
+`infra/monitoring/fixtures/k8s-snapshot.json` now uses the standalone PVC names from the repo
+manifests:
 
-- PVC names `postgres-data-postgres-0` and `redis-data-redis-0`
-- requested sizes `20Gi` and `5Gi`
-- Longhorn-backed ClubCRM volumes
+- `postgres-data`
+- `redis-data`
 
-The current repo manifests actually define:
-
-- standalone claims named `postgres-data` and `redis-data`
-- requested sizes `10Gi` and `2Gi`
+However, it still models Longhorn-backed and faulted storage while the current fallback manifests
+use `local-path`, and it currently omits the root `probes` collection returned by the live monitor
+API.
 
 The live cluster currently uses:
 

@@ -6,9 +6,9 @@ The current frontend is a UI-first MVP with:
 
 - a root redirect that sends authorized users to `/dashboard`, authenticated-but-unprovisioned users to `/not-provisioned`, and everyone else to `/login`
 - admin routes for the dashboard, profile, clubs, members, audit log, and diagnostics, with a role-aware shell for org admins versus club managers
-- public routes for login, not-provisioned access messaging, and club join-request submission, with club-level join-request review in the admin shell
+- public routes for login, not-provisioned access messaging, docs/testing pages, and club join-request submission, with club-level join-request review in the admin shell
 - same-origin auth handoff routes at `/api/auth/login` and `/auth/callback`
-- feature-owned server modules that orchestrate backend auth, clubs, members, memberships, events, and announcements while some dashboard and join-form composition still stays web-side
+- feature-owned server modules that orchestrate backend auth, dashboard, audit, clubs, members, memberships, events, announcements, and join-request flows while some page composition still stays web-side
 
 ## Getting Started
 
@@ -38,10 +38,13 @@ The homepage currently checks the backend auth session, then redirects authorize
 - [`src/app/(app)/dashboard/page.tsx`](<src/app/(app)/dashboard/page.tsx>) for the admin landing page
 - [`src/app/(app)/profile/page.tsx`](<src/app/(app)/profile/page.tsx>) for the signed-in auth profile and session diagnostics surface
 - [`src/app/(app)/clubs/[clubId]/page.tsx`](<src/app/(app)/clubs/[clubId]/page.tsx>) for the shared club detail surface that shows memberships, events, and announcements
-- [`src/app/(app)/system/audit/page.tsx`](<src/app/(app)/system/audit/page.tsx>) for the admin audit log surface
-- [`src/app/(app)/system/health/page.tsx`](<src/app/(app)/system/health/page.tsx>) for the API diagnostics surface
+- [`src/app/(app)/clubs/[clubId]/join-requests/page.tsx`](<src/app/(app)/clubs/[clubId]/join-requests/page.tsx>) for club-level join-request review
+- [`src/app/system/audit/page.tsx`](src/app/system/audit/page.tsx) for the admin audit log surface
+- [`src/app/system/health/page.tsx`](src/app/system/health/page.tsx) for the API diagnostics surface
+- [`src/app/system/health/live-routing/route.ts`](src/app/system/health/live-routing/route.ts) for the live-routing snapshot used by diagnostics and demo surfaces
 - [`src/app/demo/failover/page.tsx`](src/app/demo/failover/page.tsx) for the public failover monitor used in the networking demo
-- [`src/app/(public)/login/page.tsx`](<src/app/(public)/login/page.tsx>), [`src/app/(public)/not-provisioned/page.tsx`](<src/app/(public)/not-provisioned/page.tsx>), or [`src/app/(public)/join/[clubId]/page.tsx`](<src/app/(public)/join/[clubId]/page.tsx>) for public entry points
+- [`src/app/demo/failover/recycle/route.ts`](src/app/demo/failover/recycle/route.ts) for the demo recycle action proxy
+- [`src/app/(public)/login/page.tsx`](<src/app/(public)/login/page.tsx>), [`src/app/(public)/not-provisioned/page.tsx`](<src/app/(public)/not-provisioned/page.tsx>), [`src/app/(public)/docs/page.tsx`](<src/app/(public)/docs/page.tsx>), [`src/app/(public)/testing/page.tsx`](<src/app/(public)/testing/page.tsx>), or [`src/app/(public)/join/[clubId]/page.tsx`](<src/app/(public)/join/[clubId]/page.tsx>) for public entry points
 
 ## Notes
 
@@ -49,7 +52,7 @@ The homepage currently checks the backend auth session, then redirects authorize
 - The PNPM store, workspace `node_modules`, web `node_modules`, web `.next`, and the API virtualenv are persisted in Docker volumes.
 - File watching is configured with polling for reliable live reload in containers.
 - The web service waits for the API health check before it starts.
-- Most frontend data is currently provided by server-side view-model modules under `src/features/*/server`; `/system/health`, `/system/audit`, `/profile`, `/login`, and the protected admin route group now call into the FastAPI backend.
+- Most frontend data flows through server-side modules under `src/features/*/server`; `/system/health`, `/system/audit`, `/profile`, `/login`, dashboard, clubs, members, memberships, events, announcements, and join requests now call into the FastAPI backend.
 - Club detail pages also read memberships, upcoming events, and announcements from the backend so the admin shell can stay compact without adding more top-level routes yet.
 - Club and public join URLs now prefer backend-provided club slugs, while write actions still post
   the internal club ID back to the API.

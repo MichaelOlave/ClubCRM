@@ -56,7 +56,7 @@ Next.js Frontend
         +--> PostgreSQL   (system of record)
         +--> MongoDB      (flexible form submissions)
         +--> Redis        (cache / short-lived data)
-        +--> Kafka        (domain events / async workflows)
+        +--> Kafka        (scaffolded async event boundary)
 ```
 
 ## Workstream Boundary
@@ -165,7 +165,7 @@ The repository may also grow deployment artifacts for the networking workstream,
 
 ## Current Frontend Implementation
 
-Today the frontend is ahead of the backend contract. The implemented web app uses App Router route groups for an admin shell and public entry points:
+Today the frontend remains UI-first, but many of its server-side feature modules now call live backend endpoints. The implemented web app uses App Router route groups for the admin shell and public entry points, plus protected system routes that share the same auth model:
 
 ```text
 /apps/web/src
@@ -177,15 +177,20 @@ Today the frontend is ahead of the backend contract. The implemented web app use
       /profile
       /clubs
         /[clubId]
+          /join-requests
       /members
         /[memberId]
-      /system
-        /audit
-        /health
+    /system
+      layout.tsx
+      /audit
+      /health
+        /live-routing
     /(public)
       layout.tsx
+      /docs
       /login
       /not-provisioned
+      /testing
       /join
         /[clubId]
     /api
@@ -193,20 +198,26 @@ Today the frontend is ahead of the backend contract. The implemented web app use
         /login
     /auth
       /callback
+    /demo
+      /failover
+        /recycle
   /features
     /audit
     /auth
     /clubs
     /dashboard
+    /docs
     /forms
       /join-request
     /health
+    /landing
     /members
     /memberships
     /profile
+    /testing
 ```
 
-Most current web data is still provided by server-side view-model modules under `apps/web/src/features/*/server`, but the live cross-app integrations are now broader than diagnostics alone. The frontend currently relies on backend-owned auth session checks and auth proxy routes, the `/profile` diagnostics surface, `/system/health`, `/system/audit`, club and member CRUD flows, club-manager grant management, the public join-request submission and review flow, and the public `/demo/failover` networking-demo route. The admin shell is also role-aware: org admins see the full workspace, while club managers see a reduced shell scoped to their assigned clubs.
+Most current web data flows through server-side modules under `apps/web/src/features/*/server`; many of those modules call the API while route-level composition stays in the web app. The frontend currently relies on backend-owned auth session checks and auth proxy routes, the `/profile` diagnostics surface, `/system/health`, `/system/audit`, dashboard summaries, club and member CRUD flows, club-manager grant management, event and announcement management, the public join-request submission and review flow, and the public `/demo/failover` networking-demo route. The admin shell is also role-aware: org admins see the full workspace, while club managers see a reduced shell scoped to their assigned clubs.
 
 ## Current Backend Implementation
 
@@ -250,7 +261,7 @@ Today the backend is a real modular HTTP surface, not just a scaffold. The repo 
     /infrastructure
 ```
 
-`GET /health` remains the baseline diagnostics handler, but the live API surface now also includes the backend-owned `/auth` session flow, `/audit-logs`, `/dashboard/summary/{club_id}`, the join-request workflow under `/forms`, and CRUD-style routes for clubs, members, memberships, announcements, and events. The sections below describe how that module-first structure should keep growing as more persistence behavior moves behind those routes.
+`GET /health` remains the baseline diagnostics handler, but the live API surface now also includes the backend-owned `/auth` session flow, `/audit-logs`, `/dashboard/summary`, `/dashboard/summary/{club_id}`, `/dashboard/redis-analytics/{club_id}`, the join-request workflow under `/forms`, and CRUD-style routes for clubs, members, memberships, announcements, and events. The sections below describe how that module-first structure should keep growing as more persistence behavior moves behind those routes.
 
 ## Auth and Authorization Model
 
@@ -499,7 +510,9 @@ Store here:
 
 ### Kafka
 
-Event backbone for non-blocking workflows and demo-visible domain events.
+Intended event backbone for non-blocking workflows and demo-visible domain events. The local stack
+provisions Kafka and the backend already has publisher ports/adapters, but the current adapters are
+still scaffolded and record event metadata in memory instead of sending broker-backed messages.
 
 Use it for events such as:
 

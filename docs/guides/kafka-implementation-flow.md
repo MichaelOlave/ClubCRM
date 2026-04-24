@@ -2,8 +2,10 @@
 
 ## Purpose
 
-Use Kafka for async domain events and non-blocking workflows. In ClubCRM, Kafka is the event
-backbone for side effects, not part of the core CRUD correctness path.
+Use Kafka for async domain events and non-blocking workflows. In ClubCRM, Kafka is the intended
+event backbone for side effects, not part of the core CRUD correctness path. The current publisher
+adapters are still scaffolded and record event metadata in memory instead of sending broker-backed
+messages.
 
 Documented Kafka responsibilities include events such as:
 
@@ -36,7 +38,8 @@ Reference files in the current backend:
 - `apps/api/tests/unit/infrastructure/kafka/test_contracts.py`
 
 The current application pattern treats publishers as optional collaborators that run after the core
-state change succeeds.
+state change succeeds. Treat this as the stable boundary where a real Kafka producer can be added
+without changing the owning use case.
 
 ## Step-by-Step Flow
 
