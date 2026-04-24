@@ -28,11 +28,13 @@ Browser --> Traefik (port 80) --> Kubernetes Service --> Pod
 
 ## Cluster Node IPs
 
+All three nodes in the current cluster are control-plane nodes.
+
 | Node    | IP           | Role          |
 | ------- | ------------ | ------------- |
 | server1 | 10.10.10.102 | control-plane |
-| server2 | 10.10.10.103 | worker        |
-| server3 | 10.10.10.104 | worker        |
+| server2 | 10.10.10.103 | control-plane |
+| server3 | 10.10.10.104 | control-plane |
 
 ## Verifying Routing
 

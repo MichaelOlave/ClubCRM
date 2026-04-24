@@ -8,8 +8,7 @@ For the off-cluster monitoring stack that sits beside this cluster, see
 
 It assumes:
 
-- `Server1` is the single `k3s` server
-- `Server2` and `Server3` are `k3s` agents
+- `Server1`, `Server2`, and `Server3` are all `k3s` servers in the control plane
 - the companion monitoring stack stays off-cluster on its own monitoring host
 - `Kubero` deploys only `clubcrm-web` and `clubcrm-api`
 - PostgreSQL and Redis stay repo-managed Kubernetes resources with Longhorn-backed PVCs
@@ -17,15 +16,15 @@ It assumes:
 Current live mapping as of April 18, 2026:
 
 - `Server1` -> `100.122.118.85` -> `k3s` control plane
-- `Server2` -> `100.67.65.5` -> `k3s` worker
-- `Server3` -> `100.99.187.90` -> `k3s` worker
+- `Server2` -> `100.67.65.5` -> `k3s` control plane
+- `Server3` -> `100.99.187.90` -> `k3s` control plane
 - `DemoControlPlaneServer` -> `192.168.139.213` -> monitoring host and dashboard VM
 
 ## Topology And Ownership
 
 The intended split is:
 
-- app runtime and networking demo on the 3-node `k3s` cluster
+- app runtime and networking demo on the 3-node `k3s` control-plane cluster
 - cluster storage through Longhorn
 - app ingress through Traefik and ServiceLB
 - app workload management through Kubero for the main path
@@ -82,7 +81,7 @@ Deployments or Services. They only create ingress rules that expect those app Se
 In the primary path, Kubero provides those app workloads and matching Services. In the classroom
 fallback path, the `orbstack-demo` overlay provides them.
 
-## 1. Prepare The Three VMs
+## 1. Prepare The Three Control-Plane VMs
 
 Set stable hostnames and confirm each VM has a stable private IP.
 
@@ -122,24 +121,24 @@ lily ALL=(ALL) NOPASSWD:ALL
 
 Open the ports needed for:
 
-- `6443/tcp` for the `k3s` API on `Server1`
+- `6443/tcp` for the `k3s` API on the control-plane nodes
 - Flannel VXLAN traffic between nodes
 - ingress traffic on `80/tcp`
 - Longhorn replica traffic between nodes
 
 ## 2. Bootstrap k3s
 
-Install the server on `Server1`:
+Install the first server on `Server1`:
 
 ```bash
-curl -sfL https://get.k3s.io | sh -
+curl -sfL https://get.k3s.io | sh -s - server --cluster-init
 sudo cat /var/lib/rancher/k3s/server/node-token
 ```
 
-Join `Server2` and `Server3` as agents using the token from `Server1`:
+Join `Server2` and `Server3` as additional control-plane servers using the token from `Server1`:
 
 ```bash
-curl -sfL https://get.k3s.io | K3S_URL=https://Server1:6443 K3S_TOKEN=<node-token> sh -
+curl -sfL https://get.k3s.io | K3S_TOKEN=<node-token> sh -s - server --server https://Server1:6443
 ```
 
 Verify the cluster:
@@ -397,7 +396,7 @@ curl http://clubcrm.local/system/health
 
 Demo goals:
 
-- all three nodes show as `Ready`
+- all three nodes show as `Ready` and are control-plane nodes
 - Postgres and Redis PVCs are `Bound`
 - the app works through `http://clubcrm.local`
 - the embedded `/demo/failover` page reports the active web pod and switches to the

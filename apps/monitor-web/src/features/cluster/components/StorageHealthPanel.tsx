@@ -10,67 +10,77 @@ interface StorageHealthPanelProps {
 export function StorageHealthPanel({ volumes, replicas }: StorageHealthPanelProps) {
   if (volumes.length === 0) {
     return (
-      <div className="rounded-2xl border border-white/5 bg-black/30 p-4">
+      <div className="rounded-2xl border border-white/5 bg-zinc-900/40 p-5 backdrop-blur-sm">
         <header>
-          <p className="text-xs uppercase tracking-wider text-zinc-400">Storage health</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500">
+            Storage health
+          </p>
           <h3 className="text-lg font-semibold text-zinc-100">Longhorn overlay</h3>
         </header>
-        <p className="mt-3 text-sm text-zinc-400">
-          No Longhorn volumes in the current snapshot yet.
-        </p>
+        <p className="mt-4 text-sm text-zinc-500 italic">No active Longhorn volumes.</p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-white/5 bg-black/30 p-4">
-      <header>
-        <p className="text-xs uppercase tracking-wider text-zinc-400">Storage health</p>
+    <div className="rounded-2xl border border-white/5 bg-zinc-900/40 p-5 backdrop-blur-sm">
+      <header className="mb-4">
+        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500">
+          Storage health
+        </p>
         <h3 className="text-lg font-semibold text-zinc-100">{volumes.length} volumes tracked</h3>
       </header>
 
-      <ul className="mt-4 flex flex-col gap-3">
+      <ul className="flex flex-col gap-3">
         {volumes.map((volume) => {
           const volumeReplicas = replicas.filter((replica) => replica.volume_name === volume.name);
           return (
-            <li key={volume.name} className="rounded-xl border border-white/5 bg-white/[0.03] p-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-mono text-sm text-zinc-100">{volume.name}</p>
-                  <p className="mt-1 text-xs text-zinc-400">{describeVolumeIdentity(volume)}</p>
+            <li
+              key={volume.name}
+              className="group rounded-xl border border-white/5 bg-white/[0.01] p-3 transition-colors hover:bg-white/[0.03]"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-mono text-sm font-medium text-zinc-100">
+                    {volume.name}
+                  </p>
+                  <p className="truncate text-[10px] text-zinc-500">
+                    {describeVolumeIdentity(volume)}
+                  </p>
                 </div>
                 <span className={healthBadgeClasses(volume.health, volume.robustness)}>
                   {volume.health}
                 </span>
               </div>
 
-              <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-zinc-300">
-                <div>
-                  <dt className="text-zinc-500">Attached</dt>
-                  <dd>{volume.attachment_node ?? "detached"}</dd>
+              <div className="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-1.5 border-t border-white/5 pt-2.5 text-[10px] font-medium text-zinc-400">
+                <div className="flex justify-between">
+                  <span>Node</span>
+                  <span className="text-zinc-200">{volume.attachment_node ?? "—"}</span>
                 </div>
-                <div>
-                  <dt className="text-zinc-500">State</dt>
-                  <dd>{volume.state}</dd>
+                <div className="flex justify-between">
+                  <span>State</span>
+                  <span className="text-zinc-200">{volume.state}</span>
                 </div>
-                <div>
-                  <dt className="text-zinc-500">Robustness</dt>
-                  <dd>{volume.robustness}</dd>
+                <div className="flex justify-between">
+                  <span>Robust</span>
+                  <span className="text-zinc-200">{volume.robustness}</span>
                 </div>
-                <div>
-                  <dt className="text-zinc-500">Replicas</dt>
-                  <dd>{volumeReplicas.length}</dd>
+                <div className="flex justify-between">
+                  <span>Replicas</span>
+                  <span className="text-zinc-200">{volumeReplicas.length}</span>
                 </div>
-              </dl>
+              </div>
 
               {volumeReplicas.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-1.5 border-t border-white/5 pt-3">
                   {volumeReplicas.map((replica) => (
                     <span
                       key={replica.name}
-                      className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 font-mono text-[11px] text-cyan-100"
+                      className="rounded bg-cyan-500/5 px-1.5 py-0.5 font-mono text-[9px] text-cyan-200/70"
+                      title={`${replica.node_name}: ${replica.health}`}
                     >
-                      {replica.node_name ?? "unknown"} · {replica.health}
+                      {replica.node_name?.slice(-1) ?? "?"}·{replica.health[0]}
                     </span>
                   ))}
                 </div>

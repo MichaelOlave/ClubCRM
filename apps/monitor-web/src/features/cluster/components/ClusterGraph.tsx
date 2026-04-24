@@ -38,10 +38,10 @@ function NodeBox({ data }: NodeProps<NodeData>) {
   const isReady = node.status === "Ready";
   return (
     <div
-      className={`flex flex-col overflow-hidden rounded-2xl border-2 bg-zinc-900/70 backdrop-blur-sm transition-colors ${
+      className={`flex flex-col overflow-hidden rounded-2xl border bg-zinc-900/80 backdrop-blur-md transition-all duration-500 ${
         isReady
-          ? "border-emerald-500/60 shadow-[0_0_30px_-10px_rgba(16,185,129,0.45)]"
-          : "border-red-500/70 shadow-[0_0_30px_-10px_rgba(239,68,68,0.45)]"
+          ? "border-emerald-500/30 shadow-[0_8px_32px_-8px_rgba(16,185,129,0.2)]"
+          : "border-red-500/40 shadow-[0_8px_32px_-8px_rgba(239,68,68,0.3)]"
       }`}
       style={{ width: NODE_WIDTH }}
     >
@@ -57,51 +57,81 @@ function NodeBox({ data }: NodeProps<NodeData>) {
         isConnectable={false}
         className="!h-2 !w-2 !border-0 !bg-transparent"
       />
-      <header className="flex items-center justify-between px-4 py-3">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-zinc-400">Node</p>
-          <h3 className="text-lg font-semibold text-zinc-100">{node.name}</h3>
-          {node.roles.length > 0 && (
-            <p className="text-[11px] text-zinc-500">{node.roles.join(", ")}</p>
-          )}
+      <header className="relative flex items-center justify-between px-5 py-4">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500">
+            Host node
+          </p>
+          <h3 className="truncate text-lg font-bold tracking-tight text-zinc-100">{node.name}</h3>
+          <div className="mt-1 flex gap-1.5">
+            {node.roles.map((role) => (
+              <span
+                key={role}
+                className="rounded bg-white/5 px-1.5 py-0.5 text-[9px] font-medium uppercase text-zinc-400"
+              >
+                {role}
+              </span>
+            ))}
+          </div>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <span
-            className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wider ${
-              isReady ? "bg-emerald-500/20 text-emerald-200" : "bg-red-500/20 text-red-200"
-            }`}
-          >
-            {node.status}
-          </span>
-          <span className="rounded-full border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-cyan-100">
-            {volumeCount} vols
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${isReady ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" : "bg-red-400 animate-pulse"}`}
+            />
+            <span
+              className={`text-[10px] font-bold uppercase tracking-wider ${isReady ? "text-emerald-400" : "text-red-400"}`}
+            >
+              {node.status}
+            </span>
+          </div>
+          <span className="rounded bg-cyan-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-cyan-300 border border-cyan-500/20">
+            {volumeCount} volumes
           </span>
         </div>
+
+        {/* Subtle background glow */}
+        <div
+          className={`absolute -right-4 -top-4 h-16 w-16 rounded-full blur-3xl opacity-20 ${isReady ? "bg-emerald-500" : "bg-red-500"}`}
+        />
       </header>
-      <div className="flex flex-wrap gap-2 px-4 pb-4">
-        <AnimatePresence initial={false}>
-          {pods.map((pod) => (
-            <motion.div
-              key={podKey(pod)}
-              layout
-              layoutId={`pod-${podKey(pod)}`}
-              initial={{ opacity: 0, scale: 0.6 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.6 }}
-              transition={{ type: "spring", stiffness: 260, damping: 28 }}
-              className={podClasses(pod)}
-              title={`${pod.namespace}/${pod.name} (${pod.status})`}
-            >
-              <span className="truncate font-mono text-[11px]">{pod.name}</span>
-              {pod.volumeNames.length > 0 && (
-                <span className="rounded-full border border-cyan-400/25 bg-cyan-500/15 px-1.5 py-0.5 text-[9px] uppercase tracking-wider text-cyan-100">
-                  {pod.volumeNames.length} vol
-                </span>
-              )}
-            </motion.div>
-          ))}
-        </AnimatePresence>
-        {pods.length === 0 && <p className="text-xs text-zinc-500">No pods scheduled.</p>}
+
+      <div className="flex flex-col gap-2 bg-black/20 p-4">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+            Scheduled Pods
+          </span>
+          <span className="text-[10px] font-mono text-zinc-600">{pods.length} total</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <AnimatePresence initial={false}>
+            {pods.map((pod) => (
+              <motion.div
+                key={podKey(pod)}
+                layout
+                layoutId={`pod-${podKey(pod)}`}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className={podClasses(pod)}
+                title={`${pod.namespace}/${pod.name} (${pod.status})`}
+              >
+                <span className="truncate font-mono text-[10px] font-medium">{pod.name}</span>
+                {pod.volumeNames.length > 0 && (
+                  <span className="rounded-full bg-black/30 px-1.5 py-0.5 text-[8px] font-bold text-cyan-300">
+                    {pod.volumeNames.length}
+                  </span>
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {pods.length === 0 && (
+            <div className="flex h-12 w-full items-center justify-center rounded-xl border border-dashed border-white/5 text-[10px] text-zinc-600">
+              Empty node
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -123,45 +153,60 @@ export function ClusterGraph({ state, recentMoves = [] }: ClusterGraphProps) {
   const unscheduled = state.pods.filter((p) => !p.node_name);
 
   return (
-    <div className="flex h-[400px] w-full flex-col rounded-2xl border border-white/5 bg-black/30 sm:h-[500px] lg:h-[620px]">
-      <div className="flex-1">
+    <div className="flex h-[500px] w-full flex-col overflow-hidden rounded-2xl border border-white/5 bg-zinc-950/50 backdrop-blur-xl lg:h-[750px]">
+      <div className="flex-1 relative">
         <ReactFlow
           nodes={flowNodes}
           edges={edges}
           nodeTypes={nodeTypes}
           fitView
-          fitViewOptions={{ padding: 0.15 }}
+          fitViewOptions={{ padding: 0.2 }}
           proOptions={{ hideAttribution: true }}
           nodesDraggable={false}
           nodesConnectable={false}
           elementsSelectable={false}
           zoomOnDoubleClick={false}
         >
-          <Background gap={24} color="#1f1f23" />
-          <Controls showInteractive={false} />
+          <Background gap={32} size={1} color="rgba(255,255,255,0.03)" />
+          <Controls
+            showInteractive={false}
+            className="!bg-zinc-900 !border-white/10 !fill-zinc-400"
+          />
         </ReactFlow>
+
+        {/* Overlay for Unscheduled Pods */}
+        {unscheduled.length > 0 && (
+          <div className="absolute bottom-4 left-4 right-4 z-10 flex flex-wrap gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 backdrop-blur-md">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-amber-500/80">
+              Pending Scheduling:
+            </span>
+            {unscheduled.map((p) => (
+              <span
+                key={p.uid ?? `${p.namespace}/${p.name}`}
+                className="rounded-full bg-amber-500/10 px-2 py-0.5 font-mono text-[10px] text-amber-200/70 border border-amber-500/20"
+              >
+                {p.namespace}/{p.name}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
-      {unscheduled.length > 0 && (
-        <div className="border-t border-white/5 px-4 py-3 text-xs text-zinc-400">
-          <span className="font-semibold uppercase tracking-wider text-zinc-500">
-            Unscheduled pods:
-          </span>{" "}
-          {unscheduled.map((p) => `${p.namespace}/${p.name}`).join(", ")}
-        </div>
-      )}
+
       {boundaryMoves.length > 0 && (
-        <div className="border-t border-white/5 px-4 py-3">
-          <div className="flex flex-wrap gap-2 text-xs text-zinc-300">
-            <span className="font-semibold uppercase tracking-wider text-zinc-500">
-              Recent reassignments:
+        <div className="border-t border-white/5 bg-black/40 px-5 py-3.5">
+          <div className="flex flex-wrap gap-3 items-center">
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
+              Recent Transitions:
             </span>
             {boundaryMoves.map((move) => (
-              <span
+              <motion.span
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
                 key={`boundary-${move.ts}-${move.namespace}-${move.name}`}
-                className="rounded-full border border-violet-400/30 bg-violet-500/10 px-3 py-1 font-mono text-[11px] text-violet-100"
+                className="rounded-full border border-violet-500/20 bg-violet-500/10 px-3 py-1 font-mono text-[10px] text-violet-200"
               >
-                {move.name}: {move.from_node ?? "(unscheduled)"} → {move.to_node ?? "(unscheduled)"}
-              </span>
+                {move.name}: {move.from_node ?? "?"} → {move.to_node ?? "?"}
+              </motion.span>
             ))}
           </div>
         </div>

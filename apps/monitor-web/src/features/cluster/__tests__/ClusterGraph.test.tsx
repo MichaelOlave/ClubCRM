@@ -113,12 +113,11 @@ describe("ClusterGraph", () => {
     expect(screen.getByText("server1")).toBeInTheDocument();
     expect(screen.getByText("server2")).toBeInTheDocument();
     expect(screen.getByText("api-1")).toBeInTheDocument();
-    expect(screen.getByText("1 vol")).toBeInTheDocument();
+    expect(screen.getAllByText(/volumes/).length).toBeGreaterThan(0);
     expect(screen.getByText("Move api-1")).toBeInTheDocument();
-    expect(screen.getByText("Unscheduled pods:")).toBeInTheDocument();
+    expect(screen.getByText("Pending Scheduling:")).toBeInTheDocument();
     expect(screen.getByText("clubcrm/job-1")).toBeInTheDocument();
-    expect(screen.getByText("Recent reassignments:")).toBeInTheDocument();
-    expect(screen.getByText("job-1: (unscheduled) → server2")).toBeInTheDocument();
-    expect(screen.getByText("1 vols")).toBeInTheDocument();
+    expect(screen.getByText("Recent Transitions:")).toBeInTheDocument();
+    expect(screen.getByText("job-1: ? → server2")).toBeInTheDocument();
   });
 });

@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared-tunnel
+  namespace: clubcrm
+  labels:
+    app: cloudflared
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloudflared
+  template:
+    metadata:
+      labels:
+        app: cloudflared
+    spec:
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:latest
+          args:
+            - tunnel
+            - --no-autoupdate
+            - run
+            - --token
+            - eyJhIjoiYWQ2NjY4NGQxMDNkODFiNWNjMDcxNmM2ZTA4OGQwZWIiLCJ0IjoiODBjZDJlZjMtMTc1OC00MWE5LTkwOWYtZGVkZjlmOWQ5OTBjIiwicyI6Ik0yWXpNak5oWlRZdE1qRmlPQzAwTjJRM0xUZzROREF0TkdGa016QXhZemxqTmpabSJ9
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+        - name: tunnel-proxy
+          image: nginx:alpine
+          ports:
+            - containerPort: 3001
+            - containerPort: 3002
+          volumeMounts:
+            - name: proxy-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+      volumes:
+        - name: proxy-config
+          configMap:
+            name: cloudflared-proxy-config
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-proxy-config
+  namespace: clubcrm
+data:
+  default.conf: |
+    server {
+        listen 3001;
+        location / {
+            proxy_pass http://traefik.kube-system.svc.cluster.local:80;
+            proxy_set_header Host clubcrm.local;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }

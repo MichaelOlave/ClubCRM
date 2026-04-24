@@ -20,8 +20,8 @@ Current implementation status:
 
 Current networking-demo deployment as of April 18, 2026:
 
-- replacement cluster nodes: `Server1` -> `100.122.118.85`, `Server2` -> `100.67.65.5`,
-  `Server3` -> `100.99.187.90`
+- replacement cluster control-plane nodes: `Server1` -> `100.122.118.85`, `Server2` ->
+  `100.67.65.5`, `Server3` -> `100.99.187.90`
 - monitoring host VM: `DemoControlPlaneServer` -> `192.168.139.213`
 - shared ingress hosts: `clubcrm.local`, `kubero.local`
 

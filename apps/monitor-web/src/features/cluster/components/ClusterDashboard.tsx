@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useClusterStream } from "@/features/cluster/hooks/useClusterStream";
 import { ClusterGraph } from "@/features/cluster/components/ClusterGraph";
+import { ClusterStatsBar } from "@/features/cluster/components/ClusterStatsBar";
 import { ConnectionBadge } from "@/features/cluster/components/ConnectionBadge";
 import { EventFeed } from "@/features/cluster/components/EventFeed";
 import { ServiceHealthPanel } from "@/features/cluster/components/ServiceHealthPanel";
@@ -55,50 +56,56 @@ export function ClusterDashboard({
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-zinc-400">Cluster view</p>
-          <h2 className="text-2xl font-semibold text-zinc-100">
-            {cluster.nodes.length} nodes · {cluster.pods.length} pods · {cluster.volumes.length}{" "}
-            volumes · {cluster.probes.length} services
-          </h2>
+    <div className="flex flex-col gap-6 sm:gap-8">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <ClusterStatsBar state={cluster} />
+        <div className="flex items-center gap-4 self-end lg:self-auto">
+          <TimelineControls
+            countsByCategory={countsByCategory}
+            currentFrame={replay.currentFrame}
+            isReplay={replay.active}
+            onRestart={replay.active ? replay.restart : undefined}
+            onSelectAllCategories={() => setSelectedCategories(EVENT_CATEGORIES.slice())}
+            onToggleCategory={toggleCategory}
+            onTogglePaused={streamControls.togglePaused}
+            paused={streamControls.paused}
+            queuedFrames={streamControls.queuedFrames}
+            selectedCategories={selectedCategories}
+            totalFrames={replay.totalFrames}
+          />
+          <ConnectionBadge status={streamStatus} />
         </div>
-        <ConnectionBadge status={streamStatus} />
       </div>
 
-      <TimelineControls
-        countsByCategory={countsByCategory}
-        currentFrame={replay.currentFrame}
-        isReplay={replay.active}
-        onRestart={replay.active ? replay.restart : undefined}
-        onSelectAllCategories={() => setSelectedCategories(EVENT_CATEGORIES.slice())}
-        onToggleCategory={toggleCategory}
-        onTogglePaused={streamControls.togglePaused}
-        paused={streamControls.paused}
-        queuedFrames={streamControls.queuedFrames}
-        selectedCategories={selectedCategories}
-        totalFrames={replay.totalFrames}
-      />
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_400px_350px]">
+        {/* Main Column: Graph */}
+        <div className="min-w-0 space-y-6">
+          <ClusterGraph state={cluster} recentMoves={recentMoves} />
+        </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <ClusterGraph state={cluster} recentMoves={recentMoves} />
-        <aside className="flex flex-col gap-4">
-          <ServiceHealthPanel probes={cluster.probes} />
-          <div className="rounded-2xl border border-white/5 bg-black/30 p-4">
-            <header>
-              <p className="text-xs uppercase tracking-wider text-zinc-400">Event feed</p>
-              <h3 className="text-lg font-semibold text-zinc-100">
-                Recent transitions
-                <span className="ml-2 text-sm font-normal text-zinc-400">
-                  {visibleEvents.length} shown
-                </span>
-              </h3>
-            </header>
-            <div className="mt-3">
+        {/* Middle Column: Event Feed */}
+        <div className="flex flex-col gap-4 rounded-2xl border border-white/5 bg-zinc-900/30 p-5 backdrop-blur-md">
+          <header className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-500">
+                Timeline
+              </p>
+              <h3 className="text-lg font-semibold text-zinc-100">Live transitions</h3>
+            </div>
+            <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-medium text-zinc-400">
+              {visibleEvents.length} frames
+            </span>
+          </header>
+          <div className="relative flex-1 overflow-hidden rounded-xl border border-white/5 bg-black/20">
+            <div className="absolute inset-0 overflow-y-auto p-2">
               <EventFeed events={visibleEvents} />
             </div>
           </div>
+        </div>
+
+        {/* Right Column: Health Panels */}
+        <aside className="flex flex-col gap-6">
+          <ServiceHealthPanel probes={cluster.probes} />
           <StorageHealthPanel volumes={cluster.volumes} replicas={cluster.replicas} />
         </aside>
       </div>
