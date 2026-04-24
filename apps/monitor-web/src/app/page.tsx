@@ -9,8 +9,8 @@ export default async function HomePage() {
   const streamUrl = getMonitorWebSocketUrl();
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
-      <header className="flex flex-col gap-3 pt-4">
+    <main className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col gap-6 px-4 py-4 sm:gap-8 sm:px-6 sm:py-6 lg:px-8">
+      <header className="flex flex-col gap-3 pt-2 sm:pt-4">
         <span className="text-xs uppercase tracking-[0.2em] text-zinc-400">
           ClubCRM cluster visualizer
         </span>

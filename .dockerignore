@@ -10,3 +10,11 @@
 !apps/api/**
 !apps/web/
 !apps/web/**
+!apps/monitor-api/
+!apps/monitor-api/**
+!apps/monitor-web/
+!apps/monitor-web/**
+!infra/
+!infra/monitoring/
+!infra/monitoring/fixtures/
+!infra/monitoring/fixtures/**

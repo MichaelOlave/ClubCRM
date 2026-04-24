@@ -123,7 +123,7 @@ export function ClusterGraph({ state, recentMoves = [] }: ClusterGraphProps) {
   const unscheduled = state.pods.filter((p) => !p.node_name);
 
   return (
-    <div className="flex h-[620px] w-full flex-col rounded-2xl border border-white/5 bg-black/30">
+    <div className="flex h-[400px] w-full flex-col rounded-2xl border border-white/5 bg-black/30 sm:h-[500px] lg:h-[620px]">
       <div className="flex-1">
         <ReactFlow
           nodes={flowNodes}
