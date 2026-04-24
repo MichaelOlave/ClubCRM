@@ -10,10 +10,10 @@ services:
       - path: ../../.env
         required: false
     environment:
-      MONITOR_CLUSTER_KUBECONFIG: ${MONITOR_CLUSTER_KUBECONFIG:-}
-      MONITOR_CLUSTER_SNAPSHOT_FILE: ${MONITOR_CLUSTER_SNAPSHOT_FILE:-/app/infra/monitoring/fixtures/k8s-snapshot.json}
+      MONITOR_CLUSTER_KUBECONFIG: ${MONITOR_CLUSTER_KUBECONFIG-/etc/clubcrm-monitor/kubeconfig}
+      MONITOR_CLUSTER_SNAPSHOT_FILE: ${MONITOR_CLUSTER_SNAPSHOT_FILE-/app/infra/monitoring/fixtures/k8s-snapshot.json}
     volumes:
-      - ${MONITOR_CLUSTER_KUBECONFIG_HOST_PATH:-../../infra/monitoring/fixtures/k8s-snapshot.json}:${MONITOR_CLUSTER_KUBECONFIG:-/etc/clubcrm-monitor/kubeconfig}:ro
+      - ${MONITOR_CLUSTER_KUBECONFIG_HOST_PATH-../../infra/monitoring/fixtures/k8s-snapshot.json}:${MONITOR_CLUSTER_KUBECONFIG-/etc/clubcrm-monitor/kubeconfig}:ro
     ports:
       - "${MONITOR_API_PORT:-8010}:8010"
     restart: unless-stopped
