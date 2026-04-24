@@ -1,4 +1,5 @@
 export { ClubDirectory } from "./components/ClubDirectory";
+export { ManagerAccessDialog } from "./components/ManagerAccessDialog";
 export { ClubControlPanel } from "./components/ClubControlPanel";
 export { ClubManagerAccessCard } from "./components/ClubManagerAccessCard";
 export { ClubProfile } from "./components/ClubProfile";
