@@ -7,6 +7,10 @@ from src.modules.cluster.domain.models import (
     ClusterEvent,
     NodeState,
     PodState,
+    ProbeDegraded,
+    ProbeFailed,
+    ProbeOk,
+    ServiceProbeState,
     VolumeReplicaState,
     VolumeState,
 )
@@ -23,6 +27,7 @@ from src.modules.cluster.infrastructure.longhorn_normalizer import (
     parse_replica,
     parse_volume,
 )
+from src.modules.cluster.infrastructure.service_probe import ProbeResult, ProbeTarget
 
 
 class ClusterState:
@@ -32,6 +37,7 @@ class ClusterState:
         self._pods: dict[tuple[str, str], PodState] = {}
         self._volumes: dict[str, VolumeState] = {}
         self._replicas: dict[str, VolumeReplicaState] = {}
+        self._probes: dict[str, ServiceProbeState] = {}
         self._last_updated_at: float = 0.0
 
     async def apply_node_event(self, event_type: str, raw: dict) -> list[ClusterEvent]:
@@ -126,6 +132,34 @@ class ClusterState:
                 )
             self._last_updated_at = time.time()
 
+    async def replace_serialized_probes(self, probes: list[dict]) -> None:
+        async with self._lock:
+            self._probes = {}
+            for raw in probes:
+                service = raw.get("service")
+                url = raw.get("url")
+                if (
+                    not isinstance(service, str)
+                    or not service
+                    or not isinstance(url, str)
+                    or not url
+                ):
+                    continue
+                status = raw.get("status")
+                self._probes[service] = ServiceProbeState(
+                    service=service,
+                    url=url,
+                    status=status
+                    if status in {"unknown", "ok", "degraded", "failed"}
+                    else "unknown",
+                    last_checked_at=_read_optional_float(raw, "last_checked_at"),
+                    last_transition_at=_read_optional_float(raw, "last_transition_at"),
+                    last_latency_ms=_read_optional_float(raw, "last_latency_ms"),
+                    last_status_code=_read_optional_int(raw, "last_status_code"),
+                    last_error=_read_optional_string(raw, "last_error"),
+                )
+            self._last_updated_at = time.time()
+
     async def apply_longhorn_volume_event(self, event_type: str, raw: dict) -> list[ClusterEvent]:
         volume = parse_volume(raw)
         if not volume.name:
@@ -180,6 +214,71 @@ class ClusterState:
                 )
             self._last_updated_at = time.time()
 
+    async def register_probe_targets(self, targets: list[ProbeTarget]) -> None:
+        async with self._lock:
+            for target in targets:
+                previous = self._probes.get(target.service)
+                self._probes[target.service] = ServiceProbeState(
+                    service=target.service,
+                    url=target.url,
+                    status=previous.status if previous is not None else "unknown",
+                    last_checked_at=previous.last_checked_at if previous is not None else None,
+                    last_transition_at=previous.last_transition_at
+                    if previous is not None
+                    else None,
+                    last_latency_ms=previous.last_latency_ms if previous is not None else None,
+                    last_status_code=previous.last_status_code if previous is not None else None,
+                    last_error=previous.last_error if previous is not None else None,
+                )
+            self._last_updated_at = time.time()
+
+    async def apply_probe_result(self, result: ProbeResult) -> ClusterEvent | None:
+        async with self._lock:
+            previous = self._probes.get(result.service)
+            last_transition_at = (
+                result.checked_at
+                if previous is None or previous.status != result.status
+                else previous.last_transition_at
+            )
+            self._probes[result.service] = ServiceProbeState(
+                service=result.service,
+                url=result.url,
+                status=result.status,
+                last_checked_at=result.checked_at,
+                last_transition_at=last_transition_at,
+                last_latency_ms=result.latency_ms,
+                last_status_code=result.status_code,
+                last_error=result.detail if result.status == "failed" else None,
+            )
+            self._last_updated_at = result.checked_at
+
+            if previous is not None and previous.status == result.status:
+                return None
+
+        if result.status == "ok":
+            return ProbeOk(
+                service=result.service,
+                url=result.url,
+                latency_ms=result.latency_ms or 0.0,
+                status_code=result.status_code or 200,
+                ts=result.checked_at,
+            )
+        if result.status == "degraded":
+            return ProbeDegraded(
+                service=result.service,
+                url=result.url,
+                reason=result.detail or "probe degraded",
+                latency_ms=result.latency_ms,
+                status_code=result.status_code,
+                ts=result.checked_at,
+            )
+        return ProbeFailed(
+            service=result.service,
+            url=result.url,
+            error=result.detail or "probe failed",
+            ts=result.checked_at,
+        )
+
     async def replace_longhorn_volumes(self, raws: list[dict]) -> None:
         async with self._lock:
             self._volumes = {}
@@ -227,6 +326,7 @@ class ClusterState:
                 "pods": [pod.to_dict() for pod in self._pods.values()],
                 "volumes": [volume.to_dict() for volume in self._volumes.values()],
                 "replicas": [replica.to_dict() for replica in self._replicas.values()],
+                "probes": [probe.to_dict() for probe in self._probes.values()],
             }
 
 
@@ -238,3 +338,13 @@ def _read_optional_string(raw: dict, key: str) -> str | None:
 def _read_string(raw: dict, key: str, default: str) -> str:
     value = raw.get(key)
     return value if isinstance(value, str) and value else default
+
+
+def _read_optional_float(raw: dict, key: str) -> float | None:
+    value = raw.get(key)
+    return float(value) if isinstance(value, int | float) else None
+
+
+def _read_optional_int(raw: dict, key: str) -> int | None:
+    value = raw.get(key)
+    return value if isinstance(value, int) else None

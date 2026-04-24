@@ -38,6 +38,18 @@ function baseState(): ClusterStateShape {
         health: "healthy",
       },
     ],
+    probes: [
+      {
+        service: "clubcrm-web",
+        url: "https://clubcrm.local/login",
+        status: "unknown",
+        last_checked_at: null,
+        last_transition_at: null,
+        last_latency_ms: null,
+        last_status_code: null,
+        last_error: null,
+      },
+    ],
   };
   return snapshotToState(snapshot);
 }
@@ -159,6 +171,22 @@ describe("applyEvent", () => {
     });
     expect(next.replicas.find((replica) => replica.name === "pvc-postgres-r-2")?.health).toBe(
       "degraded"
+    );
+  });
+
+  it("tracks probe transitions in service state", () => {
+    const next = applyEvent(baseState(), {
+      kind: "PROBE_DEGRADED",
+      ts: 1950,
+      service: "clubcrm-web",
+      url: "https://clubcrm.local/login",
+      reason: "slow response (1800 ms)",
+      latency_ms: 1800,
+      status_code: 200,
+    });
+    expect(next.probes.find((probe) => probe.service === "clubcrm-web")?.status).toBe("degraded");
+    expect(next.probes.find((probe) => probe.service === "clubcrm-web")?.last_error).toBe(
+      "slow response (1800 ms)"
     );
   });
 });

@@ -12,11 +12,16 @@ def _settings() -> ClusterSettings:
         context=None,
         in_cluster=False,
         snapshot_file=None,
+        recording_file=None,
         longhorn_enabled=True,
         k8s_events_enabled=True,
         chaos_enabled=False,
         heartbeat_seconds=5.0,
         watch_timeout_seconds=300,
+        probe_targets=[],
+        probe_interval_seconds=5.0,
+        probe_timeout_seconds=2.0,
+        probe_degraded_latency_ms=1200.0,
     )
 
 

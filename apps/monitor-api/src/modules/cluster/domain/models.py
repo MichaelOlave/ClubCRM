@@ -79,6 +79,30 @@ class VolumeReplicaState:
 
 
 @dataclass(frozen=True)
+class ServiceProbeState:
+    service: str
+    url: str
+    status: Literal["unknown", "ok", "degraded", "failed"] = "unknown"
+    last_checked_at: float | None = None
+    last_transition_at: float | None = None
+    last_latency_ms: float | None = None
+    last_status_code: int | None = None
+    last_error: str | None = None
+
+    def to_dict(self) -> dict:
+        return {
+            "service": self.service,
+            "url": self.url,
+            "status": self.status,
+            "last_checked_at": self.last_checked_at,
+            "last_transition_at": self.last_transition_at,
+            "last_latency_ms": self.last_latency_ms,
+            "last_status_code": self.last_status_code,
+            "last_error": self.last_error,
+        }
+
+
+@dataclass(frozen=True)
 class NodeReady:
     node: str
     ts: float
@@ -390,6 +414,66 @@ class ChaosEnded:
         }
 
 
+@dataclass(frozen=True)
+class ProbeOk:
+    service: str
+    url: str
+    latency_ms: float
+    status_code: int
+    ts: float
+    kind: Literal["PROBE_OK"] = "PROBE_OK"
+
+    def to_dict(self) -> dict:
+        return {
+            "kind": self.kind,
+            "ts": self.ts,
+            "service": self.service,
+            "url": self.url,
+            "latency_ms": self.latency_ms,
+            "status_code": self.status_code,
+        }
+
+
+@dataclass(frozen=True)
+class ProbeDegraded:
+    service: str
+    url: str
+    reason: str
+    latency_ms: float | None
+    status_code: int | None
+    ts: float
+    kind: Literal["PROBE_DEGRADED"] = "PROBE_DEGRADED"
+
+    def to_dict(self) -> dict:
+        return {
+            "kind": self.kind,
+            "ts": self.ts,
+            "service": self.service,
+            "url": self.url,
+            "reason": self.reason,
+            "latency_ms": self.latency_ms,
+            "status_code": self.status_code,
+        }
+
+
+@dataclass(frozen=True)
+class ProbeFailed:
+    service: str
+    url: str
+    error: str
+    ts: float
+    kind: Literal["PROBE_FAILED"] = "PROBE_FAILED"
+
+    def to_dict(self) -> dict:
+        return {
+            "kind": self.kind,
+            "ts": self.ts,
+            "service": self.service,
+            "url": self.url,
+            "error": self.error,
+        }
+
+
 ClusterEvent = (
     NodeReady
     | NodeDown
@@ -407,4 +491,7 @@ ClusterEvent = (
     | K8sWarning
     | ChaosStarted
     | ChaosEnded
+    | ProbeOk
+    | ProbeDegraded
+    | ProbeFailed
 )

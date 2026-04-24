@@ -5,6 +5,8 @@ const LABEL: Record<StreamStatus, string> = {
   live: "Live",
   reconnecting: "Reconnecting",
   offline: "Offline",
+  replay: "Replay",
+  paused: "Paused",
 };
 
 const COLOR: Record<StreamStatus, string> = {
@@ -12,6 +14,8 @@ const COLOR: Record<StreamStatus, string> = {
   live: "bg-emerald-500/20 text-emerald-200 border-emerald-400/40",
   reconnecting: "bg-orange-500/20 text-orange-200 border-orange-400/40",
   offline: "bg-zinc-500/20 text-zinc-300 border-zinc-400/40",
+  replay: "bg-amber-500/20 text-amber-200 border-amber-400/40",
+  paused: "bg-zinc-500/20 text-zinc-300 border-zinc-400/40",
 };
 
 export function ConnectionBadge({ status }: { status: StreamStatus }) {
@@ -22,7 +26,9 @@ export function ConnectionBadge({ status }: { status: StreamStatus }) {
       aria-label={`Stream status: ${LABEL[status]}`}
     >
       <span
-        className={`inline-block h-2 w-2 rounded-full ${status === "live" ? "bg-emerald-400 animate-pulse" : "bg-current"}`}
+        className={`inline-block h-2 w-2 rounded-full ${
+          status === "live" || status === "replay" ? "bg-current animate-pulse" : "bg-current"
+        }`}
       />
       {LABEL[status]}
     </span>

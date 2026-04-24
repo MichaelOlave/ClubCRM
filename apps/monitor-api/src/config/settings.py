@@ -1,6 +1,8 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import lru_cache
+
+from src.modules.cluster.infrastructure.service_probe import ProbeTarget, parse_probe_targets
 
 
 @dataclass(frozen=True)
@@ -23,11 +25,16 @@ class ClusterSettings:
     context: str | None
     in_cluster: bool
     snapshot_file: str | None
+    recording_file: str | None
     longhorn_enabled: bool
     k8s_events_enabled: bool
     chaos_enabled: bool
     heartbeat_seconds: float
     watch_timeout_seconds: int
+    probe_targets: list[ProbeTarget] = field(default_factory=list)
+    probe_interval_seconds: float = 5.0
+    probe_timeout_seconds: float = 2.0
+    probe_degraded_latency_ms: float = 1200.0
 
 
 @dataclass(frozen=True)
@@ -88,10 +95,15 @@ def get_settings() -> Settings:
             context=_read_optional_env("MONITOR_CLUSTER_CONTEXT"),
             in_cluster=_read_bool_env("MONITOR_CLUSTER_IN_CLUSTER", False),
             snapshot_file=_read_optional_env("MONITOR_CLUSTER_SNAPSHOT_FILE"),
+            recording_file=_read_optional_env("MONITOR_CLUSTER_RECORDING_FILE"),
             longhorn_enabled=_read_bool_env("MONITOR_LONGHORN_ENABLED", True),
             k8s_events_enabled=_read_bool_env("MONITOR_K8S_EVENTS_ENABLED", True),
             chaos_enabled=_read_bool_env("MONITOR_CHAOS_ENABLED", False),
             heartbeat_seconds=_read_float_env("MONITOR_CLUSTER_HEARTBEAT_SECONDS", 5.0),
             watch_timeout_seconds=_read_int_env("MONITOR_CLUSTER_WATCH_TIMEOUT_SECONDS", 300),
+            probe_targets=parse_probe_targets(_read_optional_env("MONITOR_PROBE_TARGETS")),
+            probe_interval_seconds=_read_float_env("MONITOR_PROBE_INTERVAL_SECONDS", 5.0),
+            probe_timeout_seconds=_read_float_env("MONITOR_PROBE_TIMEOUT_SECONDS", 2.0),
+            probe_degraded_latency_ms=_read_float_env("MONITOR_PROBE_DEGRADED_LATENCY_MS", 1200.0),
         ),
     )

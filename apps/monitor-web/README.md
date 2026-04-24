@@ -30,11 +30,20 @@ Important environment variables:
 - `MONITOR_API_BASE_URL`
 - `NEXT_PUBLIC_MONITOR_API_BASE_URL`
 - `NEXT_PUBLIC_MONITOR_WS_URL`
+- `MONITOR_REPLAY_MODE`
+- `MONITOR_REPLAY_API_URL`
+- `NEXT_PUBLIC_MONITOR_REPLAY_MODE`
+- `NEXT_PUBLIC_MONITOR_REPLAY_API_URL`
 - `MONITOR_ADMIN_TOKEN`
 - `MONITOR_WEB_PORT`
 
 If `NEXT_PUBLIC_MONITOR_WS_URL` is unset, the app derives the WebSocket URL from the public API
 base URL by converting `http` to `ws` and appending `/ws/stream`.
+
+Replay mode is optional. Set `MONITOR_REPLAY_MODE=true` or `NEXT_PUBLIC_MONITOR_REPLAY_MODE=true`
+to fetch a captured session from `MONITOR_REPLAY_API_URL` or
+`NEXT_PUBLIC_MONITOR_REPLAY_API_URL`. If neither replay URL is set, the dashboard defaults to
+`${MONITOR_API_BASE_URL}/api/replay`.
 
 `MONITOR_ADMIN_TOKEN` is optional. Set it only when `CLUSTER_VIEWER_PUBLIC=false` on the API and
 the server-rendered snapshot fetch must include `Authorization: Bearer <token>`.

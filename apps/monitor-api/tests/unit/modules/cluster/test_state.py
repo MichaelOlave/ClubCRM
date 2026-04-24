@@ -8,7 +8,10 @@ from src.modules.cluster.domain.models import (
     PodCreated,
     PodDeleted,
     PodMoved,
+    ProbeFailed,
+    ProbeOk,
 )
+from src.modules.cluster.infrastructure.service_probe import ProbeResult, ProbeTarget
 
 
 def _node(name: str, ready: bool) -> dict:
@@ -74,6 +77,7 @@ class ClusterStateTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(snapshot["pods"][0]["name"], "api-1")
         self.assertEqual(snapshot["volumes"], [])
         self.assertEqual(snapshot["replicas"], [])
+        self.assertEqual(snapshot["probes"], [])
 
     async def test_replace_nodes_and_pods(self) -> None:
         state = ClusterState()
@@ -117,6 +121,52 @@ class ClusterStateTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(snapshot["volumes"][0]["name"], "pvc-postgres")
         self.assertEqual(snapshot["volumes"][0]["attachment_node"], "server2")
         self.assertEqual(snapshot["replicas"][0]["volume_name"], "pvc-postgres")
+
+    async def test_probe_registration_and_transitions(self) -> None:
+        state = ClusterState()
+        await state.register_probe_targets(
+            [ProbeTarget(service="clubcrm-web", url="https://clubcrm.local/login")]
+        )
+        first_event = await state.apply_probe_result(
+            ProbeResult(
+                service="clubcrm-web",
+                url="https://clubcrm.local/login",
+                status="ok",
+                checked_at=1000.0,
+                latency_ms=120.0,
+                status_code=200,
+                detail=None,
+            )
+        )
+        second_event = await state.apply_probe_result(
+            ProbeResult(
+                service="clubcrm-web",
+                url="https://clubcrm.local/login",
+                status="ok",
+                checked_at=1005.0,
+                latency_ms=140.0,
+                status_code=200,
+                detail=None,
+            )
+        )
+        third_event = await state.apply_probe_result(
+            ProbeResult(
+                service="clubcrm-web",
+                url="https://clubcrm.local/login",
+                status="failed",
+                checked_at=1010.0,
+                latency_ms=None,
+                status_code=None,
+                detail="timed out",
+            )
+        )
+
+        snapshot = await state.snapshot()
+        self.assertIsInstance(first_event, ProbeOk)
+        self.assertIsNone(second_event)
+        self.assertIsInstance(third_event, ProbeFailed)
+        self.assertEqual(snapshot["probes"][0]["status"], "failed")
+        self.assertEqual(snapshot["probes"][0]["last_error"], "timed out")
 
 
 if __name__ == "__main__":

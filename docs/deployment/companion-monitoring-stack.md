@@ -103,7 +103,9 @@ Most defaults live in [`.env.example`](../../.env.example).
 | Cluster input    | `MONITOR_CLUSTER_KUBECONFIG`, `MONITOR_CLUSTER_CONTEXT`, `MONITOR_CLUSTER_IN_CLUSTER`                            | choose how `monitor-api` connects to Kubernetes                     |
 | Longhorn         | `MONITOR_LONGHORN_ENABLED`                                                                                       | enable or disable Longhorn CRD watches                              |
 | Fallback fixture | `MONITOR_CLUSTER_SNAPSHOT_FILE`                                                                                  | preload a snapshot when live access is unavailable                  |
-| Runtime tuning   | `MONITOR_CLUSTER_HEARTBEAT_SECONDS`, `MONITOR_CLUSTER_WATCH_TIMEOUT_SECONDS`, `MONITOR_DISABLE_BACKGROUND_TASKS` | tune the watch and event loop behavior                              |
+| Replay capture   | `MONITOR_CLUSTER_RECORDING_FILE`, `MONITOR_REPLAY_MODE`, `MONITOR_REPLAY_API_URL`, `NEXT_PUBLIC_MONITOR_REPLAY_MODE`, `NEXT_PUBLIC_MONITOR_REPLAY_API_URL` | record live sessions and switch the dashboard into replay mode      |
+| Service probes   | `MONITOR_PROBE_TARGETS`, `MONITOR_PROBE_INTERVAL_SECONDS`, `MONITOR_PROBE_TIMEOUT_SECONDS`, `MONITOR_PROBE_DEGRADED_LATENCY_MS` | probe application URLs and surface continuity status                |
+| Runtime tuning   | `MONITOR_CLUSTER_HEARTBEAT_SECONDS`, `MONITOR_CLUSTER_WATCH_TIMEOUT_SECONDS`, `MONITOR_DISABLE_BACKGROUND_TASKS` | tune the watch, heartbeat, and background-loop behavior             |
 | Frontend         | `MONITOR_WEB_PORT`, `NEXT_PUBLIC_MONITOR_API_BASE_URL`, `NEXT_PUBLIC_MONITOR_WS_URL`                             | configure how browsers reach the API and dashboard                  |
 
 ## Deployment Modes
@@ -116,6 +118,7 @@ Use this for the real demo shape.
 - the monitoring host mounts a kubeconfig into `monitor-api`
 - node and pod watches start automatically
 - Longhorn watches start automatically unless `MONITOR_LONGHORN_ENABLED=false`
+- optional HTTP probes can target the live ClubCRM web or API URLs to prove traffic continuity
 
 ### Snapshot Fixture Mode
 

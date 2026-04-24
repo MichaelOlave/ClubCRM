@@ -9,6 +9,7 @@ export function emptySnapshot(): ClusterSnapshot {
     pods: [],
     volumes: [],
     replicas: [],
+    probes: [],
   };
 }
 
