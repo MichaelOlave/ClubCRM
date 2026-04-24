@@ -4,13 +4,26 @@ import { Book, FileText, Gavel, Layout, ScrollText } from "lucide-react";
 import { DocsPageClient } from "./DocsPageClient";
 
 async function getDocContent(fileName: string) {
-  const filePath = path.join(process.cwd(), "../../docs", fileName);
-  try {
-    return fs.readFileSync(filePath, "utf8");
-  } catch (error) {
-    console.error(`Error reading doc ${fileName}:`, error);
-    return "Failed to load document.";
+  const syncedFileName = fileName === "../README.md" ? "ROOT-README.md" : fileName;
+
+  // Locations to check for docs, ordered by production standalone path and local dev path.
+  const possiblePaths = [
+    path.join(process.cwd(), "apps/web/public/docs", syncedFileName), // Standalone prod
+    path.join(process.cwd(), "public/docs", syncedFileName), // Local dev after sync
+  ];
+
+  for (const filePath of possiblePaths) {
+    try {
+      if (fs.existsSync(filePath)) {
+        return fs.readFileSync(filePath, "utf8");
+      }
+    } catch {
+      // Continue to next path
+    }
   }
+
+  console.error(`Could not find doc ${fileName} in any of:`, possiblePaths);
+  return "Failed to load document.";
 }
 
 export async function DocsPage() {

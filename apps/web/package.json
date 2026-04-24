@@ -4,8 +4,9 @@
   "private": true,
   "packageManager": "pnpm@10.32.1",
   "scripts": {
-    "dev": "next dev --webpack",
-    "build": "next build",
+    "dev": "pnpm sync:docs && next dev --webpack",
+    "sync:docs": "python3 ../../scripts/sync_docs_to_web.py",
+    "build": "pnpm sync:docs && next build",
     "start": "next start",
     "lint": "eslint"
   },
