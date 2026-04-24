@@ -10,7 +10,13 @@ import type {
 import type { MembershipAssignmentCandidate } from "@/features/memberships/types";
 
 function getMembershipStatus(status: string): MembershipStatus {
-  return status === "pending" ? "pending" : "active";
+  if (status === "pending") {
+    return "pending";
+  }
+  if (status === "inactive") {
+    return "inactive";
+  }
+  return "active";
 }
 
 function formatRoleLabel(role: string): string {
@@ -110,4 +116,9 @@ export async function getAssignableMembersForClub(
     .map(mapMembershipCandidate);
 }
 
-export { createMembershipAction, updateMembershipRoleAction } from "./actions";
+export {
+  createMembershipAction,
+  updateMembershipRoleAction,
+  updateMembershipStatusAction,
+  updateMembershipStatusClientAction,
+} from "./actions";

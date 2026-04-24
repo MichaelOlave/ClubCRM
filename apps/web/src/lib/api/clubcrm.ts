@@ -198,6 +198,13 @@ export async function updateMemberApi(
   ).data;
 }
 
+export async function deleteMemberApi(memberId: string, init?: RequestInit): Promise<void> {
+  await fetchApiJson(`/members/${memberId}`, {
+    ...init,
+    method: "DELETE",
+  });
+}
+
 export async function listMembershipsApi(filters?: {
   clubId?: string;
   memberId?: string;

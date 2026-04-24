@@ -53,7 +53,9 @@ class HealthRouteTests(unittest.TestCase):
         self.assertIn("instance_id", result["runtime"])
 
     @patch("src.modules.system.presentation.http.routes.get_redis_client")
-    def test_health_handler_reports_redis_down_without_crashing(self, mock_get_redis_client) -> None:
+    def test_health_handler_reports_redis_down_without_crashing(
+        self, mock_get_redis_client
+    ) -> None:
         mock_get_redis_client.side_effect = RuntimeError("redis unavailable")
 
         result = health_check()

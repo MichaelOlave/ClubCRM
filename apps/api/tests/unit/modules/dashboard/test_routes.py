@@ -1,10 +1,9 @@
+import sys
 import unittest
 from types import ModuleType
-import sys
 
 from fastapi import FastAPI, HTTPException, status
 from fastapi.testclient import TestClient
-
 from helpers import add_api_root_to_path
 
 add_api_root_to_path()

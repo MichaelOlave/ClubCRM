@@ -1,6 +1,6 @@
 export type ClubStatus = "active" | "planning" | "archived";
-export type MemberStatus = "active" | "prospective";
-export type MembershipStatus = "active" | "pending";
+export type MemberStatus = "active" | "inactive" | "prospective";
+export type MembershipStatus = "active" | "inactive" | "pending";
 export type EventStatus = "upcoming" | "in_progress" | "past" | "draft";
 export type AnnouncementStatus = "published" | "scheduled";
 export type JoinRequestStatus = "pending" | "approved" | "denied";

@@ -666,7 +666,9 @@ class JoinRequestRouteTests(unittest.TestCase):
         )
         self.assertEqual(len(self.audit_repository.audit_logs), 1)
 
-    def test_approve_join_request_returns_409_when_membership_creation_has_no_fallback(self) -> None:
+    def test_approve_join_request_returns_409_when_membership_creation_has_no_fallback(
+        self,
+    ) -> None:
         self.store = FakeJoinRequestStore(
             seeded=[
                 JoinRequest(

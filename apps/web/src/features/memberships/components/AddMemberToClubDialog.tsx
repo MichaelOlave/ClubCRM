@@ -74,6 +74,7 @@ export function AddMemberToClubDialog({ action, clubId, clubSlug, members, notic
               <span>Status</span>
               <select className={selectClassName} defaultValue="active" name="status">
                 <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
                 <option value="pending">Pending</option>
               </select>
             </label>

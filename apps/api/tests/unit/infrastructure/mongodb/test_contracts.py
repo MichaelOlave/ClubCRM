@@ -33,7 +33,8 @@ class MongoDBAdapterContractTests(unittest.TestCase):
         fake_result.inserted_id = "507f1f77bcf86cd799439011"
 
         with patch("pymongo.MongoClient") as mock_client_cls:
-            mock_client_cls.return_value.get_database.return_value.__getitem__.return_value.insert_one.return_value = fake_result
+            mock_db = mock_client_cls.return_value.get_database.return_value
+            mock_db.__getitem__.return_value.insert_one.return_value = fake_result
             result = _make_store().save(_sample_join_request())
 
         self.assertEqual(result.id, "507f1f77bcf86cd799439011")
@@ -44,7 +45,8 @@ class MongoDBAdapterContractTests(unittest.TestCase):
         fake_result.inserted_id = "abc123"
 
         with patch("pymongo.MongoClient") as mock_client_cls:
-            mock_client_cls.return_value.get_database.return_value.__getitem__.return_value.insert_one.return_value = fake_result
+            mock_db = mock_client_cls.return_value.get_database.return_value
+            mock_db.__getitem__.return_value.insert_one.return_value = fake_result
             result = _make_store().save(_sample_join_request())
 
         self.assertEqual(result.submitter_name, "Taylor Student")

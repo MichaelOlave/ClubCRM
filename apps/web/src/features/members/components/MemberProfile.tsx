@@ -1,20 +1,30 @@
 import Link from "next/link";
 
 import type { MemberDetailViewModel } from "@/features/members/types";
-import { MembershipTable } from "@/features/memberships";
+import { MembershipTable, UpdateMembershipStatusForm } from "@/features/memberships";
 import { Badge } from "@/components/shadcn/badge";
 import { Card } from "@/components/shadcn/card";
 import { EmptyState } from "@/components/shadcn/empty-state";
 
 type Props = {
+  membershipStatusAction: (formData: FormData) => Promise<void>;
   detail: MemberDetailViewModel;
 };
 
 function getStatusVariant(status: MemberDetailViewModel["member"]["status"]) {
-  return status === "active" ? "success" : "warning";
+  switch (status) {
+    case "active":
+      return "success";
+    case "inactive":
+      return "secondary";
+    default:
+      return "warning";
+  }
 }
 
-export function MemberProfile({ detail }: Props) {
+export function MemberProfile({ detail, membershipStatusAction }: Props) {
+  const memberDetailPath = `/members/${detail.member.id}`;
+
   return (
     <div className="space-y-6">
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
@@ -94,6 +104,7 @@ export function MemberProfile({ detail }: Props) {
       </div>
 
       <MembershipTable
+        actionsHeader="Status actions"
         description="Assignments now render directly on the member profile so the detail view stays in one place."
         memberships={detail.memberships}
         renderAssignment={(membership) => (
@@ -109,6 +120,13 @@ export function MemberProfile({ detail }: Props) {
               </p>
             </div>
           </Link>
+        )}
+        renderActions={(membership) => (
+          <UpdateMembershipStatusForm
+            action={membershipStatusAction}
+            membership={membership}
+            redirectPath={memberDetailPath}
+          />
         )}
         title="Club assignments"
       />

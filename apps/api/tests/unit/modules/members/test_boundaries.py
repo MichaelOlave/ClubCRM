@@ -21,9 +21,7 @@ class FakeMemberRepository(MemberRepository):
 
     def list_members(self, organization_id: str) -> list[Member]:
         return [
-            member
-            for member in self.members.values()
-            if member.organization_id == organization_id
+            member for member in self.members.values() if member.organization_id == organization_id
         ]
 
     def get_member(self, member_id: str) -> Member | None:

@@ -9,9 +9,15 @@ import type {
 } from "@/types/api";
 
 function getMemberStatus(memberships: BackendMembershipRecord[]): MemberRecord["status"] {
-  return memberships.some((membership) => membership.status !== "pending")
-    ? "active"
-    : "prospective";
+  if (memberships.some((membership) => membership.status === "active")) {
+    return "active";
+  }
+
+  if (memberships.some((membership) => membership.status === "inactive")) {
+    return "inactive";
+  }
+
+  return "prospective";
 }
 
 function getPrimaryClubName(
@@ -30,7 +36,8 @@ function getPrimaryMembership(
     .slice()
     .sort((left, right) => (left.joined_at ?? "").localeCompare(right.joined_at ?? ""));
   return (
-    sortedMemberships.find((membership) => membership.status !== "pending") ??
+    sortedMemberships.find((membership) => membership.status === "active") ??
+    sortedMemberships.find((membership) => membership.status === "inactive") ??
     sortedMemberships[0] ??
     null
   );
@@ -79,7 +86,12 @@ function mapMembershipRecord(
     memberId: membership.member_id,
     memberName,
     role: formatRoleLabel(membership.role),
-    status: membership.status === "pending" ? "pending" : "active",
+    status:
+      membership.status === "pending"
+        ? "pending"
+        : membership.status === "inactive"
+          ? "inactive"
+          : "active",
     joinedAt: membership.joined_at,
   };
 }
@@ -167,4 +179,4 @@ export async function getMemberDetail(memberId: string): Promise<MemberDetailVie
   };
 }
 
-export { createMemberAction, updateMemberAction } from "./actions";
+export { createMemberAction, deleteMemberAction, updateMemberAction } from "./actions";

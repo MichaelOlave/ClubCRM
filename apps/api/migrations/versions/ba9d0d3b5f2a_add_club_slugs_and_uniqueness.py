@@ -6,9 +6,9 @@ Create Date: 2026-04-20 14:25:00.000000
 
 """
 
-from collections.abc import Sequence
 import re
 import unicodedata
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
@@ -50,9 +50,16 @@ def upgrade() -> None:
     op.add_column("clubs", sa.Column("slug", sa.String(length=255), nullable=True))
 
     connection = op.get_bind()
-    clubs = connection.execute(
-        sa.text("SELECT id, organization_id, name FROM clubs ORDER BY organization_id, created_at, id")
-    ).mappings().all()
+    clubs = (
+        connection.execute(
+            sa.text(
+                "SELECT id, organization_id, name FROM clubs "
+                "ORDER BY organization_id, created_at, id"
+            )
+        )
+        .mappings()
+        .all()
+    )
     used_slugs_by_org: dict[str, set[str]] = {}
     for club in clubs:
         organization_id = club["organization_id"]

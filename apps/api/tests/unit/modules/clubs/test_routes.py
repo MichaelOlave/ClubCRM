@@ -273,7 +273,7 @@ class ClubRouteTests(unittest.TestCase):
         self.assertEqual(payload["organization_id"], "org-1")
 
         update_response = self.client.patch(
-            f"/clubs/{created['id']}",
+            f"/clubs/{payload['id']}",
             json={"description": "Builds robots and hosts workshops."},
         )
         self.assertEqual(update_response.status_code, 200)
@@ -282,10 +282,10 @@ class ClubRouteTests(unittest.TestCase):
             "Builds robots and hosts workshops.",
         )
 
-        delete_response = self.client.delete(f"/clubs/{created['id']}")
+        delete_response = self.client.delete(f"/clubs/{payload['id']}")
         self.assertEqual(delete_response.status_code, 204)
 
-        missing_response = self.client.get(f"/clubs/{created['id']}")
+        missing_response = self.client.get(f"/clubs/{payload['id']}")
         self.assertEqual(missing_response.status_code, 404)
         self.assertEqual(len(self.audit_repository.audit_logs), 3)
 

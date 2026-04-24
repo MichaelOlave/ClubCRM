@@ -167,10 +167,11 @@ class MembershipRouteTests(unittest.TestCase):
 
         update_response = self.client.patch(
             f"/memberships/{created_id}",
-            json={"role": "vice-president"},
+            json={"role": "vice-president", "status": "inactive"},
         )
         self.assertEqual(update_response.status_code, 200)
         self.assertEqual(update_response.json()["role"], "vice-president")
+        self.assertEqual(update_response.json()["status"], "inactive")
 
         delete_response = self.client.delete(f"/memberships/{created_id}")
         self.assertEqual(delete_response.status_code, 204)

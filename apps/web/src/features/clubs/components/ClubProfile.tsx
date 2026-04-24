@@ -19,6 +19,7 @@ type Props = {
   rosterActions?: ReactNode;
   renderMembershipAssignment?: (membership: MembershipRecord) => ReactNode;
   renderMembershipRole?: (membership: MembershipRecord) => ReactNode;
+  renderMembershipStatus?: (membership: MembershipRecord) => ReactNode;
 };
 
 function getStatusVariant(status: ClubDetailViewModel["club"]["status"]) {
@@ -70,6 +71,7 @@ export function ClubProfile({
   rosterActions,
   renderMembershipAssignment,
   renderMembershipRole,
+  renderMembershipStatus,
 }: Props) {
   return (
     <div className="space-y-6">
@@ -128,6 +130,7 @@ export function ClubProfile({
         description="This shared membership table can be reused by club detail, member detail, and future review workflows."
         headerActions={rosterActions}
         memberships={memberships}
+        renderMembershipStatus={renderMembershipStatus}
         renderAssignment={renderMembershipAssignment}
         renderRole={renderMembershipRole}
         renderActions={membershipActions}

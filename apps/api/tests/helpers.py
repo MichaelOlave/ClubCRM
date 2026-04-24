@@ -11,9 +11,7 @@ def add_api_root_to_path() -> None:
         sys.path.insert(0, str(API_ROOT))
 
 
-def collect_import_violations(
-    relative_dir: str, forbidden_prefixes: tuple[str, ...]
-) -> list[str]:
+def collect_import_violations(relative_dir: str, forbidden_prefixes: tuple[str, ...]) -> list[str]:
     violations: list[str] = []
 
     for path in sorted((SRC_ROOT / relative_dir).rglob("*.py")):
