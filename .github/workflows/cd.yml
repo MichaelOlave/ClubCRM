@@ -1,0 +1,293 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: cd-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
+jobs:
+  publish-images:
+    name: Publish images
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    permissions:
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/clubcrm-api:${{ github.event.workflow_run.head_sha }}
+            ghcr.io/${{ github.repository_owner }}/clubcrm-api:deploy
+
+      - name: Build and push web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/clubcrm-web:${{ github.event.workflow_run.head_sha }}
+            ghcr.io/${{ github.repository_owner }}/clubcrm-web:deploy
+
+      - name: Build and push monitor-api image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/monitor-api/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/clubcrm-monitor-api:${{ github.event.workflow_run.head_sha }}
+            ghcr.io/${{ github.repository_owner }}/clubcrm-monitor-api:deploy
+
+      - name: Build and push monitor-web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/monitor-web/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/clubcrm-monitor-web:${{ github.event.workflow_run.head_sha }}
+            ghcr.io/${{ github.repository_owner }}/clubcrm-monitor-web:deploy
+
+  deploy-app-server:
+    name: Deploy app server
+    runs-on: ubuntu-latest
+    needs: publish-images
+
+    steps:
+      - name: Configure SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+          : "${DEPLOY_SSH_KEY:?Missing secret DEPLOY_SSH_KEY}"
+          : "${DEPLOY_USER:?Missing secret DEPLOY_USER}"
+          DEFAULT_DEPLOY_HOST="clubcrm.org"
+          DEPLOY_HOST="$(printf '%s' "${DEPLOY_HOST:-}" | tr -d '\r\n')"
+          DEPLOY_USER="$(printf '%s' "$DEPLOY_USER" | tr -d '\r\n')"
+          if [ -z "$DEPLOY_USER" ]; then
+            echo "DEPLOY_USER cannot be blank after trimming line endings." >&2
+            exit 1
+          fi
+          candidate_hosts=()
+          if [ -n "$DEPLOY_HOST" ]; then
+            candidate_hosts+=("$DEPLOY_HOST")
+          fi
+          if [ "$DEFAULT_DEPLOY_HOST" != "$DEPLOY_HOST" ]; then
+            candidate_hosts+=("$DEFAULT_DEPLOY_HOST")
+          fi
+          if [ "${#candidate_hosts[@]}" -eq 0 ]; then
+            echo "No deploy host candidates were configured." >&2
+            exit 1
+          fi
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          touch ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          SELECTED_DEPLOY_HOST=""
+          failure_output=""
+          for candidate_host in "${candidate_hosts[@]}"; do
+            candidate_label="configured DEPLOY_HOST"
+            include_candidate_in_logs="false"
+            if [ "$candidate_host" = "$DEFAULT_DEPLOY_HOST" ] && [ "$candidate_host" != "$DEPLOY_HOST" ]; then
+              candidate_label="production domain fallback ($DEFAULT_DEPLOY_HOST)"
+              include_candidate_in_logs="true"
+            fi
+            case "$candidate_host" in
+              *://*)
+                failure_output="${failure_output}\n- ${candidate_label} used a URL scheme; provide only a hostname or IP address."
+                continue
+                ;;
+            esac
+            if ! getent ahosts "$candidate_host" >/dev/null; then
+              failure_output="${failure_output}\n- ${candidate_label} did not resolve from the GitHub Actions runner."
+              continue
+            fi
+            keyscan_output="$(mktemp)"
+            keyscan_error="$(mktemp)"
+            if ssh-keyscan -T 10 -H "$candidate_host" >"$keyscan_output" 2>"$keyscan_error" && [ -s "$keyscan_output" ]; then
+              cat "$keyscan_output" >> ~/.ssh/known_hosts
+              rm -f "$keyscan_output" "$keyscan_error"
+              SELECTED_DEPLOY_HOST="$candidate_host"
+              if [ "$candidate_host" = "$DEPLOY_HOST" ] && [ -n "$DEPLOY_HOST" ]; then
+                echo "Using DEPLOY_HOST from secrets for SSH."
+              else
+                echo "Configured DEPLOY_HOST did not return SSH host keys; falling back to $DEFAULT_DEPLOY_HOST."
+              fi
+              break
+            fi
+            failure_output="${failure_output}\n- ${candidate_label} resolved but did not return SSH host keys on port 22."
+            if [ "$include_candidate_in_logs" = "true" ] && [ -s "$keyscan_error" ]; then
+              keyscan_summary="$(tr '\n' ' ' <"$keyscan_error" | sed 's/[[:space:]]\+/ /g')"
+              failure_output="${failure_output}\n  ssh-keyscan: ${keyscan_summary}"
+            fi
+            rm -f "$keyscan_output" "$keyscan_error"
+          done
+          if [ -z "$SELECTED_DEPLOY_HOST" ]; then
+            echo "Unable to determine a reachable deploy host." >&2
+            printf '%b\n' "$failure_output" >&2
+            exit 1
+          fi
+          {
+            printf 'Host deploy-host\n'
+            printf '  HostName %s\n' "$SELECTED_DEPLOY_HOST"
+            printf '  User %s\n' "$DEPLOY_USER"
+            printf '  IdentityFile ~/.ssh/id_ed25519\n'
+            printf '  IdentitiesOnly yes\n'
+            printf '  BatchMode yes\n'
+            printf '  StrictHostKeyChecking yes\n'
+          } > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+      - name: Verify SSH connectivity
+        run: |
+          set -euxo pipefail
+          ssh deploy-host 'echo "SSH connection established"'
+
+      - name: Deploy app and monitoring stacks
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          set -euo pipefail
+          REGISTRY="ghcr.io/${{ github.repository_owner }}"
+          IMAGE_TAG="${{ github.event.workflow_run.head_sha }}"
+          ssh deploy-host bash << ENDSSH
+          set -euxo pipefail
+          docker login ghcr.io -u '${{ github.repository_owner }}' -p '${GHCR_TOKEN}'
+          cd /opt/clubcrm
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/clubcrm-repo -o IdentitiesOnly=yes" git pull --ff-only
+
+          # --- App stack ---
+          export API_IMAGE="${REGISTRY}/clubcrm-api:${IMAGE_TAG}"
+          export WEB_IMAGE="${REGISTRY}/clubcrm-web:${IMAGE_TAG}"
+          compose_files="-f infra/docker-compose.production.yml"
+          if [ -f infra/docker-compose.production.host-nginx.yml ]; then
+            compose_files="\$compose_files -f infra/docker-compose.production.host-nginx.yml"
+          fi
+          log_deploy_failure() {
+            docker compose \$compose_files ps || true
+            docker compose \$compose_files logs api --tail=200 || true
+          }
+          trap log_deploy_failure ERR
+          if docker info >/dev/null 2>&1; then
+            docker compose \$compose_files up -d --remove-orphans
+          elif sudo -n docker info >/dev/null 2>&1; then
+            sudo -n docker compose \$compose_files up -d --remove-orphans
+          else
+            echo "Remote deploy user needs Docker access or passwordless sudo for Docker Compose." >&2
+            exit 1
+          fi
+          trap - ERR
+
+          # --- Monitoring stack ---
+          export MONITOR_API_IMAGE="${REGISTRY}/clubcrm-monitor-api:${IMAGE_TAG}"
+          export MONITOR_WEB_IMAGE="${REGISTRY}/clubcrm-monitor-web:${IMAGE_TAG}"
+          if docker info >/dev/null 2>&1; then
+            docker compose -f infra/monitoring/docker-compose.monitoring.yml up -d --remove-orphans
+          elif sudo -n docker info >/dev/null 2>&1; then
+            sudo -n docker compose -f infra/monitoring/docker-compose.monitoring.yml up -d --remove-orphans
+          else
+            echo "Remote deploy user needs Docker access or passwordless sudo for Docker Compose." >&2
+            exit 1
+          fi
+          ENDSSH
+
+  deploy-cluster:
+    name: Deploy cluster
+    runs-on: ubuntu-latest
+    needs: publish-images
+
+    steps:
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+
+      - name: Configure SSH
+        env:
+          CLUSTER_DEPLOY_SSH_KEY: ${{ secrets.CLUSTER_DEPLOY_SSH_KEY }}
+          CLUSTER_DEPLOY_USER: ${{ secrets.CLUSTER_DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+          : "${CLUSTER_DEPLOY_SSH_KEY:?Missing secret CLUSTER_DEPLOY_SSH_KEY}"
+          : "${CLUSTER_DEPLOY_USER:?Missing secret CLUSTER_DEPLOY_USER}"
+          CLUSTER_DEPLOY_USER="$(printf '%s' "$CLUSTER_DEPLOY_USER" | tr -d '\r\n')"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$CLUSTER_DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/id_cluster
+          chmod 600 ~/.ssh/id_cluster
+          touch ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          ssh-keyscan -T 10 -H "100.122.118.85" >> ~/.ssh/known_hosts
+          {
+            printf 'Host cluster-host\n'
+            printf '  HostName 100.122.118.85\n'
+            printf '  User %s\n' "$CLUSTER_DEPLOY_USER"
+            printf '  IdentityFile ~/.ssh/id_cluster\n'
+            printf '  IdentitiesOnly yes\n'
+            printf '  BatchMode yes\n'
+            printf '  StrictHostKeyChecking yes\n'
+          } > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+
+      - name: Verify SSH connectivity
+        run: |
+          set -euxo pipefail
+          ssh cluster-host 'echo "SSH connection established"'
+
+      - name: Deploy cluster via kubectl
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          set -euo pipefail
+          REGISTRY="ghcr.io/${{ github.repository_owner }}"
+          IMAGE_TAG="${{ github.event.workflow_run.head_sha }}"
+          ssh cluster-host bash << ENDSSH
+          set -euxo pipefail
+
+          # Keep the ghcr pull secret current
+          kubectl create secret docker-registry ghcr-credentials \
+            --docker-server=ghcr.io \
+            --docker-username='${{ github.repository_owner }}' \
+            --docker-password='${GHCR_TOKEN}' \
+            --namespace clubcrm \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          # Ensure deployments reference the pull secret
+          kubectl patch deployment clubcrm-api -n clubcrm \
+            -p '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"ghcr-credentials"}]}}}}'
+          kubectl patch deployment clubcrm-web -n clubcrm \
+            -p '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"ghcr-credentials"}]}}}}'
+
+          # Roll out new images
+          kubectl set image deployment/clubcrm-api api="${REGISTRY}/clubcrm-api:${IMAGE_TAG}" -n clubcrm
+          kubectl set image deployment/clubcrm-web web="${REGISTRY}/clubcrm-web:${IMAGE_TAG}" -n clubcrm
+
+          kubectl rollout status deployment/clubcrm-api -n clubcrm --timeout=5m
+          kubectl rollout status deployment/clubcrm-web -n clubcrm --timeout=5m
+          ENDSSH
