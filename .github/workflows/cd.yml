@@ -11,10 +11,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  detect-changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    outputs:
+      app: ${{ steps.filter.outputs.app }}
+      monitor: ${{ steps.filter.outputs.monitor }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+      - name: Check changed paths
+        id: filter
+        run: |
+          git diff --name-only HEAD^1 HEAD > changed_files.txt
+          if grep -qE '^apps/(api|web)/' changed_files.txt; then
+            echo "app=true" >> $GITHUB_OUTPUT
+          else
+            echo "app=false" >> $GITHUB_OUTPUT
+          fi
+          if grep -qE '^apps/monitor-(api|web)/' changed_files.txt; then
+            echo "monitor=true" >> $GITHUB_OUTPUT
+          else
+            echo "monitor=false" >> $GITHUB_OUTPUT
+          fi
+
   publish-images:
     name: Publish images
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success'
+    needs: detect-changes
+    if: needs.detect-changes.outputs.app == 'true' || needs.detect-changes.outputs.monitor == 'true'
     permissions:
       packages: write
 
@@ -36,6 +64,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push API image
+        if: needs.detect-changes.outputs.app == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -46,6 +75,7 @@ jobs:
             ghcr.io/${{ env.OWNER }}/clubcrm-api:deploy
 
       - name: Build and push web image
+        if: needs.detect-changes.outputs.app == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -56,6 +86,7 @@ jobs:
             ghcr.io/${{ env.OWNER }}/clubcrm-web:deploy
 
       - name: Build and push monitor-api image
+        if: needs.detect-changes.outputs.monitor == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -66,6 +97,7 @@ jobs:
             ghcr.io/${{ env.OWNER }}/clubcrm-monitor-api:deploy
 
       - name: Build and push monitor-web image
+        if: needs.detect-changes.outputs.monitor == 'true'
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -78,7 +110,7 @@ jobs:
   deploy-app-server:
     name: Deploy app server
     runs-on: ubuntu-latest
-    needs: publish-images
+    needs: [publish-images, detect-changes]
 
     steps:
       - name: Configure SSH
@@ -176,7 +208,20 @@ jobs:
       - name: Set lowercase registry owner
         run: echo "OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_ENV
 
-      - name: Deploy app and monitoring stacks
+      - name: Prepare remote
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          set -euo pipefail
+          ssh deploy-host bash << ENDSSH
+          set -euxo pipefail
+          docker login ghcr.io -u '${{ env.OWNER }}' -p '${GHCR_TOKEN}'
+          cd /opt/clubcrm
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/clubcrm-repo -o IdentitiesOnly=yes" git pull --ff-only
+          ENDSSH
+
+      - name: Deploy app stack
+        if: needs.detect-changes.outputs.app == 'true'
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: |
@@ -185,11 +230,7 @@ jobs:
           IMAGE_TAG="${{ github.event.workflow_run.head_sha }}"
           ssh deploy-host bash << ENDSSH
           set -euxo pipefail
-          docker login ghcr.io -u '${{ env.OWNER }}' -p '${GHCR_TOKEN}'
           cd /opt/clubcrm
-          GIT_SSH_COMMAND="ssh -i ~/.ssh/clubcrm-repo -o IdentitiesOnly=yes" git pull --ff-only
-
-          # --- App stack ---
           export API_IMAGE="${REGISTRY}/clubcrm-api:${IMAGE_TAG}"
           export WEB_IMAGE="${REGISTRY}/clubcrm-web:${IMAGE_TAG}"
           compose_files="-f infra/docker-compose.production.yml"
@@ -210,8 +251,19 @@ jobs:
             exit 1
           fi
           trap - ERR
+          ENDSSH
 
-          # --- Monitoring stack ---
+      - name: Deploy monitoring stack
+        if: needs.detect-changes.outputs.monitor == 'true'
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          set -euo pipefail
+          REGISTRY="ghcr.io/${{ env.OWNER }}"
+          IMAGE_TAG="${{ github.event.workflow_run.head_sha }}"
+          ssh deploy-host bash << ENDSSH
+          set -euxo pipefail
+          cd /opt/clubcrm
           export MONITOR_API_IMAGE="${REGISTRY}/clubcrm-monitor-api:${IMAGE_TAG}"
           export MONITOR_WEB_IMAGE="${REGISTRY}/clubcrm-monitor-web:${IMAGE_TAG}"
           if docker info >/dev/null 2>&1; then
@@ -227,7 +279,8 @@ jobs:
   deploy-cluster:
     name: Deploy cluster
     runs-on: ubuntu-latest
-    needs: publish-images
+    needs: [publish-images, detect-changes]
+    if: needs.detect-changes.outputs.app == 'true'
 
     steps:
       - name: Connect to Tailscale
@@ -287,15 +340,11 @@ jobs:
             --namespace clubcrm \
             --dry-run=client -o yaml | kubectl apply -f -
 
-          # Ensure deployments reference the pull secret
-          kubectl patch deployment clubcrm-api -n clubcrm \
-            -p '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"ghcr-credentials"}]}}}}'
-          kubectl patch deployment clubcrm-web -n clubcrm \
-            -p '{"spec":{"template":{"spec":{"imagePullSecrets":[{"name":"ghcr-credentials"}]}}}}'
-
-          # Roll out new images
-          kubectl set image deployment/clubcrm-api api="${REGISTRY}/clubcrm-api:${IMAGE_TAG}" -n clubcrm
-          kubectl set image deployment/clubcrm-web web="${REGISTRY}/clubcrm-web:${IMAGE_TAG}" -n clubcrm
+          # Roll out new images and ensure pull secret in one atomic patch per deployment
+          kubectl patch deployment clubcrm-api -n clubcrm --type=strategic \
+            -p "{\"spec\":{\"template\":{\"spec\":{\"imagePullSecrets\":[{\"name\":\"ghcr-credentials\"}],\"containers\":[{\"name\":\"api\",\"image\":\"${REGISTRY}/clubcrm-api:${IMAGE_TAG}\"}]}}}}"
+          kubectl patch deployment clubcrm-web -n clubcrm --type=strategic \
+            -p "{\"spec\":{\"template\":{\"spec\":{\"imagePullSecrets\":[{\"name\":\"ghcr-credentials\"}],\"containers\":[{\"name\":\"web\",\"image\":\"${REGISTRY}/clubcrm-web:${IMAGE_TAG}\"}]}}}}"
 
           kubectl rollout status deployment/clubcrm-api -n clubcrm --timeout=5m
           kubectl rollout status deployment/clubcrm-web -n clubcrm --timeout=5m
