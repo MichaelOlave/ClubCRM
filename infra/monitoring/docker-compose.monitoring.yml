@@ -1,3 +1,8 @@
+networks:
+  default:
+    name: commission-api-deployment_commission-network
+    external: true
+
 services:
   monitor-api:
     image: ${MONITOR_API_IMAGE:-clubcrm-monitor-api:deploy}
@@ -41,9 +46,9 @@ services:
       MONITOR_REPLAY_API_URL: ${MONITOR_REPLAY_API_URL:-}
       NEXT_PUBLIC_MONITOR_REPLAY_MODE: ${NEXT_PUBLIC_MONITOR_REPLAY_MODE:-false}
       NEXT_PUBLIC_MONITOR_REPLAY_API_URL: ${NEXT_PUBLIC_MONITOR_REPLAY_API_URL:-}
-      PORT: 3001
+      PORT: 3002
     depends_on:
       - monitor-api
     ports:
-      - "${MONITOR_WEB_PORT:-3001}:3001"
+      - "${MONITOR_WEB_PORT:-3002}:3002"
     restart: unless-stopped

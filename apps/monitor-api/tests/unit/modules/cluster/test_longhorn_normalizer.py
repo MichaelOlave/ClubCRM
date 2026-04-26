@@ -55,6 +55,34 @@ class ParseLonghornTests(unittest.TestCase):
         replica = parse_replica(_replica("replica-a", health_mode="WO"))
         self.assertEqual(replica.health, "degraded")
 
+    def test_parse_replica_uses_current_state_when_mode_absent(self) -> None:
+        raw = {
+            "metadata": {"name": "replica-running"},
+            "spec": {"volumeName": "pvc-postgres", "nodeID": "server1"},
+            "status": {
+                "currentState": "running",
+                "started": True,
+                "healthyAt": "2026-04-18T15:29:43Z",
+            },
+        }
+        replica = parse_replica(raw)
+        self.assertEqual(replica.mode, "running")
+        self.assertEqual(replica.health, "healthy")
+
+    def test_parse_replica_stopped_is_unknown(self) -> None:
+        raw = {
+            "metadata": {"name": "replica-stopped"},
+            "spec": {"volumeName": "pvc-test", "nodeID": "server3"},
+            "status": {
+                "currentState": "stopped",
+                "started": False,
+                "healthyAt": "2026-04-18T15:29:09Z",
+            },
+        }
+        replica = parse_replica(raw)
+        self.assertEqual(replica.mode, "stopped")
+        self.assertEqual(replica.health, "unknown")
+
 
 class DiffLonghornTests(unittest.TestCase):
     def test_first_attached_volume_emits_attached(self) -> None:

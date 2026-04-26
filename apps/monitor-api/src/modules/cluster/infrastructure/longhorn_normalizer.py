@@ -53,11 +53,17 @@ def parse_replica(raw: dict) -> VolumeReplicaState:
     spec = raw.get("spec") or {}
     status = raw.get("status") or {}
 
+    mode = (
+        _optional_string(status, "mode")
+        or _optional_string(status, "currentState")
+        or "unknown"
+    )
+
     return VolumeReplicaState(
         name=_optional_string(metadata, "name") or "",
         volume_name=_optional_string(spec, "volumeName") or "",
         node_name=_optional_string(spec, "nodeID"),
-        mode=_optional_string(status, "mode") or "unknown",
+        mode=mode,
         health=_replica_health(status),
     )
 
@@ -205,14 +211,20 @@ def _volume_health(state: str, robustness: str) -> str:
 
 def _replica_health(status: dict) -> str:
     mode = (_optional_string(status, "mode") or "").upper()
+    current_state = (_optional_string(status, "currentState") or "").upper()
+    started = status.get("started")
     failed_at = _optional_string(status, "failedAt")
     healthy_at = _optional_string(status, "healthyAt")
 
     if failed_at:
         return "faulted"
-    if mode in {"ERR", "ERROR"}:
+    if mode in {"ERR", "ERROR"} or current_state == "ERROR":
         return "faulted"
-    if healthy_at or mode == "RW":
+    if current_state == "STOPPED" or started is False:
+        return "unknown"
+    if mode == "RW" or (current_state == "RUNNING" and healthy_at):
+        return "healthy"
+    if healthy_at:
         return "healthy"
     if mode in {"WO", "UNKNOWN"}:
         return "degraded"
