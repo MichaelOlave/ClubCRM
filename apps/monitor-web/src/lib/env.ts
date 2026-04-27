@@ -52,5 +52,9 @@ export function isMonitorReplayModeEnabled() {
 }
 
 export function getClubCrmDemoUrl() {
-  return process.env.NEXT_PUBLIC_CLUBCRM_DEMO_URL ?? process.env.CLUBCRM_DEMO_URL ?? DEFAULT_CLUBCRM_DEMO_URL;
+  return (
+    process.env.NEXT_PUBLIC_CLUBCRM_DEMO_URL ??
+    process.env.CLUBCRM_DEMO_URL ??
+    DEFAULT_CLUBCRM_DEMO_URL
+  );
 }
