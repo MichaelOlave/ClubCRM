@@ -46,7 +46,7 @@ def parse_probe_targets(raw: str | None) -> list[ProbeTarget]:
         # Automatically inject headers for correct routing and bot-detection bypass
         headers: dict[str, str] = {"User-Agent": "curl/7.88.1"}
         if any(ip in url for ip in ["100.122.118.85", "100.67.65.5", "100.99.187.90"]):
-            headers["Host"] = "demo.clubcrm.org"
+            headers["Host"] = "clubcrm.local"
 
         targets.append(ProbeTarget(service=service, url=url, headers=headers))
     return targets
