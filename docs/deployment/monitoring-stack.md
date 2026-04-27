@@ -15,7 +15,7 @@ That means the deployment shape is intentionally separate from the main ClubCRM 
 - `monitor-api` and `monitor-web` run on their own host
 - `monitor-api` reaches Kubernetes through a mounted kubeconfig or a checked-in snapshot file
 - browsers reach the dashboard through `monitor-web`
-- the browser WebSocket connects directly to `monitor-api` unless an external proxy is configured
+- the browser reaches `monitor-api` through the dashboard's same-origin proxy by default
 - a checked-in JSON fixture remains available for rehearsal and fallback
 
 ## Required Repo Assets
@@ -111,6 +111,10 @@ Useful frontend overrides include:
 - `NEXT_PUBLIC_MONITOR_WS_URL`
 - `MONITOR_WEB_PORT`
 
+The default Compose deployment now publishes only the dashboard origin and proxies live API and
+WebSocket traffic through it. That avoids mixed-content and `ws` vs `wss` mismatches when an HTTPS
+edge sits in front of the monitoring host.
+
 ## Recommended Environment Values
 
 For a live kubeconfig-mounted deployment:
@@ -134,8 +138,9 @@ MONITOR_PROBE_INTERVAL_SECONDS=5
 MONITOR_PROBE_TIMEOUT_SECONDS=2
 MONITOR_PROBE_DEGRADED_LATENCY_MS=1200
 MONITOR_REPLAY_MODE=false
-NEXT_PUBLIC_MONITOR_API_BASE_URL=http://192.168.139.213:8010
-NEXT_PUBLIC_MONITOR_WS_URL=ws://192.168.139.213:8010/ws/stream
+NEXT_PUBLIC_MONITOR_API_BASE_URL=/monitor-api
+NEXT_PUBLIC_MONITOR_WS_URL=
+NEXT_PUBLIC_CLUBCRM_DEMO_URL=https://demo.clubcrm.org/demo/failover
 ```
 
 For offline rehearsal or frontend work without live cluster access:
@@ -186,6 +191,7 @@ For the live monitoring host at `192.168.139.213`:
 curl http://192.168.139.213:8010/health
 curl http://192.168.139.213:8010/api/snapshot
 curl http://192.168.139.213:3001
+curl http://192.168.139.213:3001/monitor-api/api/snapshot
 ```
 
 In the browser, confirm:
@@ -194,4 +200,4 @@ In the browser, confirm:
 - the cluster graph renders nodes and scheduled pods
 - the Longhorn panel shows fixture or live `volumes` and `replicas` when available
 - recent node, pod, volume, or replica events appear in the event feed
-- the browser connects to `NEXT_PUBLIC_MONITOR_WS_URL`
+- the browser stays live through the dashboard origin without reconnect loops

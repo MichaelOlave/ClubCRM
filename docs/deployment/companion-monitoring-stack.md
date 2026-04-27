@@ -37,11 +37,11 @@ See [Monitoring Stack Deployment](monitoring-stack.md) for host-level deployment
 browser
    |
    v
-monitor-web
+monitor-proxy
    |
-   | initial snapshot + WebSocket stream
-   v
-monitor-api
+   +--> monitor-web
+   |
+   +--> monitor-api
    | \
    |  \--> mounted kubeconfig
    |
@@ -108,6 +108,16 @@ Most defaults live in [`.env.example`](../../.env.example).
 | Service probes   | `MONITOR_PROBE_TARGETS`, `MONITOR_PROBE_INTERVAL_SECONDS`, `MONITOR_PROBE_TIMEOUT_SECONDS`, `MONITOR_PROBE_DEGRADED_LATENCY_MS`                            | probe application URLs and surface continuity status                |
 | Runtime tuning   | `MONITOR_CLUSTER_HEARTBEAT_SECONDS`, `MONITOR_CLUSTER_WATCH_TIMEOUT_SECONDS`, `MONITOR_DISABLE_BACKGROUND_TASKS`                                           | tune the watch, heartbeat, and background-loop behavior             |
 | Frontend         | `MONITOR_WEB_PORT`, `NEXT_PUBLIC_MONITOR_API_BASE_URL`, `NEXT_PUBLIC_MONITOR_WS_URL`                                                                       | configure how browsers reach the API and dashboard                  |
+
+In the default Compose deployment, `monitor-web` is not published directly. A lightweight reverse
+proxy publishes `MONITOR_WEB_PORT` and forwards:
+
+- `/` to `monitor-web`
+- `/monitor-api/*` to `monitor-api`
+- `/ws/stream` and `/monitor-api/ws/stream` to `monitor-api`
+
+That keeps the dashboard on a single browser origin and prevents HTTPS pages from trying to open a
+`wss://` connection against a plain `ws://` backend port.
 
 ## Deployment Modes
 

@@ -57,7 +57,9 @@ export function ServiceHealthPanel({ probes }: { probes: ServiceProbe[] }) {
                 </div>
                 <div className="flex justify-between">
                   <span>Checked</span>
-                  <span className="text-zinc-200">{formatTime(probe.last_checked_at)}</span>
+                  <span suppressHydrationWarning className="text-zinc-200">
+                    {formatTime(probe.last_checked_at)}
+                  </span>
                 </div>
               </div>
               {probe.last_error ? (

@@ -37,8 +37,14 @@ Important environment variables:
 - `MONITOR_ADMIN_TOKEN`
 - `MONITOR_WEB_PORT`
 
-If `NEXT_PUBLIC_MONITOR_WS_URL` is unset, the app derives the WebSocket URL from the public API
-base URL by converting `http` to `ws` and appending `/ws/stream`.
+The standalone Compose deployment now expects browsers to reach the dashboard through the
+same-origin proxy on `monitor-web`. The default public values are:
+
+- `NEXT_PUBLIC_MONITOR_API_BASE_URL=/monitor-api`
+- `NEXT_PUBLIC_MONITOR_WS_URL=` (unset, so the app derives `/monitor-api/ws/stream`)
+
+Use explicit absolute `http(s)://...` and `ws(s)://...` values only when you intentionally expose
+`monitor-api` as its own public origin.
 
 Replay mode is optional. Set `MONITOR_REPLAY_MODE=true` or `NEXT_PUBLIC_MONITOR_REPLAY_MODE=true`
 to fetch a captured session from `MONITOR_REPLAY_API_URL` or
