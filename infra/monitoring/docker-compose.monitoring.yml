@@ -40,8 +40,8 @@ services:
         required: false
     environment:
       MONITOR_API_BASE_URL: http://monitor-api:8010
-      NEXT_PUBLIC_MONITOR_API_BASE_URL: ${NEXT_PUBLIC_MONITOR_API_BASE_URL:-http://localhost:8010}
-      NEXT_PUBLIC_MONITOR_WS_URL: ${NEXT_PUBLIC_MONITOR_WS_URL:-ws://localhost:8010/ws/stream}
+      NEXT_PUBLIC_MONITOR_API_BASE_URL: ${NEXT_PUBLIC_MONITOR_API_BASE_URL:-/monitor-api}
+      NEXT_PUBLIC_MONITOR_WS_URL: ${NEXT_PUBLIC_MONITOR_WS_URL:-}
       MONITOR_REPLAY_MODE: ${MONITOR_REPLAY_MODE:-false}
       MONITOR_REPLAY_API_URL: ${MONITOR_REPLAY_API_URL:-}
       NEXT_PUBLIC_MONITOR_REPLAY_MODE: ${NEXT_PUBLIC_MONITOR_REPLAY_MODE:-false}
@@ -49,6 +49,15 @@ services:
       PORT: 3002
     depends_on:
       - monitor-api
+    restart: unless-stopped
+
+  monitor-proxy:
+    image: nginx:1.27-alpine
+    depends_on:
+      - monitor-api
+      - monitor-web
+    volumes:
+      - ./nginx.monitor-proxy.conf:/etc/nginx/nginx.conf:ro
     ports:
       - "${MONITOR_WEB_PORT:-3002}:3002"
     restart: unless-stopped

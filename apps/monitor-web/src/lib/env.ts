@@ -2,6 +2,9 @@ function trimTrailingSlash(value: string) {
   return value.endsWith("/") ? value.slice(0, -1) : value;
 }
 
+const DEFAULT_MONITOR_PUBLIC_API_BASE_URL = "/monitor-api";
+const DEFAULT_CLUBCRM_DEMO_URL = "https://demo.clubcrm.org/demo/failover";
+
 export function getMonitorApiBaseUrl() {
   return trimTrailingSlash(
     process.env.MONITOR_API_BASE_URL ??
@@ -12,9 +15,7 @@ export function getMonitorApiBaseUrl() {
 
 export function getMonitorPublicApiBaseUrl() {
   return trimTrailingSlash(
-    process.env.NEXT_PUBLIC_MONITOR_API_BASE_URL ??
-      process.env.MONITOR_API_BASE_URL ??
-      "http://localhost:8010"
+    process.env.NEXT_PUBLIC_MONITOR_API_BASE_URL ?? DEFAULT_MONITOR_PUBLIC_API_BASE_URL
   );
 }
 
@@ -24,7 +25,10 @@ export function getMonitorWebSocketUrl() {
     return explicitUrl;
   }
   const baseUrl = getMonitorPublicApiBaseUrl();
-  return `${baseUrl.replace(/^http/, "ws")}/ws/stream`;
+  if (/^https?:\/\//.test(baseUrl)) {
+    return `${baseUrl.replace(/^http/, "ws")}/ws/stream`;
+  }
+  return `${baseUrl}/ws/stream`;
 }
 
 export function getMonitorAdminToken(): string | null {
@@ -51,6 +55,6 @@ export function getClubCrmDemoUrl() {
   return (
     process.env.NEXT_PUBLIC_CLUBCRM_DEMO_URL ??
     process.env.CLUBCRM_DEMO_URL ??
-    "http://clubcrm.local/demo/failover"
+    DEFAULT_CLUBCRM_DEMO_URL
   );
 }
