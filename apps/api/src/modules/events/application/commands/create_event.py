@@ -1,6 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime
 
+from src.modules.events.application.ports.event_event_publisher import (
+    EventEventPublisher,
+)
 from src.modules.events.application.ports.event_repository import EventRepository
 from src.modules.events.domain.entities import Event
 
@@ -8,6 +11,7 @@ from src.modules.events.domain.entities import Event
 @dataclass
 class CreateEvent:
     repository: EventRepository
+    publisher: EventEventPublisher | None = None
 
     def execute(
         self,
@@ -19,7 +23,7 @@ class CreateEvent:
         location: str | None = None,
         ends_at: datetime | None = None,
     ) -> Event:
-        return self.repository.create_event(
+        created = self.repository.create_event(
             club_id=club_id,
             title=title,
             description=description,
@@ -27,3 +31,8 @@ class CreateEvent:
             location=location,
             ends_at=ends_at,
         )
+
+        if self.publisher is not None:
+            self.publisher.publish_event_created(created)
+
+        return created

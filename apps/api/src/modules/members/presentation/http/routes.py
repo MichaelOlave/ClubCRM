@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from src.bootstrap.dependencies import (
     get_audit_log_repository,
     get_dashboard_summary_cache,
+    get_member_event_publisher,
     get_member_repository,
     get_membership_repository,
 )
@@ -20,6 +21,9 @@ from src.modules.members.application.commands.create_member import CreateMember
 from src.modules.members.application.commands.delete_member import DeleteMember
 from src.modules.members.application.commands.update_member import UpdateMember
 from src.modules.members.application.models import CreateMemberInput, UpdateMemberInput
+from src.modules.members.application.ports.member_event_publisher import (
+    MemberEventPublisher,
+)
 from src.modules.members.application.ports.member_repository import MemberRepository
 from src.modules.members.application.queries.get_member import GetMember
 from src.modules.members.application.queries.list_members import ListMembers
@@ -90,9 +94,10 @@ def create_member(
     repository: Annotated[MemberRepository, Depends(get_member_repository)],
     audit_repository: Annotated[AuditLogRepository, Depends(get_audit_log_repository)],
     context: Annotated[AuthenticatedRequestContext, Depends(get_authenticated_write_context)],
+    publisher: Annotated[MemberEventPublisher, Depends(get_member_event_publisher)],
 ) -> MemberReadModel:
     try:
-        member = CreateMember(repository=repository).execute(
+        member = CreateMember(repository=repository, publisher=publisher).execute(
             CreateMemberInput(
                 organization_id=payload.organization_id,
                 first_name=payload.first_name,

@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from src.bootstrap.dependencies import (
     get_audit_log_repository,
     get_dashboard_summary_cache,
+    get_event_event_publisher,
     get_event_repository,
 )
 from src.modules.audit.application.ports.audit_log_repository import AuditLogRepository
@@ -24,6 +25,9 @@ from src.modules.dashboard.presentation.http.cache import invalidate_dashboard_c
 from src.modules.events.application.commands.create_event import CreateEvent
 from src.modules.events.application.commands.delete_event import DeleteEvent
 from src.modules.events.application.commands.update_event import UpdateEvent
+from src.modules.events.application.ports.event_event_publisher import (
+    EventEventPublisher,
+)
 from src.modules.events.application.ports.event_repository import (
     UNSET,
     EventConflictError,
@@ -139,11 +143,12 @@ def create_event(
     audit_repository: Annotated[AuditLogRepository, Depends(get_audit_log_repository)],
     dashboard_cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
     context: Annotated[AuthenticatedRequestContext, Depends(get_authenticated_write_context)],
+    publisher: Annotated[EventEventPublisher, Depends(get_event_event_publisher)],
 ) -> EventRead:
     ensure_club_access(access, payload.club_id)
     _validate_event_schedule(payload.starts_at, payload.ends_at)
     try:
-        event = CreateEvent(repository=repository).execute(
+        event = CreateEvent(repository=repository, publisher=publisher).execute(
             club_id=payload.club_id,
             title=payload.title,
             description=payload.description,

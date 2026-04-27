@@ -11,6 +11,12 @@ resources:
   - redis-pvc.yaml
   - redis-service.yaml
   - redis-statefulset.yaml
+  - mongodb-pvc.yaml
+  - mongodb-service.yaml
+  - mongodb-statefulset.yaml
+  - kafka-pvc.yaml
+  - kafka-service.yaml
+  - kafka-statefulset.yaml
   - traefik-strip-api-middleware.yaml
   - clubcrm-api-ingress.yaml
   - clubcrm-web-ingress.yaml

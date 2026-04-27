@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 
 from src.bootstrap.dependencies import (
+    get_announcement_event_publisher,
     get_announcement_repository,
     get_audit_log_repository,
     get_dashboard_summary_cache,
@@ -18,6 +19,9 @@ from src.modules.announcements.application.commands.delete_announcement import (
 )
 from src.modules.announcements.application.commands.update_announcement import (
     UpdateAnnouncement,
+)
+from src.modules.announcements.application.ports.announcement_event_publisher import (
+    AnnouncementEventPublisher,
 )
 from src.modules.announcements.application.ports.announcement_repository import (
     UNSET,
@@ -126,10 +130,11 @@ def create_announcement(
     audit_repository: Annotated[AuditLogRepository, Depends(get_audit_log_repository)],
     dashboard_cache: Annotated[DashboardSummaryCache, Depends(get_dashboard_summary_cache)],
     context: Annotated[AuthenticatedRequestContext, Depends(get_authenticated_write_context)],
+    publisher: Annotated[AnnouncementEventPublisher, Depends(get_announcement_event_publisher)],
 ) -> AnnouncementRead:
     ensure_club_access(access, payload.club_id)
     try:
-        announcement = CreateAnnouncement(repository=repository).execute(
+        announcement = CreateAnnouncement(repository=repository, publisher=publisher).execute(
             club_id=payload.club_id,
             title=payload.title,
             body=payload.body,

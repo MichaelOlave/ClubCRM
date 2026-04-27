@@ -9,6 +9,11 @@ data:
   API_PORT: "8000"
   API_BASE_URL: http://clubcrm-api.clubcrm.svc.cluster.local:8000
   REDIS_URL: redis://redis.clubcrm-data.svc.cluster.local:6379/0
+  MONGODB_HOST: mongodb.clubcrm-data.svc.cluster.local
+  MONGODB_PORT: "27017"
+  MONGODB_DB: clubcrm
+  MONGODB_URL: mongodb://mongodb.clubcrm-data.svc.cluster.local:27017/clubcrm
+  KAFKA_BOOTSTRAP_SERVERS: kafka.clubcrm-data.svc.cluster.local:9092
   WEB_API_PUBLIC_BASE_URL: http://clubcrm.local/api
   IS_AUTH_BYPASS: "true"
   AUTH_LOGIN_SUCCESS_URL: http://clubcrm.local/dashboard

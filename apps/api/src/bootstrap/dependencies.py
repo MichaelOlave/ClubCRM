@@ -3,8 +3,13 @@ from importlib import import_module
 
 from src.config import Settings, get_settings
 from src.infrastructure.kafka.client import KafkaClient
+from src.infrastructure.kafka.publishers.announcements import (
+    KafkaAnnouncementEventPublisher,
+)
 from src.infrastructure.kafka.publishers.clubs import KafkaClubEventPublisher
+from src.infrastructure.kafka.publishers.events import KafkaEventEventPublisher
 from src.infrastructure.kafka.publishers.forms import KafkaFormSubmissionPublisher
+from src.infrastructure.kafka.publishers.members import KafkaMemberEventPublisher
 from src.infrastructure.mongodb.client import MongoDBClient
 from src.infrastructure.mongodb.stores.forms import MongoDBJoinRequestStore
 from src.infrastructure.postgres.client import PostgresClient
@@ -25,6 +30,9 @@ from src.infrastructure.redis.caches.clubs import RedisClubSummaryCache
 from src.infrastructure.redis.caches.dashboard import RedisDashboardSummaryCache
 from src.infrastructure.redis.client import RedisClient
 from src.infrastructure.redis.sessions.session_store import RedisAuthSessionStore
+from src.modules.announcements.application.ports.announcement_event_publisher import (
+    AnnouncementEventPublisher,
+)
 from src.modules.announcements.application.ports.announcement_repository import (
     AnnouncementRepository,
 )
@@ -39,11 +47,17 @@ from src.modules.dashboard.application.ports.dashboard_repository import Dashboa
 from src.modules.dashboard.application.ports.dashboard_summary_cache import (
     DashboardSummaryCache,
 )
+from src.modules.events.application.ports.event_event_publisher import (
+    EventEventPublisher,
+)
 from src.modules.events.application.ports.event_repository import EventRepository
 from src.modules.forms.application.ports.form_submission_publisher import (
     FormSubmissionPublisher,
 )
 from src.modules.forms.application.ports.join_request_store import JoinRequestStore
+from src.modules.members.application.ports.member_event_publisher import (
+    MemberEventPublisher,
+)
 from src.modules.members.application.ports.member_repository import MemberRepository
 from src.modules.memberships.application.ports.membership_repository import (
     MembershipRepository,
@@ -131,6 +145,18 @@ def get_audit_log_repository() -> AuditLogRepository:
 
 def get_club_event_publisher() -> ClubEventPublisher:
     return KafkaClubEventPublisher(client=get_kafka_client())
+
+
+def get_member_event_publisher() -> MemberEventPublisher:
+    return KafkaMemberEventPublisher(client=get_kafka_client())
+
+
+def get_event_event_publisher() -> EventEventPublisher:
+    return KafkaEventEventPublisher(client=get_kafka_client())
+
+
+def get_announcement_event_publisher() -> AnnouncementEventPublisher:
+    return KafkaAnnouncementEventPublisher(client=get_kafka_client())
 
 
 def get_member_repository() -> MemberRepository:
