@@ -1,4 +1,5 @@
 import fs from "fs";
+import path from "path";
 import { Book, FileText, Gavel, Layout, ScrollText } from "lucide-react";
 import { DocsPageClient } from "./DocsPageClient";
 
@@ -7,8 +8,15 @@ async function getDocContent(fileName: string) {
 
   // Locations to check for docs, ordered by production standalone path and local dev path.
   const possiblePaths = [
-    `apps/web/public/docs/${syncedFileName}`, // Standalone prod
-    `public/docs/${syncedFileName}`, // Local dev after sync
+    path.join(
+      /* turbopackIgnore: true */ process.cwd(),
+      "apps",
+      "web",
+      "public",
+      "docs",
+      syncedFileName
+    ), // Standalone prod
+    path.join(/* turbopackIgnore: true */ process.cwd(), "public", "docs", syncedFileName), // Local dev after sync
   ];
 
   for (const filePath of possiblePaths) {
@@ -26,7 +34,8 @@ async function getDocContent(fileName: string) {
 }
 
 export async function DocsPage() {
-  const readme = await getDocContent("../README.md");
+  const docsIndex = await getDocContent("README.md");
+  const repoOverview = await getDocContent("../README.md");
   const architecture = await getDocContent("architecture.md");
   const contributing = await getDocContent("contributing.md");
   const decisions = await getDocContent("decisions.md");
@@ -34,10 +43,16 @@ export async function DocsPage() {
 
   const docs = [
     {
-      id: "overview",
-      label: "Overview",
+      id: "docs-index",
+      label: "Docs Index",
       icon: <Book className="size-4" />,
-      content: readme,
+      content: docsIndex,
+    },
+    {
+      id: "overview",
+      label: "Repo Overview",
+      icon: <Book className="size-4" />,
+      content: repoOverview,
     },
     {
       id: "architecture",
@@ -79,8 +94,8 @@ export async function DocsPage() {
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Documentation</h1>
           </div>
           <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground">
-            Explore the core architectural principles, contribution guidelines, and system design of
-            ClubCRM.
+            Browse the synced documentation map, then drill into the architecture, contribution
+            workflow, and repo overview from one place.
           </p>
         </div>
       </div>

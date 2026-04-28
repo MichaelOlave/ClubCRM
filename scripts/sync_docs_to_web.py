@@ -8,10 +8,11 @@ def main():
     readme_file = root_dir / "README.md"
     target_dir = root_dir / "apps" / "web" / "public" / "docs"
 
-    # Create target directory if it doesn't exist
+    if target_dir.exists():
+        shutil.rmtree(target_dir)
+
     target_dir.mkdir(parents=True, exist_ok=True)
 
-    # Sync docs folder
     if docs_dir.exists():
         for item in docs_dir.iterdir():
             if item.is_dir():
@@ -22,7 +23,6 @@ def main():
     else:
         print(f"Docs directory not found at {docs_dir}")
 
-    # Sync root README.md
     if readme_file.exists():
         shutil.copy2(readme_file, target_dir / "ROOT-README.md")
         print(f"Synced {readme_file} to {target_dir / 'ROOT-README.md'}")

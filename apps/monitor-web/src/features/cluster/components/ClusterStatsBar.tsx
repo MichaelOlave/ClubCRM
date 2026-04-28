@@ -54,10 +54,24 @@ export function ClusterStatsBar({ state }: ClusterStatsBarProps) {
               {stat.label}
             </span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-bold tracking-tight text-zinc-100">{stat.value}</span>
-              <span className={`text-xs font-medium text-${stat.color}-400/80`}>
+              <motion.span
+                key={`${stat.label}-${stat.value}`}
+                initial={{ opacity: 0.4, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.25 }}
+                className="text-2xl font-bold tracking-tight text-zinc-100"
+              >
+                {stat.value}
+              </motion.span>
+              <motion.span
+                key={`${stat.label}-sub-${stat.subValue}`}
+                initial={{ opacity: 0.4 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.25 }}
+                className={`text-xs font-medium text-${stat.color}-400/80`}
+              >
                 {stat.subValue}
-              </span>
+              </motion.span>
             </div>
           </div>
           <div

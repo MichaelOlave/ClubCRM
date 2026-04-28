@@ -17,7 +17,7 @@ The current deployment is live and DNS is already cut over.
 
 Current externally visible behavior:
 
-- the site root redirects by backend auth state, landing on `/dashboard`, `/not-provisioned`, or `/login`
+- the site root is a public landing page whose primary actions change based on backend auth state
 - Caddy terminates TLS for both the apex and `www` hostnames
 - `/api/*` is proxied to the FastAPI container for health, auth, and admin data routes
 - all other traffic is proxied to the Next.js web container
@@ -38,11 +38,11 @@ The data services stay internal to the Compose network and persist their data in
 
 ## Files
 
-- [`apps/web/Dockerfile`](../../apps/web/Dockerfile) builds the Next.js app as a standalone production image.
-- [`apps/api/Dockerfile`](../../apps/api/Dockerfile) builds the FastAPI app image.
-- [`infra/docker-compose.production.yml`](../../infra/docker-compose.production.yml) runs the full production stack, including the backing data services.
-- [`infra/Caddyfile`](../../infra/Caddyfile) fronts the app and proxies `/api/*` to the backend.
-- [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) verifies the repo on GitHub Actions and, after `main` passes verification, builds the production images, streams them to the deploy host over SSH, then asks the server to pull the latest repo state and restart the stack.
+- `apps/web/Dockerfile` builds the Next.js app as a standalone production image.
+- `apps/api/Dockerfile` builds the FastAPI app image.
+- `infra/docker-compose.production.yml` runs the full production stack, including the backing data services.
+- `infra/Caddyfile` fronts the app and proxies `/api/*` to the backend.
+- `.github/workflows/ci.yml` verifies the repo on GitHub Actions and, after `main` passes verification, builds the production images, streams them to the deploy host over SSH, then asks the server to pull the latest repo state and restart the stack.
 
 ## Server Expectations
 
@@ -70,7 +70,7 @@ If `Configure SSH` still fails after the secrets are present, verify that `DEPLO
 
 ## Production Environment
 
-Create `/opt/clubcrm/.env.production` from [`.env.production.example`](../../.env.production.example) and keep at least these values set:
+Create `/opt/clubcrm/.env.production` from `.env.production.example` and keep at least these values set:
 
 ```dotenv
 DOMAIN=clubcrm.org
@@ -89,7 +89,7 @@ KAFKA_BOOTSTRAP_SERVERS=kafka:9092
 
 ## Deployment Flow
 
-Production deploys are handled by the `deploy-production` job in [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml):
+Production deploys are handled by the `deploy-production` job in `.github/workflows/ci.yml`:
 
 - GitHub Actions first runs `pnpm verify`
 - only successful pushes to `main` continue to deployment

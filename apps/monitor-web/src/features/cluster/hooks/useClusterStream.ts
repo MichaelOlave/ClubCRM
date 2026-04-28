@@ -71,11 +71,12 @@ export interface UseClusterStreamResult {
 export function useClusterStream(
   initialSnapshot: ClusterSnapshot,
   streamUrl: string,
-  replaySession?: ClusterReplay | null
+  replaySession?: ClusterReplay | null,
+  initialEventLog?: ClusterEvent[]
 ): UseClusterStreamResult {
   const [state, dispatch] = useReducer(reducer, {
     cluster: snapshotToState(initialSnapshot),
-    eventLog: [],
+    eventLog: initialEventLog ? [...initialEventLog].reverse().slice(0, EVENT_LOG_LIMIT) : [],
   });
   const replayFrames = replaySession?.frames ?? EMPTY_REPLAY_FRAMES;
   const replayMode = replaySession !== null && replaySession !== undefined;

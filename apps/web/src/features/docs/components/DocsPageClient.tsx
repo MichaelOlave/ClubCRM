@@ -199,9 +199,15 @@ function parseInline(text: string) {
       );
     } else if (m.startsWith("[") && m.includes("](")) {
       const linkText = m.slice(1, m.indexOf("]("));
-      const url = m.slice(m.indexOf("](") + 2, -1);
+      const url = resolveDocsHref(m.slice(m.indexOf("](") + 2, -1));
       parts.push(
-        <a key={match.index} href={url} className="text-brand hover:underline font-medium">
+        <a
+          key={match.index}
+          href={url}
+          className="text-brand hover:underline font-medium"
+          target={url.startsWith("http") ? "_blank" : undefined}
+          rel={url.startsWith("http") ? "noreferrer" : undefined}
+        >
           {linkText}
         </a>
       );
@@ -215,4 +221,27 @@ function parseInline(text: string) {
   }
 
   return parts.length > 0 ? parts : text;
+}
+
+function resolveDocsHref(url: string) {
+  if (
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("mailto:") ||
+    url.startsWith("#") ||
+    url.startsWith("/")
+  ) {
+    return url;
+  }
+
+  if (url === "../README.md" || url === "../../README.md") {
+    return "/docs/ROOT-README.md";
+  }
+
+  const normalized = url
+    .replace(/^\.\/+/, "")
+    .replace(/^(\.\.\/)+/, "")
+    .replace(/^docs\//, "");
+
+  return `/docs/${normalized}`;
 }

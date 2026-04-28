@@ -11,8 +11,10 @@ Use this directory as the main entry point for project documentation.
 
 ## App-Specific Docs
 
-- [Web App README](../apps/web/README.md) for the current Next.js route surface and frontend-specific runtime assumptions
-- [API README](../apps/api/README.md) for the current FastAPI module layout and live route groups
+- `apps/web/README.md` for the current Next.js route surface and frontend-specific runtime assumptions
+- `apps/api/README.md` for the current FastAPI module layout and live route groups
+- `apps/monitor-web/README.md` for the standalone monitoring dashboard surface
+- `apps/monitor-api/README.md` for the standalone monitoring API contract
 
 ## Implementation Guides
 
@@ -43,10 +45,12 @@ the app READMEs, and the current-state analysis for the implemented surface.
 - [SSH Docker Deployment](deployment/ssh-docker-deploy.md) for the current VM deployment path
 - [Companion Monitoring Stack Guide](deployment/companion-monitoring-stack.md) for the companion monitoring app architecture and data flow
 - [Monitoring Stack Deployment](deployment/monitoring-stack.md) for the companion networking-demo visualizer deployment steps
+- [Production Monitor Server](deployment/prod-monitor-server.md) for the Hostinger VPS running the live monitoring stack and production Docker app
+- [Cluster Snapshot](deployment/cluster-snapshot.md) for a verified point-in-time record of all running pods, volumes, services, and node state (captured 2026-04-28)
 - [Current Longhorn Implementation Status](deployment/current-longhorn-implementation.md) for the repo-backed and live-cluster view of Longhorn, including current breakage and drift
 - [k3s + Kubero + Longhorn Runbook](deployment/k3s-kubero-longhorn.md) for the networking-final cluster rollout
 - [Final Project Development Writeup](analysis/final-project-development-writeup.md) for the project-wide end-state summary and lessons learned
-- [Current Project Structure Analysis](analysis/current-project-structure-analysis.md) for a deeper review of the repo layout and tradeoffs
+- [Current Project Structure Analysis](analysis/current-project-structure-analysis.md) for a point-in-time April 2026 review of the repo layout and tradeoffs
 
 ## Assets
 

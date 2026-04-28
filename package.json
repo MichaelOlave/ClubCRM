@@ -5,6 +5,7 @@
   "scripts": {
     "bootstrap": "node ./scripts/run-python.js ./scripts/bootstrap.py",
     "bootstrap:monitoring": "node ./scripts/run-python.js ./scripts/bootstrap_monitoring.py",
+    "sync:docs": "node ./scripts/sync_docs_to_web.js",
     "verify": "pnpm format:check && pnpm lint && pnpm build",
     "verify:monitoring": "pnpm lint:monitor-web && pnpm lint:monitor-api && pnpm check:monitor-api && pnpm test:monitor-api && pnpm test:monitor-web && pnpm build:monitor-web",
     "dev": "node ./scripts/dev.js",

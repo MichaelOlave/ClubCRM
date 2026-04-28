@@ -6,7 +6,8 @@ This document reviews ClubCRM as it exists in the repository today. It focuses o
 shape of the codebase, tooling, and runtime behavior, then explains which structural decisions are
 already paying off and which ones are still ahead of the product.
 
-This snapshot reflects the repository state in April 2026. It is based on the live tree plus the
+This snapshot reflects the repository state in April 2026. It is a point-in-time analysis, not the
+ongoing source of truth. It is based on the live tree plus the
 key workflow and architecture sources in `README.md`, `docs/contributing.md`,
 `docs/architecture.md`, `docs/README.md`, `apps/web/README.md`, `apps/api/README.md`,
 `.github/workflows/`, `infra/`, `scripts/`, `apps/web/src`, and `apps/api/src`.
@@ -70,7 +71,7 @@ deployment path, CI pipeline, and internal documentation map.
 
 Today the system behaves like this:
 
-- `/` checks the backend auth session and redirects users to `/dashboard`, `/not-provisioned`, or `/login`
+- `/` is a public landing page that checks backend auth state to tailor its primary actions
 - the web app has admin routes for dashboard, profile, clubs, members, club-level join-request review, `/system/audit`, and `/system/health`
 - the web app has public routes for `/login`, `/not-provisioned`, `/docs`, `/testing`, `/join/[clubId]`, and `/demo/failover`
 - most frontend feature data still comes from server-side modules under

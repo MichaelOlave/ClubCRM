@@ -1,5 +1,8 @@
 import { ClusterDashboard } from "@/features/cluster/components/ClusterDashboard";
-import { getInitialClusterSnapshot } from "@/features/cluster/server/getInitialSnapshot";
+import {
+  getInitialClusterSnapshot,
+  getInitialEventLog,
+} from "@/features/cluster/server/getInitialSnapshot";
 import { getClusterReplaySession } from "@/features/cluster/server/getReplaySession";
 import { getMonitorWebSocketUrl, isMonitorReplayModeEnabled, getClubCrmDemoUrl } from "@/lib/env";
 
@@ -7,7 +10,10 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const replaySession = isMonitorReplayModeEnabled() ? await getClusterReplaySession() : null;
-  const initialSnapshot = replaySession?.initial_snapshot ?? (await getInitialClusterSnapshot());
+  const [initialSnapshot, initialEventLog] = await Promise.all([
+    replaySession?.initial_snapshot ?? getInitialClusterSnapshot(),
+    replaySession ? Promise.resolve([]) : getInitialEventLog(),
+  ]);
   const streamUrl = replaySession ? "" : getMonitorWebSocketUrl();
   const demoUrl = getClubCrmDemoUrl();
 
@@ -64,6 +70,7 @@ export default async function HomePage() {
       </header>
       <ClusterDashboard
         initialSnapshot={initialSnapshot}
+        initialEventLog={initialEventLog}
         replaySession={replaySession}
         streamUrl={streamUrl}
       />

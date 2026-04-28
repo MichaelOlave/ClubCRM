@@ -30,7 +30,7 @@ spec:
           readinessProbe:
             exec:
               command:
-                - mongosh
+                - mongo
                 - --quiet
                 - --eval
                 - "db.adminCommand('ping').ok"
@@ -40,7 +40,7 @@ spec:
           livenessProbe:
             exec:
               command:
-                - mongosh
+                - mongo
                 - --quiet
                 - --eval
                 - "db.adminCommand('ping').ok"

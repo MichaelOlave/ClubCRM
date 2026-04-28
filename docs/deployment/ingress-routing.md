@@ -8,7 +8,27 @@ running in the `clubcrm` namespace.
 
 ## Traffic Flow
 
-Browser --> Traefik (port 80) --> Kubernetes Service --> Pod
+### Public internet (demo.clubcrm.org)
+
+```
+Browser --> Cloudflare Edge --> cloudflared pod (QUIC tunnel)
+        --> nginx sidecar (port 3001) --> Traefik ClusterIP (port 80)
+        --> Kubernetes Service --> Pod
+```
+
+Two `cloudflared` replicas run on separate nodes with `requiredDuringSchedulingIgnoredDuringExecution`
+podAntiAffinity. A `preStop: sleep 5` lifecycle hook ensures QUIC connections close cleanly before
+the pod is evicted — without it, Cloudflare takes up to 30 minutes to detect the missing connector
+and route to the surviving replica, causing a 502 for the entire drain window.
+
+### Local / LAN (clubcrm.local)
+
+```
+Browser --> Traefik LoadBalancer (port 80, all three nodes) --> Kubernetes Service --> Pod
+```
+
+Traefik runs as **2 replicas** on separate nodes via `HelmChartConfig`. A `PodDisruptionBudget
+(minAvailable: 1)` prevents both replicas from being evicted simultaneously.
 
 ### Web
 
@@ -91,8 +111,15 @@ Then visit `http://clubcrm.local` in a browser. You should be redirected to
 
 If routing is not working, check in this order:
 
-1. Traefik is running: `kubectl get pods -n kube-system | grep traefik`
-2. Ingress rules exist: `kubectl get ingress -n clubcrm`
-3. Services exist: `kubectl get services -n clubcrm`
-4. Pods are running: `kubectl get pods -n clubcrm`
-5. Test with curl using the `Host` header as shown above
+1. Traefik is running (expect 2 pods on separate nodes):
+   `kubectl get pods -n kube-system -l app.kubernetes.io/name=traefik -o wide`
+2. cloudflared is running (expect 2 pods on separate nodes):
+   `kubectl get pods -n clubcrm -l app=cloudflared -o wide`
+3. Ingress rules exist: `kubectl get ingress -n clubcrm`
+4. Services exist: `kubectl get services -n clubcrm`
+5. Pods are running: `kubectl get pods -n clubcrm`
+6. Test with curl using the `Host` header as shown above
+
+**502 on demo.clubcrm.org after a drain:** See the Cloudflare QUIC routing bug note in
+[k3s-kubero-longhorn.md](k3s-kubero-longhorn.md#troubleshooting-notes). Quick fix:
+`kubectl rollout restart deployment/cloudflared-tunnel -n clubcrm`

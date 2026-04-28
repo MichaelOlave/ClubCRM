@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import ReactFlow, {
   Background,
   Controls,
   Handle,
   MarkerType,
   Position,
+  useReactFlow,
   type Edge,
   type Node,
   type NodeProps,
@@ -137,6 +138,14 @@ function NodeBox({ data }: NodeProps<NodeData>) {
   );
 }
 
+function AutoFitView({ nodeCount }: { nodeCount: number }) {
+  const { fitView } = useReactFlow();
+  useEffect(() => {
+    fitView({ padding: 0.2, duration: 400 });
+  }, [fitView, nodeCount]);
+  return null;
+}
+
 const nodeTypes = { clusterNode: NodeBox };
 
 interface ClusterGraphProps {
@@ -167,6 +176,7 @@ export function ClusterGraph({ state, recentMoves = [] }: ClusterGraphProps) {
           elementsSelectable={false}
           zoomOnDoubleClick={false}
         >
+          <AutoFitView nodeCount={flowNodes.length} />
           <Background gap={32} size={1} color="rgba(255,255,255,0.03)" />
           <Controls
             showInteractive={false}

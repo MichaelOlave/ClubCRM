@@ -13,12 +13,26 @@ It assumes:
 - `Kubero` deploys only `clubcrm-web` and `clubcrm-api`
 - PostgreSQL and Redis stay repo-managed Kubernetes resources with Longhorn-backed PVCs
 
-Current live mapping as of April 18, 2026:
+Current live mapping as of April 28, 2026:
 
-- `Server1` -> `100.122.118.85` -> `k3s` control plane
-- `Server2` -> `100.67.65.5` -> `k3s` control plane
-- `Server3` -> `100.99.187.90` -> `k3s` control plane
-- `DemoControlPlaneServer` -> `192.168.139.213` -> monitoring host and dashboard VM
+- `Server1` -> `100.122.118.85` (LAN: 10.10.10.102) -> `k3s` control plane, uptime 17 days
+- `Server2` -> `100.67.65.5` (LAN: 10.10.10.103) -> `k3s` control plane, uptime 6 days
+- `Server3` -> `100.99.187.90` (LAN: 10.10.10.104) -> `k3s` control plane, uptime 4 days
+- `DemoControlPlaneServer` -> `192.168.139.213` -> OrbStack dev VM (local fallback, not prod)
+- `srv881749` -> `31.97.142.155` (Tailscale: 100.99.164.88) -> production monitor server (Hostinger VPS, Debian 12)
+
+**Software versions (verified live):**
+
+| Component  | Version                                    |
+| ---------- | ------------------------------------------ |
+| K3s        | v1.34.6+k3s1                               |
+| containerd | 2.2.2-bd1.34                               |
+| Traefik    | 3.6.10 (rancher mirror)                    |
+| Longhorn   | v1.11.1                                    |
+| CoreDNS    | 1.14.2                                     |
+| Kubero     | latest                                     |
+| OS         | Ubuntu 24.04.4 LTS                         |
+| Kernel     | 6.17.0-20 (server1), 6.17.0-22 (server2/3) |
 
 ## Topology And Ownership
 
@@ -184,15 +198,20 @@ kubectl -n longhorn-system get volumes.longhorn.io
 
 Continue only after the smoke pod reaches `Running` and the smoke PVC is `Bound`.
 
-Current validation status as of April 12, 2026:
+Current validation status as of April 28, 2026:
 
-- the repo-managed smoke PVC provisions successfully on the real `k3s` cluster
-- the smoke pod schedules onto the intended healthy node path when `server2` is cordoned
-- the current classroom cluster still fails at Longhorn volume attach, not at Kubernetes PVC
-  provisioning
-- the observed blocker is host-side iSCSI session creation on the provided VM environment
-- PostgreSQL and Redis should stay on the fallback path until the smoke workload reaches `Running`
-  and survives recreation cleanly
+- **All Longhorn volumes on the live cluster are healthy and attached** — this issue is resolved on the real hardware
+- `postgres-data` (10Gi), `redis-data` (2Gi), `mongodb-data` (10Gi), `kafka-data` (10Gi) are all `Bound` and `healthy`
+- `kubero-data` (1Gi) is `Bound` and `healthy` using the default `longhorn` storage class (3 replicas)
+- All three Longhorn nodes show `Ready=True` and `AllowScheduling=true`
+- Replica placement:
+  - postgres-data: server1 + server2
+  - redis-data: server1 + server2
+  - mongodb-data: server1 + server3
+  - kafka-data: server2 + server3
+  - kubero-data: server1 + server2 + server3
+
+Note: The global Longhorn `default-replica-count` is set to `{"v1":"3","v2":"3"}`. The `clubcrm-longhorn` storage class overrides this to 2 replicas at the storage class level.
 
 On the OrbStack classroom machines used for this repo, Longhorn installs cleanly but PVC-backed
 workloads can still fail to attach because the node `iscsid` daemon crashes under load. If that
@@ -228,7 +247,8 @@ Current live deployment note:
 - `kubero.local` routes to the Kubero service on port `2000`
 - Kubero needed a writable PVC; in the current live cluster that PVC is backed by Longhorn
 - the live ClubCRM app pair is currently served by `clubcrm-api` and `clubcrm-web` Deployments in
-  namespace `clubcrm`, with replicas spread across `Server2` and `Server3`
+  namespace `clubcrm`, with replicas spread across all three nodes using `requiredDuringSchedulingIgnoredDuringExecution`
+  podAntiAffinity — no `nodeAffinity` restrictions exist; all nodes are equal
 
 Current Kubero access:
 
@@ -253,13 +273,25 @@ Use those tags in Kubero when creating the `clubcrm-web` and `clubcrm-api` appli
 Set the `clubcrm-web` replica count to `2` for the networking demo so the live diagnostics iframe
 can show traffic moving from the active web pod to the replacement pod during a recycle.
 
-For the demo to fail over cleanly between servers instead of bouncing between pod instances on the
-same node, the `clubcrm-web` replicas must be spread across distinct Kubernetes nodes. The
-repo-managed OrbStack overlay now enforces that with pod anti-affinity and a hostname-level
-topology spread rule for `clubcrm-web`.
+For the demo to fail over cleanly between servers, all stateless replicas must be spread across
+distinct nodes. The repo-managed OrbStack overlay enforces that with
+`requiredDuringSchedulingIgnoredDuringExecution` podAntiAffinity on every Deployment — including
+`cloudflared-tunnel`, `clubcrm-api`, `clubcrm-web`, and Traefik. No `nodeAffinity` is set on any
+workload; all three control-plane nodes are treated as equal.
+
+The `cloudflared-tunnel` deployment also sets a `preStop: sleep 5` lifecycle hook. Without it,
+Cloudflare does not detect that the connector is gone after a pod eviction and can take up to 30
+minutes to route to the surviving replica, producing a 502 for the entire demo window.
 
 The `clubcrm-web` ingress should also keep sticky-session cookies enabled so the same browser
 session stays pinned to one healthy web pod until that pod is recycled or becomes unavailable.
+
+**Important — never apply the overlay deployment files directly with `kubectl apply`:**
+`infra/k8s/overlays/orbstack-demo/clubcrm-api-deployment.yaml` and `clubcrm-web-deployment.yaml`
+use placeholder image tags (`clubcrm-api:deploy`, `clubcrm-web:deploy`) that CI/CD rewrites at
+deploy time. Applying these files manually triggers a rolling update to those placeholder tags,
+causing `ImagePullBackOff` on all pods. Always use `kubectl patch` with an explicit SHA-tagged
+image, or let CI/CD apply them.
 
 If you are using the OrbStack overlay instead of Kubero-managed app workloads, build the same tags
 locally and import them onto the schedulable `k3s` nodes:
@@ -333,7 +365,7 @@ Important values:
 - api `AUTH_LOGOUT_REDIRECT_URL=http://clubcrm.local/login`
 - api `AUTH_COOKIE_SECURE=false`
 
-Do not wire MongoDB or Kafka into the live final unless you intentionally expand the scope.
+As of April 28, 2026, MongoDB and Kafka **are** deployed on the live cluster (both with Longhorn-backed PVCs) and wired into the app. `mongodb-data` (10Gi) and `kafka-data` (10Gi) are both healthy. If recreating the cluster from scratch, apply `infra/k8s/mongodb-statefulset.yaml`, `infra/k8s/mongodb-pvc.yaml`, `infra/k8s/kafka-statefulset.yaml`, and `infra/k8s/kafka-pvc.yaml` as well.
 
 Primary-path expectation:
 
@@ -356,11 +388,20 @@ On the monitoring host:
 - optionally set `MONITOR_CLUSTER_CONTEXT` when the kubeconfig contains multiple contexts
 - use `MONITOR_CLUSTER_SNAPSHOT_FILE` only as a fallback for rehearsal or offline demos
 
-For the current live environment:
+For the current live environment there are two monitoring hosts:
 
-- the monitoring host is `DemoControlPlaneServer` at `192.168.139.213`
-- the visualizer UI is served through `http://192.168.139.213:3001`
-- `monitor-api` is served on `http://192.168.139.213:8010`
+**Production monitoring server** (`srv881749.hstgr.cloud`):
+
+- Public IP: `31.97.142.155` | Tailscale IP: `100.99.164.88`
+- The visualizer nginx proxy is at `http://31.97.142.155:3002` (same-origin, proxies both UI and API)
+- `monitor-api` is exposed directly at `http://31.97.142.155:8010`
+- `monitor-app` Next.js runs internally on port 3001 (not exposed directly)
+- See [prod-monitor-server.md](prod-monitor-server.md) for full details
+
+**Dev/OrbStack monitoring host** (`DemoControlPlaneServer`):
+
+- OrbStack VM at `192.168.139.213` — local fallback for classroom demos
+- Uses port 3001 for the dashboard and 8011 for the monitor-api
 
 The monitoring dashboard will then show:
 
@@ -404,6 +445,45 @@ Demo goals:
 - a Postgres pod restart does not lose data
 - the companion visualizer shows node and pod placement throughout the demo
 
+## Node Drain Procedure (Demo Failover)
+
+All three nodes are equal control-plane members. Any single node can be drained without an outage.
+
+### Drain a node
+
+```bash
+# Cordon and evict all pods (replace serverN with server1, server2, or server3)
+kubectl drain serverN --ignore-daemonsets --delete-emptydir-data --grace-period=30
+```
+
+**What to expect during the drain:**
+
+- Stateless pods (`cloudflared`, `clubcrm-api`, `clubcrm-web`, `traefik`, `coredns`) reschedule
+  within seconds. The `preStop` hook on `cloudflared` adds a 5-second delay before SIGTERM so
+  QUIC connections close cleanly — HTTP 200 is maintained throughout.
+- StatefulSet pods (`postgres`, `mongodb`, `redis`, `kafka`) pause for ~45 seconds while Longhorn
+  detaches the PVC from the drained node and reattaches it to the target node. The site may return
+  503/502 on API calls that hit the database during this window. Pure front-end pages remain up.
+- `svclb-traefik` DaemonSet pods are evicted by `--ignore-daemonsets`; traffic is automatically
+  served by the surviving nodes through the LoadBalancer VIP.
+
+### Verify the drain
+
+```bash
+kubectl get pods -n clubcrm -o wide      # all pods rescheduled, 1/1 or 2/2 Running
+kubectl get pods -n clubcrm-data -o wide # StatefulSets running on remaining nodes
+curl https://demo.clubcrm.org/           # HTTP 200
+```
+
+### Restore the node
+
+```bash
+kubectl uncordon serverN
+```
+
+Pods will gradually rebalance across all three nodes as new rollouts happen. They do not
+automatically move back; existing running pods stay where they are until recycled.
+
 ## Troubleshooting Notes
 
 - `clubcrm.local` resolves but does not serve the app:
@@ -433,3 +513,29 @@ Demo goals:
 - The monitoring dashboard reaches the old cluster instead of the replacement servers:
   Update `/etc/hosts` on the presenter machine and `DemoControlPlaneServer` so `clubcrm.local` and
   `kubero.local` point to `100.122.118.85` instead of the retired `192.168.139.x` nodes.
+
+- 502 immediately after a node drain even though the surviving `cloudflared` pod is Running:
+  This is the Cloudflare QUIC routing bug. It means the drained pod did not close its QUIC
+  connections cleanly before being evicted (e.g., `preStop` was removed or the pod was force-deleted).
+  Fix: `kubectl rollout restart deployment/cloudflared-tunnel -n clubcrm`. Site recovers within
+  60 seconds. Verify `preStop: sleep 5` is still present in the deployment spec.
+
+- `clubcrm-api` pods enter `CrashLoopBackOff` with "failed to resolve host" or connection errors:
+  Check that the `containers[0]` spec includes `envFrom` references to both `clubcrm-api-env`
+  (ConfigMap) and `clubcrm-api-secrets` (Secret). A `--type=merge` kubectl patch that only
+  specifies `name` and `image` in the containers array will silently strip all other container
+  fields including `envFrom`, `ports`, and probes. Always use `--type=strategic` when patching
+  the containers spec, or include every field explicitly.
+
+- A pod is stuck `Pending` with "didn't match pod anti-affinity rules":
+  With `required` podAntiAffinity on a 2-replica deployment, both pods cannot land on the same
+  node. If a node has a matching pod from a previous replica set that has not yet terminated,
+  the new pod will pend until the old one is gone. Wait for the old replica set to scale to 0,
+  or force-delete the old pod if it is stuck in `Terminating`.
+
+- A pod is stuck `Pending` with "didn't match Pod's node affinity/selector":
+  A `nodeAffinity` rule is still set on the deployment. Remove it:
+  ```bash
+  kubectl patch deployment <name> -n clubcrm --type=json \
+    -p='[{"op":"remove","path":"/spec/template/spec/affinity/nodeAffinity"}]'
+  ```

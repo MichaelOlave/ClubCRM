@@ -176,7 +176,7 @@ pnpm verify
 ### Python Standards
 
 - Let `Ruff` own both formatting and linting.
-- Follow the current Ruff settings in [`pyproject.toml`](../pyproject.toml).
+- Follow the current Ruff settings in `pyproject.toml`.
 - Use `snake_case` for functions, variables, and modules.
 - Use `PascalCase` for classes.
 - Prefer explicit, readable imports and straightforward control flow.

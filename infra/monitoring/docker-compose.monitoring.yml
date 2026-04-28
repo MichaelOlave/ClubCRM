@@ -28,7 +28,7 @@ services:
       - "${MONITOR_API_PORT:-8010}:8010"
     restart: unless-stopped
 
-  monitor-web:
+  monitor-app:
     image: ${MONITOR_WEB_IMAGE:-clubcrm-monitor-web:deploy}
     build:
       context: ../..
@@ -51,11 +51,11 @@ services:
       - monitor-api
     restart: unless-stopped
 
-  monitor-proxy:
+  monitor-web:
     image: nginx:1.27-alpine
     depends_on:
       - monitor-api
-      - monitor-web
+      - monitor-app
     volumes:
       - ./nginx.monitor-proxy.conf:/etc/nginx/nginx.conf:ro
     ports:
