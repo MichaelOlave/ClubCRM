@@ -4,7 +4,7 @@ This is the ClubCRM web client, built with [Next.js](https://nextjs.org).
 
 The current frontend is a UI-first MVP with:
 
-- a root redirect that sends authorized users to `/dashboard`, authenticated-but-unprovisioned users to `/not-provisioned`, and everyone else to `/login`
+- a public landing page at `/` that checks backend auth state to tailor its primary actions
 - admin routes for the dashboard, profile, clubs, members, audit log, and diagnostics, with a role-aware shell for org admins versus club managers
 - public routes for login, not-provisioned access messaging, docs/testing pages, and club join-request submission, with club-level join-request review in the admin shell
 - same-origin auth handoff routes at `/api/auth/login` and `/auth/callback`
@@ -32,9 +32,10 @@ If you need to restart the web server from the workspace terminal, run:
 pnpm dev:web
 ```
 
-The homepage currently checks the backend auth session, then redirects authorized users to `/dashboard`, authenticated-but-unprovisioned users to `/not-provisioned`, and everyone else to `/login`, so the most useful entry points to edit are usually:
+The homepage currently checks the backend auth session and uses that state to tailor its primary
+calls to action, so the most useful entry points to edit are usually:
 
-- [`src/app/page.tsx`](src/app/page.tsx) for the root redirect
+- [`src/app/page.tsx`](src/app/page.tsx) for the landing-page entrypoint
 - [`src/app/(app)/dashboard/page.tsx`](<src/app/(app)/dashboard/page.tsx>) for the admin landing page
 - [`src/app/(app)/profile/page.tsx`](<src/app/(app)/profile/page.tsx>) for the signed-in auth profile and session diagnostics surface
 - [`src/app/(app)/clubs/[clubId]/page.tsx`](<src/app/(app)/clubs/[clubId]/page.tsx>) for the shared club detail surface that shows memberships, events, and announcements
@@ -60,8 +61,8 @@ The homepage currently checks the backend auth session, then redirects authorize
 - `API_BASE_URL` is the web server's preferred internal API target.
 - `WEB_API_PUBLIC_BASE_URL` should stay pointed at the browser-reachable API origin for direct API links and as a server-side fallback when the web app cannot reach the Docker hostname directly.
 - The web app proxies both auth start (`/api/auth/login`) and callback (`/auth/callback`) through the current browser origin so backend auth cookies stay aligned even when the devcontainer remaps ports or the browser host differs from `localhost`.
-- The admin shell now redirects unauthenticated requests to `/login` and authenticated-but-unprovisioned requests to `/not-provisioned` after checking the backend-owned session.
-- The root route uses the same auth-state split, so `/` is no longer a simple redirect to `/dashboard`.
+- The admin shell redirects unauthenticated requests to `/login` and authenticated-but-unprovisioned requests to `/not-provisioned` after checking the backend-owned session.
+- The root route stays public and uses backend session state only to choose the landing-page CTAs.
 - If you need to restart or validate the web app manually, use the root scripts from the workspace terminal.
 
 ## shadcn/ui

@@ -27,6 +27,11 @@ async def get_snapshot(state: ClusterStateDep) -> dict:
     return await state.snapshot()
 
 
+@router.get("/api/events", dependencies=[Depends(require_viewer_access)])
+async def get_recent_events(state: ClusterStateDep, limit: int = 100) -> dict:
+    return {"events": state.recent_events(limit)}
+
+
 @router.get("/api/replay", dependencies=[Depends(require_viewer_access)])
 async def get_replay(recording_store: ClusterRecordingStoreDep) -> dict:
     payload = await recording_store.load_replay()

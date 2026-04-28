@@ -13,6 +13,13 @@ spec:
       labels:
         app.kubernetes.io/name: clubcrm-api
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: clubcrm-api
+              topologyKey: kubernetes.io/hostname
       containers:
         - name: api
           image: clubcrm-api:deploy

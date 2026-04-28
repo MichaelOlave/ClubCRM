@@ -6,7 +6,7 @@ metadata:
   labels:
     app: cloudflared
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: cloudflared
@@ -15,15 +15,40 @@ spec:
       labels:
         app: cloudflared
     spec:
+      # Spread the two replicas across different nodes — no node preference.
+      # preStop ensures QUIC connections close cleanly so Cloudflare immediately
+      # fails over to the surviving replica when a node is drained.
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: cloudflared
+              topologyKey: kubernetes.io/hostname
+      terminationGracePeriodSeconds: 30
       containers:
         - name: cloudflared
           image: cloudflare/cloudflared:latest
           args:
             - tunnel
             - --no-autoupdate
+            - --config
+            - /etc/cloudflared/config.yaml
             - run
-            - --token
-            - eyJhIjoiYWQ2NjY4NGQxMDNkODFiNWNjMDcxNmM2ZTA4OGQwZWIiLCJ0IjoiODBjZDJlZjMtMTc1OC00MWE5LTkwOWYtZGVkZjlmOWQ5OTBjIiwicyI6Ik0yWXpNak5oWlRZdE1qRmlPQzAwTjJRM0xUZzROREF0TkdGa016QXhZemxqTmpabSJ9
+          lifecycle:
+            preStop:
+              # Give cloudflared 5s to close QUIC connections cleanly before k8s sends SIGTERM.
+              # Without this, Cloudflare doesn't detect the connector is gone and keeps
+              # returning 502 until the new connector is seen — which can take minutes.
+              exec:
+                command: ["/bin/sh", "-c", "sleep 5"]
+          volumeMounts:
+            - name: cloudflared-config
+              mountPath: /etc/cloudflared/config.yaml
+              subPath: config.yaml
+            - name: cloudflared-credentials
+              mountPath: /etc/cloudflared/credentials.json
+              subPath: credentials.json
           resources:
             limits:
               cpu: "500m"
@@ -44,6 +69,12 @@ spec:
         - name: proxy-config
           configMap:
             name: cloudflared-proxy-config
+        - name: cloudflared-config
+          configMap:
+            name: cloudflared-config
+        - name: cloudflared-credentials
+          secret:
+            secretName: cloudflared-credentials
       restartPolicy: Always
 ---
 apiVersion: v1
@@ -55,6 +86,7 @@ data:
   default.conf: |
     server {
         listen 3001;
+        listen [::]:3001;
         location / {
             proxy_pass http://traefik.kube-system.svc.cluster.local:80;
             proxy_set_header Host clubcrm.local;

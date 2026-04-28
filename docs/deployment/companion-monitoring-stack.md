@@ -37,9 +37,9 @@ See [Monitoring Stack Deployment](monitoring-stack.md) for host-level deployment
 browser
    |
    v
-monitor-proxy
+monitor-web (nginx)
    |
-   +--> monitor-web
+   +--> monitor-app (Next.js)
    |
    +--> monitor-api
    | \
@@ -66,6 +66,8 @@ Its live API surface is:
 
 - `GET /health`
 - `GET /api/snapshot`
+- `GET /api/events`
+- `GET /api/replay`
 - `WS /ws/stream`
 
 The live snapshot currently includes root-level fields:
@@ -76,10 +78,12 @@ The live snapshot currently includes root-level fields:
 - `pods`
 - `volumes`
 - `replicas`
+- `probes`
 
 `nodes` and `pods` are the Phase 1 visualizer contract. `volumes` and `replicas` are the initial
 Longhorn visibility layer; they track attachment node, workload correlation, robustness, health,
-replica placement, and replica health.
+replica placement, and replica health. `probes` captures monitored ClubCRM service availability,
+latency, and recent failures.
 
 ## `monitor-web` Responsibilities
 
@@ -88,13 +92,14 @@ replica placement, and replica health.
 It is responsible for:
 
 - fetching the first snapshot on the server
+- preloading the most recent in-memory event buffer before the WebSocket connects
 - connecting browsers to `WS /ws/stream`
 - rendering the cluster graph, pod placement, Longhorn storage panel, and recent event feed
 - showing whether the stream is live, reconnecting, or offline
 
 ## Environment Reference
 
-Most defaults live in [`.env.example`](../../.env.example).
+Most defaults live in `.env.example`.
 
 | Group            | Key variables                                                                                                                                              | Purpose                                                             |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
@@ -109,11 +114,12 @@ Most defaults live in [`.env.example`](../../.env.example).
 | Runtime tuning   | `MONITOR_CLUSTER_HEARTBEAT_SECONDS`, `MONITOR_CLUSTER_WATCH_TIMEOUT_SECONDS`, `MONITOR_DISABLE_BACKGROUND_TASKS`                                           | tune the watch, heartbeat, and background-loop behavior             |
 | Frontend         | `MONITOR_WEB_PORT`, `NEXT_PUBLIC_MONITOR_API_BASE_URL`, `NEXT_PUBLIC_MONITOR_WS_URL`                                                                       | configure how browsers reach the API and dashboard                  |
 
-In the default Compose deployment, `monitor-web` is not published directly. A lightweight reverse
+In the default Compose deployment, `monitor-app` is not published directly. A lightweight reverse
 proxy publishes `MONITOR_WEB_PORT` and forwards:
 
-- `/` to `monitor-web`
+- `/` to `monitor-app`
 - `/monitor-api/*` to `monitor-api`
+- `/health` to `monitor-api`
 - `/ws/stream` and `/monitor-api/ws/stream` to `monitor-api`
 
 That keeps the dashboard on a single browser origin and prevents HTTPS pages from trying to open a

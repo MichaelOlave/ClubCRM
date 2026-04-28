@@ -11,7 +11,7 @@ ClubCRM is a devcontainer-first monorepo for a club management platform with:
 
 Current implementation status:
 
-- `apps/web` now provides a UI-first MVP: `/` sends authorized users to `/dashboard`, authenticated-but-unprovisioned users to `/not-provisioned`, and everyone else to `/login`; admin pages live under `src/app/(app)`, protected system pages live under `src/app/system`, public entry points live under `src/app/(public)`, and auth proxy handlers live at `/api/auth/login` and `/auth/callback`
+- `apps/web` now provides a UI-first MVP: `/` is a public landing page that checks the backend auth session to tailor its primary actions, while admin pages live under `src/app/(app)`, protected system pages live under `src/app/system`, public entry points live under `src/app/(public)`, and auth proxy handlers live at `/api/auth/login` and `/auth/callback`
 - the frontend currently includes dashboard, profile, audit, club and member directory/detail pages, club and member creation and update flows, roster assignment plus event and announcement management from club detail, public join-request submission plus club-level join-request review, a `/login` route that hands off to backend-owned auth, and a dedicated `/system/health` diagnostics route
 - `apps/api` now includes bootstrap, config, infrastructure, module, and test layers, with live routes for system health, backend-owned auth, audit logs, dashboard summaries, clubs, members, memberships, announcements, events, and join-request flows
 - the admin route group now checks the backend session before rendering and serves a role-aware shell for organization admins and club managers
@@ -161,6 +161,8 @@ Before opening a pull request, run the narrowest relevant checks from the reposi
 - `docs/deployment/companion-monitoring-stack.md` for the companion monitoring stack architecture and data flow
 - `docs/deployment/current-longhorn-implementation.md` for the current Longhorn implementation, live-cluster status, and broken pieces
 - `docs/deployment/monitoring-stack.md` for the separate networking-demo monitoring stack
+- `docs/deployment/prod-monitor-server.md` for the current Hostinger monitoring and production Docker host
+- `docs/deployment/cluster-snapshot.md` for a point-in-time live cluster inventory captured on 2026-04-28
 - `docs/deployment/k3s-kubero-longhorn.md` for the networking-final cluster rollout
-- `docs/analysis/current-project-structure-analysis.md` for a detailed review of the repo's current shape
+- `docs/analysis/current-project-structure-analysis.md` for a point-in-time structural analysis snapshot from April 2026
 - `docs/plans/` and `docs/proposals/` for historical course-planning context

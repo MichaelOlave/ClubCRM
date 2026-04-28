@@ -345,6 +345,7 @@ class ClusterRuntime:
                 return
 
     async def _publish_frame(self, frame: dict) -> None:
+        self._state.record_event(frame)
         await self._recording_store.record_frame(frame)
         await self._event_bus.publish(frame)
 

@@ -4,7 +4,7 @@
 // This replaces sync_docs_to_web.py so that no Python installation is required
 // (e.g. inside the Node-based Docker builder image).
 
-const { cpSync, mkdirSync, copyFileSync, existsSync } = require("fs");
+const { cpSync, mkdirSync, copyFileSync, existsSync, rmSync } = require("fs");
 const { resolve } = require("path");
 
 const rootDir = resolve(__dirname, "..");
@@ -12,6 +12,7 @@ const docsDir = resolve(rootDir, "docs");
 const readmeFile = resolve(rootDir, "README.md");
 const targetDir = resolve(rootDir, "apps", "web", "public", "docs");
 
+rmSync(targetDir, { recursive: true, force: true });
 mkdirSync(targetDir, { recursive: true });
 
 if (existsSync(docsDir)) {

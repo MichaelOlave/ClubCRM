@@ -61,3 +61,29 @@
 - Status: accepted
 - Decision: standard development happens in the repository devcontainer, which uses `infra/docker-compose.yml`, `.devcontainer/docker-compose.devcontainer.yml`, and a generated `.devcontainer/docker-compose.ports.yml` to bring up the workspace, app services, and supporting infrastructure.
 - Rationale: the team needs one repeatable local setup for frontend, backend, and all supporting data services, and the devcontainer makes that workflow the default for every contributor.
+
+### ADR-011: All three k3s nodes are treated as equal — no nodeAffinity restrictions
+
+- Status: accepted
+- Decision: no workload in the cluster sets `nodeAffinity` or `nodeSelector` to prefer or require specific nodes. Spreading is achieved exclusively through `podAntiAffinity` rules.
+- Rationale: all three control-plane nodes (server1, server2, server3) have identical hardware and roles. Pinning workloads to a subset of nodes creates artificial single points of failure — draining the pinned node takes down everything that was restricted to it. Using only `podAntiAffinity` with `topologyKey: kubernetes.io/hostname` achieves the same spread guarantee while letting the scheduler use any available node during a drain.
+- Implementation: `requiredDuringSchedulingIgnoredDuringExecution` podAntiAffinity on `cloudflared-tunnel`, `clubcrm-api`, `clubcrm-web`, and Traefik. The `required` form guarantees that two replicas of the same workload never land on the same node, which is stronger than `preferred` for demo resilience.
+
+### ADR-012: cloudflared preStop lifecycle hook for clean QUIC connection teardown
+
+- Status: accepted
+- Decision: the `cloudflared-tunnel` Deployment sets a `preStop` lifecycle hook (`exec: sleep 5`) on the `cloudflared` container.
+- Rationale: Cloudflare's edge uses QUIC (UDP-based) to maintain persistent connections to `cloudflared` connectors. When a pod is evicted without cleanly closing those connections, Cloudflare's edge does not immediately detect the connector is gone and continues routing new requests to it — resulting in 502 errors that persist for up to 30 minutes even though a healthy second connector is available. The 5-second `preStop` sleep gives `cloudflared` time to drain and close QUIC connections before Kubernetes sends SIGTERM, signaling the edge to immediately fail over to the surviving replica. The `terminationGracePeriodSeconds: 30` on the pod gives the full signal-to-exit window.
+- Alternative considered: running a single `cloudflared` replica. A single replica is immune to the routing confusion bug (no ambiguity about which connector to use) but is itself a single point of failure — draining its node takes down public internet access until the new pod is scheduled and the tunnel reconnects (~30s). Two replicas with a preStop hook provides both high availability and clean failover.
+
+### ADR-013: Traefik scaled to 2 replicas via HelmChartConfig
+
+- Status: accepted
+- Decision: Traefik is configured to run as 2 replicas through a `HelmChartConfig` resource (`infra/k8s/overlays/orbstack-demo/traefik-helm-chart-config.yaml`) rather than directly patching the Traefik Deployment.
+- Rationale: k3s manages Traefik through an embedded Helm operator. Direct patches to the `traefik` Deployment in `kube-system` are overwritten on every k3s upgrade or Traefik reconciliation. The `HelmChartConfig` resource is the k3s-native way to persist Helm value overrides that survive upgrades. The config also adds `podAntiAffinity` and a `PodDisruptionBudget (minAvailable: 1)` so that draining any single node always leaves at least one Traefik replica running.
+
+### ADR-014: Never apply overlay Deployment files directly with kubectl apply
+
+- Status: accepted
+- Decision: `infra/k8s/overlays/orbstack-demo/clubcrm-api-deployment.yaml` and `clubcrm-web-deployment.yaml` must never be applied directly with `kubectl apply` against the live cluster.
+- Rationale: these overlay files use placeholder image tags (`clubcrm-api:deploy`, `clubcrm-web:deploy`) that CI/CD rewrites at deploy time with the actual SHA-tagged GHCR image. Applying the files manually triggers a rolling update to the placeholder tags, causing `ImagePullBackOff` on every pod because those tags do not exist in the registry. Live cluster changes to affinity or probes must be made with `kubectl patch --type=strategic` (which merges correctly) or `kubectl patch --type=json` (for removals), always including the correct SHA-tagged image in any patch that touches the containers array.

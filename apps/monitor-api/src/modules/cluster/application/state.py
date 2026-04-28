@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections import deque
 
 from src.modules.cluster.domain.models import (
     ClusterEvent,
@@ -30,6 +31,9 @@ from src.modules.cluster.infrastructure.longhorn_normalizer import (
 from src.modules.cluster.infrastructure.service_probe import ProbeResult, ProbeTarget
 
 
+_EVENT_BUFFER_MAX = 200
+
+
 class ClusterState:
     def __init__(self) -> None:
         self._lock = asyncio.Lock()
@@ -39,6 +43,7 @@ class ClusterState:
         self._replicas: dict[str, VolumeReplicaState] = {}
         self._probes: dict[str, ServiceProbeState] = {}
         self._last_updated_at: float = 0.0
+        self._event_buffer: deque[dict] = deque(maxlen=_EVENT_BUFFER_MAX)
 
     async def apply_node_event(self, event_type: str, raw: dict) -> list[ClusterEvent]:
         node = parse_node(raw)
@@ -316,6 +321,14 @@ class ClusterState:
                     uid=raw.get("uid") if isinstance(raw.get("uid"), str) else None,
                 )
             self._last_updated_at = time.time()
+
+    def record_event(self, frame: dict) -> None:
+        if frame.get("type") == "event":
+            self._event_buffer.append(frame)
+
+    def recent_events(self, limit: int = 100) -> list[dict]:
+        events = [f["event"] for f in self._event_buffer if "event" in f]
+        return events[-min(limit, _EVENT_BUFFER_MAX):]
 
     async def snapshot(self) -> dict:
         async with self._lock:

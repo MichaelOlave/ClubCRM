@@ -24,6 +24,12 @@ export function resolveClusterStreamUrl(streamUrl: string, currentLocation?: str
 
   const pageUrl = new URL(locationSource);
 
+  if (resolvedUrl.protocol === "http:") {
+    resolvedUrl.protocol = "ws:";
+  } else if (resolvedUrl.protocol === "https:") {
+    resolvedUrl.protocol = "wss:";
+  }
+
   if (pageUrl.protocol === "https:" && resolvedUrl.protocol === "ws:") {
     resolvedUrl.protocol = "wss:";
   }

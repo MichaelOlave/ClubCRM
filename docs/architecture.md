@@ -170,7 +170,7 @@ Today the frontend remains UI-first, but many of its server-side feature modules
 ```text
 /apps/web/src
   /app
-    page.tsx                 # redirects / based on backend auth session
+    page.tsx                 # public landing page that reads backend auth state for CTA routing
     /(app)
       layout.tsx
       /dashboard

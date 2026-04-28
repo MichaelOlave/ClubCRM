@@ -19,19 +19,22 @@ import type { ClusterEvent, ClusterReplay, ClusterSnapshot } from "@/features/cl
 
 interface ClusterDashboardProps {
   initialSnapshot: ClusterSnapshot;
+  initialEventLog?: ClusterEvent[];
   replaySession?: ClusterReplay | null;
   streamUrl: string;
 }
 
 export function ClusterDashboard({
   initialSnapshot,
+  initialEventLog,
   replaySession,
   streamUrl,
 }: ClusterDashboardProps) {
   const { cluster, eventLog, replay, streamControls, streamStatus } = useClusterStream(
     initialSnapshot,
     streamUrl,
-    replaySession
+    replaySession,
+    initialEventLog
   );
   const [selectedCategories, setSelectedCategories] = useState<ClusterEventCategory[]>(
     EVENT_CATEGORIES.slice()

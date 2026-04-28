@@ -64,10 +64,11 @@ The preferred live-demo shape is:
 
 Current host mapping for the networking environment:
 
-- `Server1` -> `100.122.118.85`
-- `Server2` -> `100.67.65.5`
-- `Server3` -> `100.99.187.90`
-- `DemoControlPlaneServer` -> `192.168.139.213`
+- `Server1` -> `100.122.118.85` (LAN: 10.10.10.102)
+- `Server2` -> `100.67.65.5` (LAN: 10.10.10.103)
+- `Server3` -> `100.99.187.90` (LAN: 10.10.10.104)
+- `srv881749` -> `31.97.142.155` (Tailscale: `100.99.164.88`) → **production monitoring server** (Hostinger VPS, Debian 12)
+- `DemoControlPlaneServer` -> `192.168.139.213` → local OrbStack dev VM (classroom fallback only)
 
 All three `Server*` nodes are part of the control plane in the current cluster config.
 
@@ -76,6 +77,43 @@ The monitoring host needs:
 - Docker and Docker Compose
 - the repo checkout or copied deployment assets
 - a kubeconfig file with read access to the cluster
+
+### Production monitoring server
+
+The live production monitoring stack runs on `srv881749.hstgr.cloud` (`31.97.142.155`). The repo
+is checked out at `/opt/clubcrm` on that host. The monitoring stack is started with:
+
+```bash
+cd /opt/clubcrm
+docker compose --env-file .env -f infra/monitoring/docker-compose.monitoring.yml up -d
+```
+
+Port map on the production server:
+
+| Port | Service           | Notes                                                                                  |
+| ---- | ----------------- | -------------------------------------------------------------------------------------- |
+| 3002 | monitor-web nginx | Same-origin proxy: `/` → monitor-app, `/monitor-api/` → monitor-api, `/ws/stream` → WS |
+| 8010 | monitor-api       | FastAPI, also accessible directly for API calls                                        |
+| 3000 | Grafana           | Separate Grafana instance for commission project                                       |
+| 3100 | Loki              | Log aggregation for commission project                                                 |
+| 8082 | commission-nginx  | Commission API nginx frontend                                                          |
+| 80   | nginx/Coolify     | Reverse proxy for public routing                                                       |
+| 443  | nginx/Coolify     | TLS termination                                                                        |
+| 22   | SSH               | Standard SSH access                                                                    |
+
+### Dev/OrbStack monitoring host
+
+`DemoControlPlaneServer` at `192.168.139.213` is an OrbStack VM on the presenter's Mac. Use it
+for classroom rehearsal when the production server is not appropriate. Ports on this host:
+
+| Port | Service                              |
+| ---- | ------------------------------------ |
+| 3001 | monitor-app (Next.js or nginx proxy) |
+| 8011 | monitor-api                          |
+| 3005 | unknown / secondary service          |
+| 22   | SSH (from OrbStack host network)     |
+
+SSH access to the dev host uses port 2204 from outside the OrbStack network.
 
 ## Standalone Compose Deployment
 
@@ -185,13 +223,21 @@ curl http://localhost:8010/api/snapshot
 curl http://localhost:3001
 ```
 
-For the live monitoring host at `192.168.139.213`:
+For the production monitoring host at `31.97.142.155`:
 
 ```bash
-curl http://192.168.139.213:8010/health
-curl http://192.168.139.213:8010/api/snapshot
+curl http://31.97.142.155:8010/health
+curl http://31.97.142.155:8010/api/snapshot
+curl http://31.97.142.155:3002
+curl http://31.97.142.155:3002/monitor-api/api/snapshot
+```
+
+For the dev OrbStack host at `192.168.139.213`:
+
+```bash
+curl http://192.168.139.213:8011/health
+curl http://192.168.139.213:8011/api/snapshot
 curl http://192.168.139.213:3001
-curl http://192.168.139.213:3001/monitor-api/api/snapshot
 ```
 
 In the browser, confirm:

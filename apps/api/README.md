@@ -32,7 +32,9 @@ src/
         http/
     dashboard/
       application/
+        handlers.py
         ports/
+        queries.py
       domain/
       presentation/
         http/
@@ -176,7 +178,9 @@ port if `8000` is already in use. The resolved binding is written to
   server-side and applies a basic Redis-backed rate limit.
 - `/clubs/*` includes CRUD plus club-manager grant management, now exposing stable club `slug`
   values alongside internal IDs and enforcing per-organization uniqueness for club URL slugs.
-  `GET /clubs/slug/{club_slug}` resolves public club URLs.
+  `GET /clubs/slug/{club_slug}` is an authorized club lookup for admin and app flows.
+- `GET /forms/join-request-context/{club_identifier}` is the public slug-or-id resolver used by
+  join pages before submission
 - `/members/*` and `/memberships/*` provide the current roster-management surface
 - `/events/*` and `/announcements/*` provide the current club activity surface
 
