@@ -51,6 +51,7 @@ The deploy host should have:
 - Docker Engine
 - Docker Compose plugin
 - a checkout at `/opt/clubcrm`
+- enough disk space for a disposable clean deploy worktree at `/opt/clubcrm-deploy`
 - a read-only GitHub deploy key at `~/.ssh/clubcrm-repo`
 - a deploy user that either has direct Docker access or can run `sudo -n docker` and `sudo -n docker compose` without an interactive password prompt
 - a production environment file at `/opt/clubcrm/.env.production`
@@ -97,8 +98,10 @@ Production deploys are handled by the `deploy-production` job in [`.github/workf
   Uvicorn starts, so a fresh production PostgreSQL volume gets the current schema during rollout
 - the workflow verifies SSH access, then streams those images to the deploy host over SSH and loads them with Docker, falling back to `sudo -n` when the deploy user is not in the `docker` group
 - the workflow now tries the configured `DEPLOY_HOST` first and falls back to `clubcrm.org` when the configured host no longer answers SSH host-key discovery on port `22`
-- the host pulls the latest repo state in `/opt/clubcrm`
-- `docker compose -f infra/docker-compose.production.yml up -d --remove-orphans` refreshes the stack, with a `sudo -n` fallback when direct Docker access is unavailable
+- the host fetches the latest repo state in `/opt/clubcrm` and creates a clean detached worktree at `/opt/clubcrm-deploy` for the exact commit being deployed
+- `docker compose --env-file /opt/clubcrm/.env.production -f /opt/clubcrm-deploy/infra/docker-compose.production.yml up -d --remove-orphans` refreshes the stack, with a `sudo -n` fallback when direct Docker access is unavailable
+
+This avoids deployment failures when `/opt/clubcrm` contains host-local environment files, kubeconfigs, or other operator-only changes that should not block a fast-forward deploy.
 
 This keeps the production artifact centered on Docker images, which makes the future move to
 Kubernetes mainly a deployment-target change. The verification step and image-build boundary can stay
