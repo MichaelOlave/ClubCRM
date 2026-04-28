@@ -215,9 +215,16 @@ jobs:
           set -euo pipefail
           ssh deploy-host bash << ENDSSH
           set -euxo pipefail
-          docker login ghcr.io -u '${{ env.OWNER }}' -p '${GHCR_TOKEN}'
-          cd /opt/clubcrm
-          GIT_SSH_COMMAND="ssh -i ~/.ssh/clubcrm-repo -o IdentitiesOnly=yes" git pull --ff-only
+          REMOTE_REPO=/opt/clubcrm
+          REMOTE_DEPLOY_REPO=/opt/clubcrm-deploy
+          DEPLOY_REF='${{ github.event.workflow_run.head_sha }}'
+          printf '%s' '${GHCR_TOKEN}' | docker login ghcr.io -u '${{ env.OWNER }}' --password-stdin
+          cd "\$REMOTE_REPO"
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/clubcrm-repo -o IdentitiesOnly=yes" git fetch --prune origin
+          git cat-file -e "\${DEPLOY_REF}^{commit}"
+          git worktree remove --force "\$REMOTE_DEPLOY_REPO" 2>/dev/null || true
+          rm -rf "\$REMOTE_DEPLOY_REPO"
+          git worktree add --force --detach "\$REMOTE_DEPLOY_REPO" "\$DEPLOY_REF"
           ENDSSH
 
       - name: Deploy app stack
@@ -230,22 +237,27 @@ jobs:
           IMAGE_TAG="${{ github.event.workflow_run.head_sha }}"
           ssh deploy-host bash << ENDSSH
           set -euxo pipefail
-          cd /opt/clubcrm
+          REMOTE_REPO=/opt/clubcrm
+          REMOTE_DEPLOY_REPO=/opt/clubcrm-deploy
+          cd "\$REMOTE_DEPLOY_REPO"
           export API_IMAGE="${REGISTRY}/clubcrm-api:${IMAGE_TAG}"
           export WEB_IMAGE="${REGISTRY}/clubcrm-web:${IMAGE_TAG}"
-          compose_files="-f infra/docker-compose.production.yml"
-          if [ -f infra/docker-compose.production.host-nginx.yml ]; then
-            compose_files="\$compose_files -f infra/docker-compose.production.host-nginx.yml"
+          env_file="\$REMOTE_REPO/.env.production"
+          compose_files="-f \$REMOTE_DEPLOY_REPO/infra/docker-compose.production.yml"
+          if [ -f "\$REMOTE_REPO/infra/docker-compose.production.host-nginx.yml" ]; then
+            compose_files="\$compose_files -f \$REMOTE_REPO/infra/docker-compose.production.host-nginx.yml"
+          elif [ -f "\$REMOTE_DEPLOY_REPO/infra/docker-compose.production.host-nginx.yml" ]; then
+            compose_files="\$compose_files -f \$REMOTE_DEPLOY_REPO/infra/docker-compose.production.host-nginx.yml"
           fi
           log_deploy_failure() {
-            docker compose \$compose_files ps || true
-            docker compose \$compose_files logs api --tail=200 || true
+            docker compose --env-file "\$env_file" \$compose_files ps || true
+            docker compose --env-file "\$env_file" \$compose_files logs api --tail=200 || true
           }
           trap log_deploy_failure ERR
           if docker info >/dev/null 2>&1; then
-            docker compose \$compose_files up -d --remove-orphans
+            docker compose --env-file "\$env_file" \$compose_files up -d --remove-orphans
           elif sudo -n docker info >/dev/null 2>&1; then
-            sudo -n docker compose \$compose_files up -d --remove-orphans
+            sudo -n docker compose --env-file "\$env_file" \$compose_files up -d --remove-orphans
           else
             echo "Remote deploy user needs Docker access or passwordless sudo for Docker Compose." >&2
             exit 1
@@ -263,13 +275,17 @@ jobs:
           IMAGE_TAG="${{ github.event.workflow_run.head_sha }}"
           ssh deploy-host bash << ENDSSH
           set -euxo pipefail
-          cd /opt/clubcrm
+          REMOTE_REPO=/opt/clubcrm
+          REMOTE_DEPLOY_REPO=/opt/clubcrm-deploy
+          cd "\$REMOTE_DEPLOY_REPO"
           export MONITOR_API_IMAGE="${REGISTRY}/clubcrm-monitor-api:${IMAGE_TAG}"
           export MONITOR_WEB_IMAGE="${REGISTRY}/clubcrm-monitor-web:${IMAGE_TAG}"
+          env_file="\$REMOTE_REPO/.env"
+          compose_files="-f \$REMOTE_DEPLOY_REPO/infra/monitoring/docker-compose.monitoring.yml"
           if docker info >/dev/null 2>&1; then
-            docker compose -f infra/monitoring/docker-compose.monitoring.yml up -d --remove-orphans
+            docker compose --env-file "\$env_file" \$compose_files up -d --remove-orphans
           elif sudo -n docker info >/dev/null 2>&1; then
-            sudo -n docker compose -f infra/monitoring/docker-compose.monitoring.yml up -d --remove-orphans
+            sudo -n docker compose --env-file "\$env_file" \$compose_files up -d --remove-orphans
           else
             echo "Remote deploy user needs Docker access or passwordless sudo for Docker Compose." >&2
             exit 1
